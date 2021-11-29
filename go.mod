@@ -8,7 +8,7 @@ require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0 // indirect
 	github.com/ONSdigital/dp-component-test v0.6.0
 	github.com/ONSdigital/dp-healthcheck v1.2.1
-	github.com/ONSdigital/dp-net v1.2.0 // indirect
+	github.com/ONSdigital/dp-net v1.2.0
 	github.com/ONSdigital/log.go/v2 v2.0.9
 	github.com/cucumber/godog v0.12.2
 	github.com/fatih/color v1.13.0 // indirect
