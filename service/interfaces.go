@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-files-api/mongo"
 	"net/http"
 
 	"github.com/ONSdigital/dp-files-api/config"
@@ -16,6 +17,7 @@ import (
 type Initialiser interface {
 	DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
+	DoGetMongoDB(ctx context.Context, cfg *config.Config) (*mongo.Mongo, error)
 }
 
 // HTTPServer defines the required methods from the HTTP server
