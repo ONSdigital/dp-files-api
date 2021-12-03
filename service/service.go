@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 
 	"github.com/ONSdigital/dp-files-api/api"
 	"github.com/ONSdigital/dp-files-api/config"
@@ -18,6 +19,15 @@ type Service struct {
 	Api         *api.API
 	ServiceList *ExternalServiceList
 	HealthCheck HealthChecker
+	mongoClient MongoClient
+}
+
+// Mongo abstracts mongo.Mongo so we can create a mock.
+//
+type MongoClient interface {
+	URI() string
+	Close(context.Context) error
+	Checker(context.Context, *healthcheck.CheckState) error
 }
 
 // Run the service
@@ -43,8 +53,16 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 		log.Fatal(ctx, "could not instantiate healthcheck", err)
 		return nil, err
 	}
+	svc := &Service{
+		Config:      cfg,
+		Router:      r,
+		Api:         a,
+		HealthCheck: hc,
+		ServiceList: serviceList,
+		Server:      s,
+	}
 
-	if err := registerCheckers(ctx, hc); err != nil {
+	if err := svc.registerCheckers(ctx, hc); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
@@ -58,14 +76,7 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 		}
 	}()
 
-	return &Service{
-		Config:      cfg,
-		Router:      r,
-		Api:         a,
-		HealthCheck: hc,
-		ServiceList: serviceList,
-		Server:      s,
-	}, nil
+	return svc, nil
 }
 
 // Close gracefully shuts the service down in the required order, with timeout
@@ -114,10 +125,18 @@ func (svc *Service) Close(ctx context.Context) error {
 	return nil
 }
 
-func registerCheckers(ctx context.Context,
-	hc HealthChecker) (err error) {
+func (svc *Service) registerCheckers(ctx context.Context, hc HealthChecker) (err error) {
+	hasErrors := false
 
-	// TODO: add other health checks here, as per dp-upload-service
+	db, err := svc.ServiceList.GetMongoDB(ctx, svc.Config)
+	if err = hc.AddCheck("Mongo DB", db.Checker); err != nil {
+		hasErrors = true
+		log.Error(ctx, "error adding check for mongo db", err)
+	}
+
+	if hasErrors {
+		return errors.New("Error(s) registering checkers for healthcheck")
+	}
 
 	return nil
 }
