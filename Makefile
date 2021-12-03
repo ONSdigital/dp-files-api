@@ -42,5 +42,6 @@ test-component:
 docker_test:
 	docker build -f Dockerfile.m1 . -t template_test --target=test
 	docker-compose -f docker-compose-m1.yml up -d
+	docker-compose -f docker-compose-m1.yml exec -T http go test ./...
 	docker-compose -f docker-compose-m1.yml exec -T http go test -component
 	docker-compose -f docker-compose-m1.yml down
