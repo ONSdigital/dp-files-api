@@ -37,3 +37,10 @@ convey:
 .PHONY: test-component
 test-component:
 	go test -cover -coverpkg=github.com/ONSdigital/dp-files-api/... -component
+
+.PHONY: docker_test
+docker_test:
+	docker build -f Dockerfile.m1 . -t template_test --target=test
+	docker-compose -f docker-compose-m1.yml up -d
+	docker-compose -f docker-compose-m1.yml exec -T http go test -component
+	docker-compose -f docker-compose-m1.yml down
