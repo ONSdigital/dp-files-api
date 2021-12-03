@@ -19,7 +19,7 @@ type Service struct {
 	Api         *api.API
 	ServiceList *ExternalServiceList
 	HealthCheck HealthChecker
-	mongoClient MongoClient
+	MongoClient MongoClient
 }
 
 // Mongo abstracts mongo.Mongo so we can create a mock.
@@ -53,6 +53,7 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 		log.Fatal(ctx, "could not instantiate healthcheck", err)
 		return nil, err
 	}
+
 	svc := &Service{
 		Config:      cfg,
 		Router:      r,
@@ -60,6 +61,12 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 		HealthCheck: hc,
 		ServiceList: serviceList,
 		Server:      s,
+	}
+
+	svc.MongoClient, err = svc.ServiceList.GetMongoDB(ctx, svc.Config)
+	if err != nil {
+		log.Error(ctx, "could not obtain mongo session", err)
+		return nil, err
 	}
 
 	if err := svc.registerCheckers(ctx, hc); err != nil {
@@ -128,8 +135,7 @@ func (svc *Service) Close(ctx context.Context) error {
 func (svc *Service) registerCheckers(ctx context.Context, hc HealthChecker) (err error) {
 	hasErrors := false
 
-	db, err := svc.ServiceList.GetMongoDB(ctx, svc.Config)
-	if err = hc.AddCheck("Mongo DB", db.Checker); err != nil {
+	if err = hc.AddCheck("Mongo DB", svc.MongoClient.Checker); err != nil {
 		hasErrors = true
 		log.Error(ctx, "error adding check for mongo db", err)
 	}

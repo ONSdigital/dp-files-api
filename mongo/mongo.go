@@ -5,9 +5,9 @@ import (
 
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	dpMongoLock "github.com/ONSdigital/dp-mongodb/v3/dplock"
-	dpMongoHealth "github.com/ONSdigital/dp-mongodb/v3/health"
-	dpmongo "github.com/ONSdigital/dp-mongodb/v3/mongodb"
+	dpMongoLock "github.com/ONSdigital/dp-mongodb/v2/dplock"
+	dpMongoHealth "github.com/ONSdigital/dp-mongodb/v2/health"
+	dpmongo "github.com/ONSdigital/dp-mongodb/v2/mongodb"
 )
 
 const (
@@ -20,7 +20,8 @@ type Mongo struct {
 	datasetURL   string
 	connection   *dpmongo.MongoConnection
 	uri          string
-	client       *dpMongoHealth.CheckMongoClient
+	client       *dpMongoHealth.Client
+	healthClient *dpMongoHealth.CheckMongoClient
 	lockClient   *dpMongoLock.Lock
 }
 
@@ -51,10 +52,14 @@ func New(ctx context.Context, cfg *config.Config) (*Mongo, error) {
 
 	// set up databaseCollectionBuilder here when collections are known
 
-	// Create client and healthclient from session
-	m.client = dpMongoHealth.NewClientWithCollections(m.connection, nil)
+	// Create healthClient and healthclient from session
+	m.client = dpMongoHealth.NewClient(m.connection)
+	m.healthClient = &dpMongoHealth.CheckMongoClient{
+		Client:      *m.client,
+		Healthcheck: m.client.Healthcheck,
+	}
 
-	// create lock client here when collections are known
+	// create lock healthClient here when collections are known
 	return m, nil
 }
 
@@ -70,5 +75,5 @@ func (m *Mongo) Close(ctx context.Context) error {
 
 // Checker is called by the healthcheck library to check the health state of this mongoDB instance
 func (m *Mongo) Checker(ctx context.Context, state *healthcheck.CheckState) error {
-	return m.client.Checker(ctx, state)
+	return m.healthClient.Checker(ctx, state)
 }
