@@ -1,0 +1,12 @@
+FROM golang:1.16-stretch as build
+
+WORKDIR /service
+ADD . /service
+
+# RUN cd /service && go build -o /http-service .
+
+CMD make debug
+
+# TEST
+FROM build as test
+
