@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-
 	"github.com/ONSdigital/dp-files-api/api"
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/log.go/v2/log"
@@ -18,6 +17,7 @@ type Service struct {
 	Api         *api.API
 	ServiceList *ExternalServiceList
 	HealthCheck HealthChecker
+	MongoClient MongoClient
 }
 
 // Run the service
@@ -44,7 +44,22 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 		return nil, err
 	}
 
-	if err := registerCheckers(ctx, hc); err != nil {
+	svc := &Service{
+		Config:      cfg,
+		Router:      r,
+		Api:         a,
+		HealthCheck: hc,
+		ServiceList: serviceList,
+		Server:      s,
+	}
+
+	svc.MongoClient, err = svc.ServiceList.GetMongoDB(ctx, svc.Config)
+	if err != nil {
+		log.Error(ctx, "could not obtain mongo session", err)
+		return nil, err
+	}
+
+	if err := svc.registerCheckers(ctx, hc); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
@@ -58,14 +73,7 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 		}
 	}()
 
-	return &Service{
-		Config:      cfg,
-		Router:      r,
-		Api:         a,
-		HealthCheck: hc,
-		ServiceList: serviceList,
-		Server:      s,
-	}, nil
+	return svc, nil
 }
 
 // Close gracefully shuts the service down in the required order, with timeout
@@ -114,10 +122,17 @@ func (svc *Service) Close(ctx context.Context) error {
 	return nil
 }
 
-func registerCheckers(ctx context.Context,
-	hc HealthChecker) (err error) {
+func (svc *Service) registerCheckers(ctx context.Context, hc HealthChecker) (err error) {
+	hasErrors := false
 
-	// TODO: add other health checks here, as per dp-upload-service
+	if err = hc.AddCheck("Mongo DB", svc.MongoClient.Checker); err != nil {
+		hasErrors = true
+		log.Error(ctx, "error adding check for mongo db", err)
+	}
+
+	if hasErrors {
+		return errors.New("Error(s) registering checkers for healthcheck")
+	}
 
 	return nil
 }
