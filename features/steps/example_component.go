@@ -40,6 +40,7 @@ func NewComponent() (*Component, error) {
 	initMock := &mock.InitialiserMock{
 		DoGetHealthCheckFunc: c.DoGetHealthcheckOk,
 		DoGetHTTPServerFunc:  c.DoGetHTTPServer,
+		DoGetMongoDBFunc: c.DoGetMongoClient,
 	}
 
 	c.svcList = service.NewServiceList(initMock)
@@ -85,4 +86,12 @@ func (c *Component) DoGetHTTPServer(bindAddr string, router http.Handler) servic
 	c.HTTPServer.Addr = bindAddr
 	c.HTTPServer.Handler = router
 	return c.HTTPServer
+}
+
+func (c *Component) DoGetMongoClient (ctx context.Context, cfg *config.Config) (service.MongoClient, error) {
+	return &mock.MongoClientMock{
+		CheckerFunc: nil,
+		CloseFunc:   nil,
+		URIFunc:     nil,
+	}, nil
 }

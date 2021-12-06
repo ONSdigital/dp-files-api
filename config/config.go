@@ -18,9 +18,6 @@ type MongoConfig struct {
 	EnableWriteConcern bool          `envconfig:"MONGODB_ENABLE_WRITE_CONCERN"`
 	QueryTimeout       time.Duration `envconfig:"MONGODB_QUERY_TIMEOUT"`
 	ConnectionTimeout  time.Duration `envconfig:"MONGODB_CONNECT_TIMEOUT"`
-
-	CodeListAPIURL string `envconfig:"CODE_LIST_API_URL"`
-	DatasetAPIURL  string `envconfig:"DATASET_API_URL"`
 }
 
 
@@ -54,9 +51,6 @@ func Get() (*Config, error) {
 			QueryTimeout:       15 * time.Second,
 			ConnectionTimeout:  5 * time.Second,
 			EnableWriteConcern: true,
-
-			CodeListAPIURL: "http://localhost:22400",
-			DatasetAPIURL:  "http://localhost:22000",
 		},
 	}
 

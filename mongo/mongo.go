@@ -27,7 +27,6 @@ type Mongo struct {
 
 func New(ctx context.Context, cfg *config.Config) (*Mongo, error) {
 	m := &Mongo{
-		datasetURL: cfg.DatasetAPIURL,
 		uri:        cfg.MongoConfig.URI,
 	}
 
