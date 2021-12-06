@@ -46,7 +46,7 @@ func (e *ExternalServiceList) GetHealthCheck(cfg *config.Config, buildTime, gitC
 	return hc, nil
 }
 
-func (e *ExternalServiceList) GetMongoDB(ctx context.Context, cfg *config.Config) (*mongo.Mongo, error) {
+func (e *ExternalServiceList) GetMongoDB(ctx context.Context, cfg *config.Config) (MongoClient, error) {
 	db, err := e.Init.DoGetMongoDB(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (e *Init) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, versio
 }
 
 // GetMongoDB returns a mongodb health client and dataset mongo object
-func (e *Init) DoGetMongoDB(ctx context.Context, cfg *config.Config) (*mongo.Mongo, error) {
+func (e *Init) DoGetMongoDB(ctx context.Context, cfg *config.Config) (MongoClient, error) {
 	mongodb, err := mongo.New(ctx, cfg)
 	if err != nil {
 		log.Error(ctx, "failed to initialise mongo", err)

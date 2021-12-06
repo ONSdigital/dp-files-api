@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-
 	"github.com/ONSdigital/dp-files-api/api"
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/log.go/v2/log"
@@ -20,14 +18,6 @@ type Service struct {
 	ServiceList *ExternalServiceList
 	HealthCheck HealthChecker
 	MongoClient MongoClient
-}
-
-// Mongo abstracts mongo.Mongo so we can create a mock.
-//
-type MongoClient interface {
-	URI() string
-	Close(context.Context) error
-	Checker(context.Context, *healthcheck.CheckState) error
 }
 
 // Run the service
