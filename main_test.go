@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 	"testing"
@@ -23,12 +24,16 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 		panic(err)
 	}
 
-	ctx.BeforeScenario(func(*godog.Scenario) {
+	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		component.Reset()
+
+		return ctx, nil
 	})
 
-	ctx.AfterScenario(func(*godog.Scenario, error) {
-		_ = component.Close()
+	ctx.After(func(ctx context.Context, sc *godog.Scenario, e error) (context.Context, error) {
+		err := component.Close()
+
+		return ctx, err
 	})
 
 	component.RegisterSteps(ctx)
