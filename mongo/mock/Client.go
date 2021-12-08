@@ -5,42 +5,49 @@ package mock
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-files-api/service"
+	"github.com/ONSdigital/dp-files-api/mongo"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
+	dpmongo "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"sync"
 )
 
-// Ensure, that MongoClientMock does implement service.MongoClient.
+// Ensure, that ClientMock does implement mongo.Client.
 // If this is not the case, regenerate this file with moq.
-var _ service.MongoClient = &MongoClientMock{}
+var _ mongo.Client = &ClientMock{}
 
-// MongoClientMock is a mock implementation of service.MongoClient.
+// ClientMock is a mock implementation of mongo.Client.
 //
-// 	func TestSomethingThatUsesMongoClient(t *testing.T) {
+// 	func TestSomethingThatUsesClient(t *testing.T) {
 //
-// 		// make and configure a mocked service.MongoClient
-// 		mockedMongoClient := &MongoClientMock{
+// 		// make and configure a mocked mongo.Client
+// 		mockedClient := &ClientMock{
 // 			CheckerFunc: func(contextMoqParam context.Context, checkState *healthcheck.CheckState) error {
 // 				panic("mock out the Checker method")
 // 			},
 // 			CloseFunc: func(contextMoqParam context.Context) error {
 // 				panic("mock out the Close method")
 // 			},
+// 			ConnectionFunc: func() *dpmongo.MongoConnection {
+// 				panic("mock out the Connection method")
+// 			},
 // 			URIFunc: func() string {
 // 				panic("mock out the URI method")
 // 			},
 // 		}
 //
-// 		// use mockedMongoClient in code that requires service.MongoClient
+// 		// use mockedClient in code that requires mongo.Client
 // 		// and then make assertions.
 //
 // 	}
-type MongoClientMock struct {
+type ClientMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(contextMoqParam context.Context, checkState *healthcheck.CheckState) error
 
 	// CloseFunc mocks the Close method.
 	CloseFunc func(contextMoqParam context.Context) error
+
+	// ConnectionFunc mocks the Connection method.
+	ConnectionFunc func() *dpmongo.MongoConnection
 
 	// URIFunc mocks the URI method.
 	URIFunc func() string
@@ -59,19 +66,23 @@ type MongoClientMock struct {
 			// ContextMoqParam is the contextMoqParam argument value.
 			ContextMoqParam context.Context
 		}
+		// Connection holds details about calls to the Connection method.
+		Connection []struct {
+		}
 		// URI holds details about calls to the URI method.
 		URI []struct {
 		}
 	}
-	lockChecker sync.RWMutex
-	lockClose   sync.RWMutex
-	lockURI     sync.RWMutex
+	lockChecker    sync.RWMutex
+	lockClose      sync.RWMutex
+	lockConnection sync.RWMutex
+	lockURI        sync.RWMutex
 }
 
 // Checker calls CheckerFunc.
-func (mock *MongoClientMock) Checker(contextMoqParam context.Context, checkState *healthcheck.CheckState) error {
+func (mock *ClientMock) Checker(contextMoqParam context.Context, checkState *healthcheck.CheckState) error {
 	if mock.CheckerFunc == nil {
-		panic("MongoClientMock.CheckerFunc: method is nil but MongoClient.Checker was just called")
+		panic("ClientMock.CheckerFunc: method is nil but Client.Checker was just called")
 	}
 	callInfo := struct {
 		ContextMoqParam context.Context
@@ -88,8 +99,8 @@ func (mock *MongoClientMock) Checker(contextMoqParam context.Context, checkState
 
 // CheckerCalls gets all the calls that were made to Checker.
 // Check the length with:
-//     len(mockedMongoClient.CheckerCalls())
-func (mock *MongoClientMock) CheckerCalls() []struct {
+//     len(mockedClient.CheckerCalls())
+func (mock *ClientMock) CheckerCalls() []struct {
 	ContextMoqParam context.Context
 	CheckState      *healthcheck.CheckState
 } {
@@ -104,9 +115,9 @@ func (mock *MongoClientMock) CheckerCalls() []struct {
 }
 
 // Close calls CloseFunc.
-func (mock *MongoClientMock) Close(contextMoqParam context.Context) error {
+func (mock *ClientMock) Close(contextMoqParam context.Context) error {
 	if mock.CloseFunc == nil {
-		panic("MongoClientMock.CloseFunc: method is nil but MongoClient.Close was just called")
+		panic("ClientMock.CloseFunc: method is nil but Client.Close was just called")
 	}
 	callInfo := struct {
 		ContextMoqParam context.Context
@@ -121,8 +132,8 @@ func (mock *MongoClientMock) Close(contextMoqParam context.Context) error {
 
 // CloseCalls gets all the calls that were made to Close.
 // Check the length with:
-//     len(mockedMongoClient.CloseCalls())
-func (mock *MongoClientMock) CloseCalls() []struct {
+//     len(mockedClient.CloseCalls())
+func (mock *ClientMock) CloseCalls() []struct {
 	ContextMoqParam context.Context
 } {
 	var calls []struct {
@@ -134,10 +145,36 @@ func (mock *MongoClientMock) CloseCalls() []struct {
 	return calls
 }
 
+// Connection calls ConnectionFunc.
+func (mock *ClientMock) Connection() *dpmongo.MongoConnection {
+	if mock.ConnectionFunc == nil {
+		panic("ClientMock.ConnectionFunc: method is nil but Client.Connection was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockConnection.Lock()
+	mock.calls.Connection = append(mock.calls.Connection, callInfo)
+	mock.lockConnection.Unlock()
+	return mock.ConnectionFunc()
+}
+
+// ConnectionCalls gets all the calls that were made to Connection.
+// Check the length with:
+//     len(mockedClient.ConnectionCalls())
+func (mock *ClientMock) ConnectionCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockConnection.RLock()
+	calls = mock.calls.Connection
+	mock.lockConnection.RUnlock()
+	return calls
+}
+
 // URI calls URIFunc.
-func (mock *MongoClientMock) URI() string {
+func (mock *ClientMock) URI() string {
 	if mock.URIFunc == nil {
-		panic("MongoClientMock.URIFunc: method is nil but MongoClient.URI was just called")
+		panic("ClientMock.URIFunc: method is nil but Client.URI was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -149,8 +186,8 @@ func (mock *MongoClientMock) URI() string {
 
 // URICalls gets all the calls that were made to URI.
 // Check the length with:
-//     len(mockedMongoClient.URICalls())
-func (mock *MongoClientMock) URICalls() []struct {
+//     len(mockedClient.URICalls())
+func (mock *ClientMock) URICalls() []struct {
 } {
 	var calls []struct {
 	}
