@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/ONSdigital/dp-files-api/api"
 	"github.com/ONSdigital/dp-files-api/config"
+	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/ONSdigital/dp-files-api/mongo"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -14,10 +16,9 @@ type Service struct {
 	Config      *config.Config
 	Server      HTTPServer
 	Router      *mux.Router
-	Api         *api.API
 	ServiceList *ExternalServiceList
 	HealthCheck HealthChecker
-	MongoClient MongoClient
+	MongoClient mongo.Client
 }
 
 // Run the service
@@ -27,15 +28,21 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 
 	log.Info(ctx, "using service configuration", log.Data{"config": cfg})
 
+	mongoClient, err := serviceList.GetMongoDB(ctx, cfg)
+	if err != nil {
+		log.Error(ctx, "could not obtain mongo session", err)
+		return nil, err
+	}
+
 	// Get HTTP Server and ... // TODO: Add any middleware that your service requires
 	r := mux.NewRouter()
+	store := files.NewStore(mongoClient)
+
+	r.StrictSlash(true).Path("/v1/files").HandlerFunc(api.CreateFileUploadStartedHandler(store.CreateUploadStarted))
 
 	s := serviceList.GetHTTPServer(cfg.BindAddr, r)
 
 	// TODO: Add other(s) to serviceList here
-
-	// Setup the API
-	a := api.Setup(ctx, r)
 
 	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
 
@@ -47,16 +54,10 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 	svc := &Service{
 		Config:      cfg,
 		Router:      r,
-		Api:         a,
 		HealthCheck: hc,
 		ServiceList: serviceList,
 		Server:      s,
-	}
-
-	svc.MongoClient, err = svc.ServiceList.GetMongoDB(ctx, svc.Config)
-	if err != nil {
-		log.Error(ctx, "could not obtain mongo session", err)
-		return nil, err
+		MongoClient: mongoClient,
 	}
 
 	if err := svc.registerCheckers(ctx, hc); err != nil {
