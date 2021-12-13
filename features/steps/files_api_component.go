@@ -64,7 +64,7 @@ func NewFilesApiComponent(mongoUrl string) *FilesApiComponent {
 	os.Setenv("MONGODB_ENABLE_WRITE_CONCERN", "true")
 	os.Setenv("MONGODB_QUERY_TIMEOUT", "30")
 	os.Setenv("MONGODB_CONNECT_TIMEOUT", "30")
-	os.Setenv("MONGODB_IS_SSL", "true")
+	os.Setenv("MONGODB_IS_SSL", "false")
 
 	log.Namespace = "dp-files-api"
 
