@@ -45,6 +45,10 @@ func New(ctx context.Context, cfg *config.Config) (*Mongo, error) {
 		Collection:                    cfg.MongoConfig.Collection,
 		IsWriteConcernMajorityEnabled: true,
 		IsStrongReadConcernEnabled:    false,
+
+		TLSConnectionConfig: dpmongo.TLSConnectionConfig{
+			IsSSL: cfg.MongoConfig.IsSSL,
+		},
 	}
 
 	conn, err := dpmongo.Open(connCfg)
