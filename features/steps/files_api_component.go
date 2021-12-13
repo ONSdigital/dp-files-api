@@ -58,8 +58,8 @@ func NewFilesApiComponent(mongoUrl string) *FilesApiComponent {
 	fmt.Println("handler created in new", d.DpHttpServer.Server.Handler)
 
 	os.Setenv("MONGODB_BIND_ADDR", mongoUrl)
-	os.Setenv("MONGODB_DATABASE", "files")
-	os.Setenv("MONGODB_COLLECTION", "metadata")
+	os.Setenv("MONGODB_FILES_DATABASE", "files")
+	os.Setenv("MONGODB_FILES_COLLECTION", "metadata")
 	os.Setenv("MONGODB_ENABLE_READ_CONCERN", "true")
 	os.Setenv("MONGODB_ENABLE_WRITE_CONCERN", "true")
 	os.Setenv("MONGODB_QUERY_TIMEOUT", "30")
