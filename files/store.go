@@ -2,8 +2,13 @@ package files
 
 import (
 	"context"
+	"errors"
+
 	"github.com/ONSdigital/dp-files-api/mongo"
+	"go.mongodb.org/mongo-driver/bson"
 )
+
+var ErrDuplicateFile = errors.New("duplicate file path")
 
 type Store struct {
 	m mongo.Client
@@ -14,11 +19,17 @@ func NewStore(m mongo.Client) *Store {
 }
 
 func (s *Store) CreateUploadStarted(ctx context.Context, metaData MetaData) error {
-	_, err := s.m.Connection().C("metadata").Insert(ctx, metaData)
+	finder := s.m.Connection().C("metadata").Find(bson.M{"path": metaData.Path})
+	count, err := finder.Count(ctx)
+	if err != nil {
+		return err
+	}
+
+	if count > 0 {
+		return ErrDuplicateFile
+	}
+
+	_, err = s.m.Connection().C("metadata").Insert(ctx, metaData)
 
 	return err
 }
-
-
-
-

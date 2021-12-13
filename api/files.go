@@ -2,9 +2,10 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/ONSdigital/dp-files-api/files"
 	"net/http"
 	"time"
+
+	"github.com/ONSdigital/dp-files-api/files"
 )
 
 func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) http.HandlerFunc {
@@ -14,7 +15,7 @@ func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) 
 
 		err := json.NewDecoder(req.Body).Decode(&m)
 		if err != nil {
-			return 
+			return
 		}
 
 		m.CreatedAt = time.Now()
@@ -24,7 +25,7 @@ func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) 
 		encoder := json.NewEncoder(w)
 
 		type jsonError struct {
-			Code string `json:"code"`
+			Code        string `json:"code"`
 			Description string `json:"description"`
 		}
 
@@ -34,6 +35,12 @@ func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) 
 
 		err = creatorFunc(req.Context(), m)
 		if err != nil {
+			if err == files.ErrDuplicateFile {
+				errs := JsonErrors{Error: []jsonError{{Description: err.Error(), Code: "DuplicateFileError"}}}
+				w.WriteHeader(http.StatusBadRequest)
+				encoder.Encode(&errs)
+				return
+			}
 			errs := JsonErrors{Error: []jsonError{{Description: err.Error(), Code: "DatabaseError"}}}
 			w.WriteHeader(http.StatusInternalServerError)
 			encoder.Encode(&errs)
