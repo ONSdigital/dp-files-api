@@ -2,38 +2,23 @@ package steps
 
 import (
 	"context"
+	"strconv"
+
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/cucumber/godog"
 	"github.com/rdumont/assistdog"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
-	"io/ioutil"
-	"strconv"
-	"strings"
 )
 
 func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the file upload is registered with payload:`, c.iRegisterFile)
 	ctx.Step(`^the following document entry should be created:`, c.theFollowingDocumentShouldBeCreated)
-}
-
-func (c *FilesApiComponent) iShouldReceiveAHelloworldResponse() error {
-	responseBody := c.ApiFeature.HttpResponse.Body
-	body, _ := ioutil.ReadAll(responseBody)
-
-	assert.Equal(c.ApiFeature, `{"message":"Hello, World!"}`, strings.TrimSpace(string(body)))
-
-	return c.ApiFeature.StepError()
+	ctx.Step(`^the file upload "([^"]*)" has been registered$`, c.theFileUploadHasBeenRegistered)
 }
 
 func (c *FilesApiComponent) iRegisterFile(payload *godog.DocString) error {
-
-	err := c.ApiFeature.IPostToWithBody("/v1/files", payload)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return c.ApiFeature.IPostToWithBody("/v1/files", payload)
 }
 
 type ExpectedMetaData struct {
@@ -76,6 +61,16 @@ func (c *FilesApiComponent) theFollowingDocumentShouldBeCreated(table *godog.Tab
 	assert.Equal(c.ApiFeature, expectedMetaData.Licence, metaData.Licence)
 	assert.Equal(c.ApiFeature, expectedMetaData.LicenceUrl, metaData.LicenceUrl)
 	assert.Equal(c.ApiFeature, expectedMetaData.State, metaData.State)
+
+	return c.ApiFeature.StepError()
+}
+
+func (c *FilesApiComponent) theFileUploadHasBeenRegistered(path string) error {
+	ctx := context.Background()
+
+	m := files.MetaData{Path: path}
+	_, err := c.Mongo.Client.Database("files").Collection("metadata").InsertOne(ctx, &m)
+	assert.NoError(c.ApiFeature, err)
 
 	return c.ApiFeature.StepError()
 }
