@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"fmt"
+	"github.com/ONSdigital/dp-files-api/mongo"
 	"net/http"
 	"sync"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/ONSdigital/dp-files-api/service"
 	"github.com/ONSdigital/dp-files-api/service/mock"
 	serviceMock "github.com/ONSdigital/dp-files-api/service/mock"
+	mongoMock "github.com/ONSdigital/dp-files-api/mongo/mock"
 
 	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
@@ -78,8 +80,8 @@ func TestRun(t *testing.T) {
 			return failingServerMock
 		}
 
-		funcDoGetMongoDb := func(ctx context.Context, cfg *config.Config) (service.MongoClient, error) {
-			return &serviceMock.MongoClientMock{
+		funcDoGetMongoDb := func(ctx context.Context, cfg *config.Config) (mongo.Client, error) {
+			return &mongoMock.ClientMock{
 				CheckerFunc: nil,
 				CloseFunc:   nil,
 				URIFunc:     nil,
@@ -235,8 +237,8 @@ func TestClose(t *testing.T) {
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 					return hcMock, nil
 				},
-				DoGetMongoDBFunc: func(ctx context.Context, cfg *config.Config) (service.MongoClient, error) {
-					return &serviceMock.MongoClientMock{
+				DoGetMongoDBFunc: func(ctx context.Context, cfg *config.Config) (mongo.Client, error) {
+					return &mongoMock.ClientMock{
 						CheckerFunc: nil,
 						CloseFunc:   nil,
 						URIFunc:     nil,
@@ -269,8 +271,8 @@ func TestClose(t *testing.T) {
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 					return hcMock, nil
 				},
-				DoGetMongoDBFunc: func(ctx context.Context, cfg *config.Config) (service.MongoClient, error) {
-					return &serviceMock.MongoClientMock{
+				DoGetMongoDBFunc: func(ctx context.Context, cfg *config.Config) (mongo.Client, error) {
+					return &mongoMock.ClientMock{
 						CheckerFunc: nil,
 						CloseFunc:   nil,
 						URIFunc:     nil,

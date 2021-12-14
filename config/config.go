@@ -9,8 +9,8 @@ import (
 // MongoConfig contains the config required to connect to MongoDB.
 type MongoConfig struct {
 	URI                string        `envconfig:"MONGODB_BIND_ADDR"   json:"-"`
-	Collection         string        `envconfig:"MONGODB_COLLECTION"`
-	Database           string        `envconfig:"MONGODB_DATABASE"`
+	Collection         string        `envconfig:"MONGODB_FILES_COLLECTION"`
+	Database           string        `envconfig:"MONGODB_FILES_DATABASE"`
 	Username           string        `envconfig:"MONGODB_USERNAME"    json:"-"`
 	Password           string        `envconfig:"MONGODB_PASSWORD"    json:"-"`
 	IsSSL              bool          `envconfig:"MONGODB_IS_SSL"`

@@ -2,12 +2,10 @@ package mongo
 
 import (
 	"context"
-
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	dpMongoLock "github.com/ONSdigital/dp-mongodb/v2/dplock"
-	dpMongoHealth "github.com/ONSdigital/dp-mongodb/v2/health"
-	dpmongo "github.com/ONSdigital/dp-mongodb/v2/mongodb"
+	dpMongoHealth "github.com/ONSdigital/dp-mongodb/v3/health"
+	dpmongo "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 )
 
 const (
@@ -15,14 +13,20 @@ const (
 	queryTimeoutInSeconds   = 15
 )
 
+//go:generate moq -out mock/Client.go -pkg mock . Client
+type Client interface {
+	URI() string
+	Close(context.Context) error
+	Checker(context.Context, *healthcheck.CheckState) error
+	Connection() *dpmongo.MongoConnection
+}
+
 // Mongo represents a simplistic MongoDB configuration.
 type Mongo struct {
-	datasetURL   string
-	connection   *dpmongo.MongoConnection
-	uri          string
-	client       *dpMongoHealth.Client
+	datasetURL string
+	conn       *dpmongo.MongoConnection
+	uri        string
 	healthClient *dpMongoHealth.CheckMongoClient
-	lockClient   *dpMongoLock.Lock
 }
 
 func New(ctx context.Context, cfg *config.Config) (*Mongo, error) {
@@ -41,23 +45,19 @@ func New(ctx context.Context, cfg *config.Config) (*Mongo, error) {
 		Collection:                    cfg.MongoConfig.Collection,
 		IsWriteConcernMajorityEnabled: true,
 		IsStrongReadConcernEnabled:    false,
-		IsSSL:                         cfg.MongoConfig.IsSSL,
+
+		TLSConnectionConfig: dpmongo.TLSConnectionConfig{
+			IsSSL: cfg.MongoConfig.IsSSL,
+		},
 	}
 
 	conn, err := dpmongo.Open(connCfg)
 	if err != nil {
 		return nil, err
 	}
-	m.connection = conn
+	m.conn = conn
 
-	// set up databaseCollectionBuilder here when collections are known
-
-	// Create healthClient and healthclient from session
-	m.client = dpMongoHealth.NewClient(m.connection)
-	m.healthClient = &dpMongoHealth.CheckMongoClient{
-		Client:      *m.client,
-		Healthcheck: m.client.Healthcheck,
-	}
+	m.healthClient = dpMongoHealth.NewClient(m.conn)
 
 	// create lock healthClient here when collections are known
 	return m, nil
@@ -69,11 +69,14 @@ func (m *Mongo) URI() string {
 
 // Close represents mongo session closing within the context deadline
 func (m *Mongo) Close(ctx context.Context) error {
-	m.lockClient.Close(ctx)
-	return m.connection.Close(ctx)
+	return m.conn.Close(ctx)
 }
 
 // Checker is called by the healthcheck library to check the health state of this mongoDB instance
 func (m *Mongo) Checker(ctx context.Context, state *healthcheck.CheckState) error {
 	return m.healthClient.Checker(ctx, state)
+}
+
+func (m *Mongo) Connection() *dpmongo.MongoConnection {
+	return m.conn
 }
