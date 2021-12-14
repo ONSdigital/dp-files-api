@@ -2,11 +2,18 @@ package api
 
 import (
 	"encoding/json"
-	"net/http"
-	"time"
-
 	"github.com/ONSdigital/dp-files-api/files"
+	"net/http"
 )
+
+type jsonError struct {
+	Code        string `json:"code"`
+	Description string `json:"description"`
+}
+
+type jsonErrors struct {
+	Error []jsonError `json:"errors"`
+}
 
 func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -18,35 +25,29 @@ func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) 
 			return
 		}
 
-		m.CreatedAt = time.Now()
-		m.LastModified = time.Now()
-		m.State = "CREATED"
-
-		encoder := json.NewEncoder(w)
-
-		type jsonError struct {
-			Code        string `json:"code"`
-			Description string `json:"description"`
-		}
-
-		type JsonErrors struct {
-			Error []jsonError `json:"errors"`
-		}
-
 		err = creatorFunc(req.Context(), m)
 		if err != nil {
-			if err == files.ErrDuplicateFile {
-				errs := JsonErrors{Error: []jsonError{{Description: err.Error(), Code: "DuplicateFileError"}}}
-				w.WriteHeader(http.StatusBadRequest)
-				encoder.Encode(&errs)
-				return
-			}
-			errs := JsonErrors{Error: []jsonError{{Description: err.Error(), Code: "DatabaseError"}}}
-			w.WriteHeader(http.StatusInternalServerError)
-			encoder.Encode(&errs)
+			handleError(w, err)
 			return
 		}
 
 		w.WriteHeader(http.StatusCreated)
 	}
+}
+
+func handleError(w http.ResponseWriter, err error) {
+	switch err {
+	case files.ErrDuplicateFile:
+		writeError(w, err, "DuplicateFileError", http.StatusBadRequest)
+	default:
+		writeError(w, err, "DatabaseError", http.StatusInternalServerError)
+	}
+}
+
+func writeError(w http.ResponseWriter, err error, code string, httpCode int) {
+	encoder := json.NewEncoder(w)
+
+	errs := jsonErrors{Error: []jsonError{{Description: err.Error(), Code: code}}}
+	w.WriteHeader(httpCode)
+	encoder.Encode(&errs)
 }
