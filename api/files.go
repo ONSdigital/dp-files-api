@@ -8,12 +8,12 @@ import (
 )
 
 type ApiMetaData struct {
-	Path          string    `json:"path" validate:"required"`
-	IsPublishable bool      `json:"is_publishable"`
-	CollectionID  string    `json:"collection_id"`
-	Title         string    `json:"title" `
-	SizeInBytes   int64     `json:"size_in_bytes"`
-	Type          string    `json:"type"`
+	Path          string    `json:"path" validate:"required,uri"`
+	IsPublishable *bool     `json:"is_publishable,omitempty" validate:"required"`
+	CollectionID  string    `json:"collection_id" validate:"required"`
+	Title         string    `json:"title"`
+	SizeInBytes   uint64    `json:"size_in_bytes" validate:"gt=0"`
+	Type          string    `json:"type" validate:"mime-type"`
 	Licence       string    `json:"licence"`
 	LicenceUrl    string    `json:"licence_url"`
 	State         string    `json:"state"`
@@ -29,10 +29,13 @@ func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) 
 			return
 		}
 
+
 		validate := validator.New()
+		validate.RegisterValidation("mime-type", mimeValidator)
 		err = validate.Struct(m)
 		if err != nil {
 			handleError(w, err)
+			return
 		}
 
 		err = creatorFunc(req.Context(), generateStoredMetaData(m))
@@ -48,7 +51,7 @@ func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) 
 func generateStoredMetaData(m ApiMetaData) files.StoredMetaData {
 	return files.StoredMetaData{
 		Path:          m.Path,
-		IsPublishable: m.IsPublishable,
+		IsPublishable: *m.IsPublishable,
 		CollectionID:  m.CollectionID,
 		Title:         m.Title,
 		SizeInBytes:   m.SizeInBytes,
