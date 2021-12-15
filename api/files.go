@@ -25,6 +25,7 @@ func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) 
 
 		err := json.NewDecoder(req.Body).Decode(&m)
 		if err != nil {
+			writeError(w, err, "BadJsonEncoding", http.StatusBadRequest)
 			return
 		}
 

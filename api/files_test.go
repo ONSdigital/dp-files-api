@@ -40,6 +40,32 @@ func TestFileMetaDataCreationUnsuccessful(t *testing.T) {
 	assert.Contains(t, string(response), "it's all gone very wrong")
 }
 
+func TestJsonDecoding(t *testing.T) {
+	rec := httptest.NewRecorder()
+	body := bytes.NewBufferString(`{
+          "path": 123,
+          "is_publishable": "true",
+          "collection_id": false,
+          "title": "The latest Meme",
+          "size_in_bytes": 14794,
+          "type": "image/jpeg",
+          "licence": "OGL v3",
+          "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+        }`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
+
+	errFunc := func(ctx context.Context, metaData files.StoredMetaData) error {
+		return errors.New("it's all gone very wrong")
+	}
+
+	h := api.CreateFileUploadStartedHandler(errFunc)
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	assert.Contains(t, string(response), "BadJsonEncoding")
+}
+
 func TestValidation(t *testing.T) {
 	tests := []struct {
 		name                     string
@@ -86,14 +112,6 @@ func TestValidation(t *testing.T) {
 			incomingJson:             `{"path": "/some/file.txt", "is_publishable":false,"collection_id":"1234-asdfg-54321-qwerty","title":"The latest Meme", "size_in_bytes": 10, "type":"image/jpeg","licence":"OGL v3"}`,
 			expectedErrorDescription: "LicenceUrl required",
 		},
-
-		// TODO put in a JSON validation function
-		//{
-		//	name:                     "Validate that is_publishable a boolean",
-		//	incomingJson:             `{"path": "/some/file.txt","is_publishable":"false", "collection_id":"1234-asdfg-54321-qwerty","title":"The latest Meme","size_in_bytes":14794,"type":"image/jpeg","licence":"OGL v3","licence_url":"http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"}`,
-		//	expectedErrorDescription: "Invalid JSON",
-		//},
-		// validate size in bytes is unint64
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -102,7 +120,7 @@ func TestValidation(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 
-			errFunc := func(ctx context.Context, metaData files.StoredMetaData) error {return nil}
+			errFunc := func(ctx context.Context, metaData files.StoredMetaData) error { return nil }
 
 			h := api.CreateFileUploadStartedHandler(errFunc)
 			h.ServeHTTP(rec, req)
