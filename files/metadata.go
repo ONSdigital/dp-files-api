@@ -5,19 +5,19 @@ import (
 	"time"
 )
 
-type MetaData struct {
-	Path          string    `json:"path" bson:"path"`
-	IsPublishable bool      `json:"is_publishable" bson:"is_publishable"`
-	CollectionID  string    `json:"collection_id" bson:"collection_id"`
-	Title         string    `json:"title" bson:"title"`
-	SizeInBytes   int64     `json:"size_in_bytes" bson:"size_in_bytes"`
-	Type          string    `json:"type" bson:"type"`
-	Licence       string    `json:"licence" bson:"licence"`
-	LicenceUrl    string    `json:"licence_url" bson:"licence_url"`
-	CreatedAt     time.Time `json:"created_at" bson:"created_at"`
-	LastModified  time.Time `json:"last_modified" bson:"last_modified"`
-	State         string    `json:"state" bson:"state"`
+type StoredMetaData struct {
+	Path          string    `bson:"path"`
+	IsPublishable bool      `bson:"is_publishable"`
+	CollectionID  string    `bson:"collection_id"`
+	Title         string    `bson:"title"`
+	SizeInBytes   int64     `bson:"size_in_bytes"`
+	Type          string    `bson:"type"`
+	Licence       string    `bson:"licence"`
+	LicenceUrl    string    `bson:"licence_url"`
+	createdAt     time.Time `bson:"created_at"`
+	lastModified  time.Time `bson:"last_modified"`
+	State         string    `bson:"state"`
 }
 
-type CreateUploadStartedEntry func(ctx context.Context, metaData MetaData) error
+type CreateUploadStartedEntry func(ctx context.Context, metaData StoredMetaData) error
 type MakeUploadComplete func(path string) error

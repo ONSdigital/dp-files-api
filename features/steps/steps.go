@@ -38,7 +38,7 @@ type ExpectedMetaData struct {
 func (c *FilesApiComponent) theFollowingDocumentShouldBeCreated(table *godog.Table) error {
 	ctx := context.Background()
 
-	metaData := files.MetaData{}
+	metaData := files.StoredMetaData{}
 
 	assist := assistdog.NewDefault()
 	keyValues, err := assist.CreateInstance(&ExpectedMetaData{}, table)
@@ -68,7 +68,7 @@ func (c *FilesApiComponent) theFollowingDocumentShouldBeCreated(table *godog.Tab
 func (c *FilesApiComponent) theFileUploadHasBeenRegistered(path string) error {
 	ctx := context.Background()
 
-	m := files.MetaData{Path: path}
+	m := files.StoredMetaData{Path: path}
 	_, err := c.Mongo.Client.Database("files").Collection("metadata").InsertOne(ctx, &m)
 	assert.NoError(c.ApiFeature, err)
 

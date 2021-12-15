@@ -18,7 +18,7 @@ func TestFileMetaDataCreationUnsuccessful(t *testing.T) {
 	body := bytes.NewBufferString(`{"test": "test"}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
 
-	errFunc := func (ctx context.Context, metaData files.MetaData) error {
+	errFunc := func (ctx context.Context, metaData files.StoredMetaData) error {
 		return errors.New("it's all gone very wrong")
 	}
 
