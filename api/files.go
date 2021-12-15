@@ -8,15 +8,14 @@ import (
 )
 
 type ApiMetaData struct {
-	Path          string    `json:"path" validate:"required,uri"`
-	IsPublishable *bool     `json:"is_publishable,omitempty" validate:"required"`
-	CollectionID  string    `json:"collection_id" validate:"required"`
-	Title         string    `json:"title"`
-	SizeInBytes   uint64    `json:"size_in_bytes" validate:"gt=0"`
-	Type          string    `json:"type" validate:"mime-type"`
-	Licence       string    `json:"licence"`
-	LicenceUrl    string    `json:"licence_url"`
-	State         string    `json:"state"`
+	Path          string `json:"path" validate:"required,uri"`
+	IsPublishable *bool  `json:"is_publishable,omitempty" validate:"required"`
+	CollectionID  string `json:"collection_id" validate:"required"`
+	Title         string `json:"title"`
+	SizeInBytes   uint64 `json:"size_in_bytes" validate:"gt=0"`
+	Type          string `json:"type" validate:"mime-type"`
+	Licence       string `json:"licence" validate:"required"`
+	LicenceUrl    string `json:"licence_url" validate:"required"`
 }
 
 func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) http.HandlerFunc {
@@ -28,7 +27,6 @@ func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) 
 		if err != nil {
 			return
 		}
-
 
 		validate := validator.New()
 		validate.RegisterValidation("mime-type", mimeValidator)
