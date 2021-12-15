@@ -10,7 +10,7 @@ type StoredMetaData struct {
 	IsPublishable bool      `bson:"is_publishable"`
 	CollectionID  string    `bson:"collection_id"`
 	Title         string    `bson:"title"`
-	SizeInBytes   int64     `bson:"size_in_bytes"`
+	SizeInBytes   uint64     `bson:"size_in_bytes"`
 	Type          string    `bson:"type"`
 	Licence       string    `bson:"licence"`
 	LicenceUrl    string    `bson:"licence_url"`

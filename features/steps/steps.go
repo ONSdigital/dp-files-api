@@ -52,7 +52,7 @@ func (c *FilesApiComponent) theFollowingDocumentShouldBeCreated(table *godog.Tab
 	assert.NoError(c.ApiFeature, res.Decode(&metaData))
 
 	isPublishable, _ := strconv.ParseBool(expectedMetaData.IsPublishable)
-	sizeInBytes, _ := strconv.ParseInt(expectedMetaData.SizeInBytes, 10, 64)
+	sizeInBytes, _ := strconv.ParseUint(expectedMetaData.SizeInBytes, 10, 64)
 	assert.Equal(c.ApiFeature, isPublishable, metaData.IsPublishable)
 	assert.Equal(c.ApiFeature, expectedMetaData.CollectionID, metaData.CollectionID)
 	assert.Equal(c.ApiFeature, expectedMetaData.Title, metaData.Title)
