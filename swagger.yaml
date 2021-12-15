@@ -1,31 +1,33 @@
 swagger: "2.0"
 info:
   title: "dp-files-api"
-  description: "An"
+  description: "Digital Publishing API for handling file metadata"
   version: 1.0.0
   license:
     name: "Open Government Licence v3.0"
     url: "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
-basePath: "/v1"
+
 schemes:
   - http
+  -
 tags:
-  - name: "hello"
   - name: "private"
+
 paths:
-  /hello:
-    get:
+  /v1/files:
+    post:
       tags:
-        - hello
-      summary: Example hello world endpoint
-      description: Returns an example payload.
+        - File upload started
+      summary: POST's metadata for a file when an upload has started
       produces:
         - application/json
+      parameters:
+        - $ref: '#/parameters/new_file_upload'
       responses:
-        200:
+        201:
           description: OK
-          schema:
-            $ref: "#/definitions/HelloResponse"
+        400:
+          $ref: '#/responses/JsonErrors'
         500:
           $ref: '#/responses/InternalError'
 
@@ -50,9 +52,14 @@ paths:
 responses:
   InternalError:
     description: "Failed to process the request due to an internal error"
+  JsonErrors:
+      type: object
+      description: "Common error response format"
+      schema:
+        $ref: "#/definitions/Error"
 
 definitions:
-  HelloResponse:
+  RegisterFileUploadResponse:
     type: object
     properties:
       message:
@@ -128,3 +135,70 @@ definitions:
         type: string
         description: "The last failed health check date and time of the external service"
         example: "2019-09-22T11:48:51.0000001Z"
+  NewFileUpload:
+    type: object
+    description: "New file upload metadata to be POSTed"
+    required:
+      - "path"
+      - "is_publishable"
+      - "collection_id"
+      - "size_in_bytes"
+      - "type"
+      - "licence"
+      - "licence_url"
+    properties:
+      path:
+        type: string
+        description: "Path to file"
+        example: "/images/meme.jpg"
+      is_publishable:
+        type: boolean
+        description: "Is the file publishable"
+        example: true
+      collection_id:
+        type: string
+        description: "The collection ID to which the file is attached"
+        example: "1234-asdfg-54321-qwerty"
+      title:
+        type: string
+        description: "The title given to the file"
+        example: "The latest Meme"
+      size_in_bytes:
+        type: integer
+        description: "Size of the file in bytes"
+        example: 14794
+      type:
+        type: string
+        description: "The file type"
+        example: "image/jpeg"
+      licence:
+        type: string
+        description: "The type of licence the file has"
+        example: "OGL v3"
+      licence_url:
+        type: string
+        description: "Licence URL"
+        example: "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+  Error:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+          properties:
+            code:
+              type: string
+              example: BadJson
+            description:
+              type: string
+              example: The JSON is not in a valid format
+
+parameters:
+  new_file_upload:
+    name: new_file_upload
+    description: "Register a new file upload"
+    in: body
+    required: true
+    schema:
+      $ref: '#/definitions/NewFileUpload'
