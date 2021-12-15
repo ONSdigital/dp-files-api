@@ -18,7 +18,7 @@ func NewStore(m mongo.Client) *Store {
 	return &Store{m}
 }
 
-func (s *Store) CreateUploadStarted(ctx context.Context, metaData MetaData) error {
+func (s *Store) CreateUploadStarted(ctx context.Context, metaData StoredMetaData) error {
 
 
 	finder := s.m.Connection().C("metadata").Find(bson.M{"path": metaData.Path})
@@ -31,8 +31,8 @@ func (s *Store) CreateUploadStarted(ctx context.Context, metaData MetaData) erro
 		return ErrDuplicateFile
 	}
 
-	metaData.CreatedAt = time.Now()
-	metaData.LastModified = time.Now()
+	metaData.createdAt = time.Now()
+	metaData.lastModified = time.Now()
 	metaData.State = "CREATED"
 
 	_, err = s.m.Connection().C("metadata").Insert(ctx, metaData)
