@@ -3,11 +3,12 @@ package api
 import (
 	"encoding/json"
 	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/go-playground/validator"
 	"net/http"
 )
 
 type ApiMetaData struct {
-	Path          string    `json:"path"`
+	Path          string    `json:"path" validate:"required"`
 	IsPublishable bool      `json:"is_publishable"`
 	CollectionID  string    `json:"collection_id"`
 	Title         string    `json:"title" `
@@ -26,6 +27,12 @@ func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) 
 		err := json.NewDecoder(req.Body).Decode(&m)
 		if err != nil {
 			return
+		}
+
+		validate := validator.New()
+		err = validate.Struct(m)
+		if err != nil {
+			handleError(w, err)
 		}
 
 		err = creatorFunc(req.Context(), generateStoredMetaData(m))

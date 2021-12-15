@@ -2,7 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/go-playground/validator"
 	"net/http"
 )
 
@@ -16,6 +18,23 @@ type jsonErrors struct {
 }
 
 func handleError(w http.ResponseWriter, err error) {
+	if verrs, ok := err.(validator.ValidationErrors); ok {
+		jerrs := jsonErrors{
+			Error: []jsonError{},
+		}
+		for _, verr := range verrs {
+			desc := fmt.Sprintf("%s %s", verr.Field(), verr.Tag())
+			jerrs.Error = append(jerrs.Error, jsonError{Code: "ValidationError", Description: desc})
+		}
+
+		encoder := json.NewEncoder(w)
+
+		w.WriteHeader(http.StatusBadRequest)
+		encoder.Encode(&jerrs)
+
+		return
+	}
+
 	switch err {
 	case files.ErrDuplicateFile:
 		writeError(w, err, "DuplicateFileError", http.StatusBadRequest)
