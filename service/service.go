@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+
 	"github.com/ONSdigital/dp-files-api/api"
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
@@ -36,9 +37,10 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 
 	// Get HTTP Server and ... // TODO: Add any middleware that your service requires
 	r := mux.NewRouter()
-	store := files.NewStore(mongoClient)
+	store := files.NewStore(mongoClient, serviceList.GetClock(ctx))
 
 	r.StrictSlash(true).Path("/v1/files").HandlerFunc(api.CreateFileUploadStartedHandler(store.CreateUploadStarted))
+	r.StrictSlash(true).Path("/v1/files/upload-complete").HandlerFunc(api.MarkUploadCompleteHandler(store.MarkUploadComplete))
 
 	s := serviceList.GetHTTPServer(cfg.BindAddr, r)
 

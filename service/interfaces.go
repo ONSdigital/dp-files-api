@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-files-api/mongo"
 	"net/http"
+
+	"github.com/ONSdigital/dp-files-api/clock"
+	"github.com/ONSdigital/dp-files-api/mongo"
 
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
@@ -18,6 +20,7 @@ type Initialiser interface {
 	DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
 	DoGetMongoDB(ctx context.Context, cfg *config.Config) (mongo.Client, error)
+	DoGetClock(ctx context.Context) clock.Clock
 }
 
 // HTTPServer defines the required methods from the HTTP server
@@ -33,5 +36,3 @@ type HealthChecker interface {
 	Stop()
 	AddCheck(name string, checker healthcheck.Checker) (err error)
 }
-
-

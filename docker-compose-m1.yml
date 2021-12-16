@@ -4,4 +4,4 @@ services:
   http:
     image: template_test
     ports:
-      - "8080:8080"
+      - "26900:26900"

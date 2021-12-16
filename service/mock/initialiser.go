@@ -5,6 +5,7 @@ package mock
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/mongo"
 	"github.com/ONSdigital/dp-files-api/service"
@@ -22,6 +23,9 @@ var _ service.Initialiser = &InitialiserMock{}
 //
 // 		// make and configure a mocked service.Initialiser
 // 		mockedInitialiser := &InitialiserMock{
+// 			DoGetClockFunc: func(ctx context.Context) clock.Clock {
+// 				panic("mock out the DoGetClock method")
+// 			},
 // 			DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) service.HTTPServer {
 // 				panic("mock out the DoGetHTTPServer method")
 // 			},
@@ -38,6 +42,9 @@ var _ service.Initialiser = &InitialiserMock{}
 //
 // 	}
 type InitialiserMock struct {
+	// DoGetClockFunc mocks the DoGetClock method.
+	DoGetClockFunc func(ctx context.Context) clock.Clock
+
 	// DoGetHTTPServerFunc mocks the DoGetHTTPServer method.
 	DoGetHTTPServerFunc func(bindAddr string, router http.Handler) service.HTTPServer
 
@@ -49,6 +56,11 @@ type InitialiserMock struct {
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// DoGetClock holds details about calls to the DoGetClock method.
+		DoGetClock []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
 		// DoGetHTTPServer holds details about calls to the DoGetHTTPServer method.
 		DoGetHTTPServer []struct {
 			// BindAddr is the bindAddr argument value.
@@ -75,9 +87,41 @@ type InitialiserMock struct {
 			Cfg *config.Config
 		}
 	}
+	lockDoGetClock       sync.RWMutex
 	lockDoGetHTTPServer  sync.RWMutex
 	lockDoGetHealthCheck sync.RWMutex
 	lockDoGetMongoDB     sync.RWMutex
+}
+
+// DoGetClock calls DoGetClockFunc.
+func (mock *InitialiserMock) DoGetClock(ctx context.Context) clock.Clock {
+	if mock.DoGetClockFunc == nil {
+		panic("InitialiserMock.DoGetClockFunc: method is nil but Initialiser.DoGetClock was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockDoGetClock.Lock()
+	mock.calls.DoGetClock = append(mock.calls.DoGetClock, callInfo)
+	mock.lockDoGetClock.Unlock()
+	return mock.DoGetClockFunc(ctx)
+}
+
+// DoGetClockCalls gets all the calls that were made to DoGetClock.
+// Check the length with:
+//     len(mockedInitialiser.DoGetClockCalls())
+func (mock *InitialiserMock) DoGetClockCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockDoGetClock.RLock()
+	calls = mock.calls.DoGetClock
+	mock.lockDoGetClock.RUnlock()
+	return calls
 }
 
 // DoGetHTTPServer calls DoGetHTTPServerFunc.

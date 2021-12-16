@@ -28,7 +28,7 @@ func TestFileMetaDataCreationUnsuccessful(t *testing.T) {
         }`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
 
-	errFunc := func(ctx context.Context, metaData files.StoredMetaData) error {
+	errFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 		return errors.New("it's all gone very wrong")
 	}
 
@@ -40,7 +40,7 @@ func TestFileMetaDataCreationUnsuccessful(t *testing.T) {
 	assert.Contains(t, string(response), "it's all gone very wrong")
 }
 
-func TestJsonDecoding(t *testing.T) {
+func TestJsonDecodingMetaDataCreation(t *testing.T) {
 	rec := httptest.NewRecorder()
 	body := bytes.NewBufferString(`{
           "path": 123,
@@ -54,7 +54,7 @@ func TestJsonDecoding(t *testing.T) {
         }`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
 
-	errFunc := func(ctx context.Context, metaData files.StoredMetaData) error {
+	errFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 		return errors.New("it's all gone very wrong")
 	}
 
@@ -66,7 +66,7 @@ func TestJsonDecoding(t *testing.T) {
 	assert.Contains(t, string(response), "BadJsonEncoding")
 }
 
-func TestValidation(t *testing.T) {
+func TestValidationMetaDataCreation(t *testing.T) {
 	tests := []struct {
 		name                     string
 		incomingJson             string
@@ -120,7 +120,7 @@ func TestValidation(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 
-			errFunc := func(ctx context.Context, metaData files.StoredMetaData) error { return nil }
+			errFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error { return nil }
 
 			h := api.CreateFileUploadStartedHandler(errFunc)
 			h.ServeHTTP(rec, req)
@@ -133,3 +133,91 @@ func TestValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestMarkFileUploadCompleteUnsuccessful(t *testing.T) {
+	rec := httptest.NewRecorder()
+	body := bytes.NewBufferString(`{
+          "path": "/images/meme.jpg",
+          "etag": "1234-asdfg-54321-qwerty"
+        }`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
+
+	errFunc := func(ctx context.Context, metaData files.StoredUploadCompleteMetaData) error {
+		return errors.New("it's all gone very wrong")
+	}
+
+	h := api.MarkUploadCompleteHandler(errFunc)
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	assert.Contains(t, string(response), "it's all gone very wrong")
+}
+
+func TestJsonDecodingUploadComplete(t *testing.T) {
+	rec := httptest.NewRecorder()
+	body := bytes.NewBufferString(`{
+          "path": true,
+          "etag": 1234,
+        }`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
+
+	errFunc := func(ctx context.Context, metaData files.StoredUploadCompleteMetaData) error {
+		return errors.New("it's all gone very wrong")
+	}
+
+	h := api.MarkUploadCompleteHandler(errFunc)
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	assert.Contains(t, string(response), "BadJsonEncoding")
+}
+
+func TestValidateUploadComplete(t *testing.T) {
+	tests := []struct {
+		name                     string
+		incomingJson             string
+		expectedErrorDescription string
+	}{
+		{
+			name:                     "Validate that path is required",
+			incomingJson:             `{"etag": "1234-asdfg-54321-qwerty"}`,
+			expectedErrorDescription: "Path required",
+		},
+		{
+			name:                     "Validate that path uri is valid",
+			incomingJson:             `{"path": ".jpg","etag": "1234-asdfg-54321-qwerty"}`,
+			expectedErrorDescription: "Path uri",
+		},
+		{
+			name:                     "Validate that etag is required",
+			incomingJson:             `{"path": "/valid/path.jpg"}`,
+			expectedErrorDescription: "Etag required",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			body := bytes.NewBufferString(test.incomingJson)
+			req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
+
+			rec := httptest.NewRecorder()
+
+			nilFunc := func(ctx context.Context, metaData files.StoredUploadCompleteMetaData) error { return nil }
+
+			h := api.MarkUploadCompleteHandler(nilFunc)
+			h.ServeHTTP(rec, req)
+
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+			expectedResponse := fmt.Sprintf(`{"errors": [{"code": "ValidationError", "description": "%s"}]}`, test.expectedErrorDescription)
+			response, _ := ioutil.ReadAll(rec.Body)
+			assert.JSONEq(t, expectedResponse, string(response))
+		})
+	}
+}
+
+
+
+
+

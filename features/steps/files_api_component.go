@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ONSdigital/dp-files-api/clock"
+
 	componenttest "github.com/ONSdigital/dp-component-test"
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/mongo"
@@ -46,6 +48,17 @@ func (e *External) DoGetHTTPServer(bindAddr string, r http.Handler) service.HTTP
 	return e.Server
 }
 
+func (e External) DoGetClock(ctx context.Context) clock.Clock {
+	return testClock{}
+}
+
+type testClock struct{}
+
+func (tt testClock) GetCurrentTime() time.Time {
+	t, _ := time.Parse(time.RFC3339, "2021-10-19T09:30:30Z")
+	return t
+}
+
 func NewFilesApiComponent(murl string) *FilesApiComponent {
 	buf := bytes.NewBufferString("")
 	log.SetDestination(buf, buf)
@@ -82,7 +95,6 @@ func (d *FilesApiComponent) Initialiser() (http.Handler, error) {
 	cfg, _ := config.Get()
 	ctx := context.Background()
 	d.svc, _ = service.Run(ctx, cfg, d.svcList, "1", "1", "1", d.errChan)
-
 	return d.DpHttpServer.Handler, nil
 }
 
