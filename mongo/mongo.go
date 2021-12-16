@@ -10,7 +10,7 @@ import (
 
 const (
 	connectTimeoutInSeconds = 5
-	queryTimeoutInSeconds   = 15
+	queryTimeoutInSeconds   = 5
 )
 
 //go:generate moq -out mock/Client.go -pkg mock . Client

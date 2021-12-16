@@ -3,19 +3,21 @@ package service_test
 import (
 	"context"
 	"fmt"
-	"github.com/ONSdigital/dp-files-api/mongo"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/ONSdigital/dp-files-api/clock"
+	"github.com/ONSdigital/dp-files-api/mongo"
+
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 
 	"github.com/ONSdigital/dp-files-api/config"
+	mongoMock "github.com/ONSdigital/dp-files-api/mongo/mock"
 	"github.com/ONSdigital/dp-files-api/service"
 	"github.com/ONSdigital/dp-files-api/service/mock"
 	serviceMock "github.com/ONSdigital/dp-files-api/service/mock"
-	mongoMock "github.com/ONSdigital/dp-files-api/mongo/mock"
 
 	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
@@ -39,6 +41,10 @@ var funcDoGetHealthcheckErr = func(cfg *config.Config, buildTime string, gitComm
 
 var funcDoGetHTTPServerNil = func(bindAddr string, router http.Handler) service.HTTPServer {
 	return nil
+}
+
+var funcDoGetClock = func(ctx context.Context) clock.Clock {
+	return clock.SystemClock{}
 }
 
 func TestRun(t *testing.T) {
@@ -94,7 +100,8 @@ func TestRun(t *testing.T) {
 			initMock := &serviceMock.InitialiserMock{
 				DoGetHTTPServerFunc:  funcDoGetHTTPServerNil,
 				DoGetHealthCheckFunc: funcDoGetHealthcheckErr,
-				DoGetMongoDBFunc: funcDoGetMongoDb,
+				DoGetMongoDBFunc:     funcDoGetMongoDb,
+				DoGetClockFunc:       funcDoGetClock,
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
@@ -116,7 +123,8 @@ func TestRun(t *testing.T) {
 			initMock := &serviceMock.InitialiserMock{
 				DoGetHTTPServerFunc:  funcDoGetHTTPServer,
 				DoGetHealthCheckFunc: funcDoGetHealthcheckOk,
-				DoGetMongoDBFunc: funcDoGetMongoDb,
+				DoGetMongoDBFunc:     funcDoGetMongoDb,
+				DoGetClockFunc:       funcDoGetClock,
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
@@ -182,7 +190,8 @@ func TestRun(t *testing.T) {
 			initMock := &serviceMock.InitialiserMock{
 				DoGetHealthCheckFunc: funcDoGetHealthcheckOk,
 				DoGetHTTPServerFunc:  funcDoGetFailingHTTPSerer,
-				DoGetMongoDBFunc: funcDoGetMongoDb,
+				DoGetMongoDBFunc:     funcDoGetMongoDb,
+				DoGetClockFunc:       funcDoGetClock,
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
@@ -244,6 +253,7 @@ func TestClose(t *testing.T) {
 						URIFunc:     nil,
 					}, nil
 				},
+				DoGetClockFunc: funcDoGetClock,
 			}
 
 			svcErrors := make(chan error, 1)
@@ -278,6 +288,7 @@ func TestClose(t *testing.T) {
 						URIFunc:     nil,
 					}, nil
 				},
+				DoGetClockFunc: funcDoGetClock,
 			}
 
 			svcErrors := make(chan error, 1)

@@ -40,8 +40,17 @@ test-component:
 
 .PHONY: docker_test
 docker_test:
-	docker build -f Dockerfile.m1 . -t template_test --target=test
+	docker-compose -f docker-compose-m1.yml down
+	docker buildx build --platform linux/amd64 -f Dockerfile.m1 . -t template_test --target=test
 	docker-compose -f docker-compose-m1.yml up -d
-	docker-compose -f docker-compose-m1.yml exec -T http go test ./...
+	#docker-compose -f docker-compose-m1.yml exec -T http go test ./...
 	docker-compose -f docker-compose-m1.yml exec -T http go test -component
 	docker-compose -f docker-compose-m1.yml down
+
+.PHONY: test-coverage
+test-coverage:
+	rm combined-coverage.out component-coverage.out coverage.out
+	go test -cover ./... -coverprofile=coverage.out
+	go test -component -cover -coverpkg=github.com/ONSdigital/dp-files-api/... -coverprofile=component-coverage.out
+	gocovmerge coverage.out component-coverage.out > combined-coverage.out
+	go tool cover -html=combined-coverage.out

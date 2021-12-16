@@ -9,7 +9,9 @@ info:
 
 schemes:
   - http
-  -
+
+basePath: http://localhost:26900/
+
 tags:
   - name: "private"
 
@@ -23,6 +25,23 @@ paths:
         - application/json
       parameters:
         - $ref: '#/parameters/new_file_upload'
+      responses:
+        201:
+          description: OK
+        400:
+          $ref: '#/responses/JsonErrors'
+        500:
+          $ref: '#/responses/InternalError'
+
+  /v1/files/upload-complete:
+    post:
+      tags:
+        - File upload complete
+      summary: POST's metadata for a file when an upload has completed
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/file_upload_complete'
       responses:
         201:
           description: OK
@@ -53,10 +72,10 @@ responses:
   InternalError:
     description: "Failed to process the request due to an internal error"
   JsonErrors:
-      type: object
-      description: "Common error response format"
-      schema:
-        $ref: "#/definitions/Error"
+    type: object
+    description: "Common error response format"
+    schema:
+      $ref: "#/definitions/Error"
 
 definitions:
   RegisterFileUploadResponse:
@@ -179,6 +198,21 @@ definitions:
         type: string
         description: "Licence URL"
         example: "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+  FileUploadComplete:
+    type: object
+    description: "File upload complete metadata to be POSTed"
+    required:
+      - "path"
+      - "etag"
+    properties:
+      path:
+        type: string
+        description: "Path to file"
+        example: "/images/meme.jpg"
+      etag:
+        type: string
+        description: "The etag for the file"
+        example: "194577a7e20bdcc7afbb718f502c134c"
   Error:
     type: object
     properties:
@@ -202,3 +236,11 @@ parameters:
     required: true
     schema:
       $ref: '#/definitions/NewFileUpload'
+
+  file_upload_complete:
+    name: new_file_upload
+    description: "Register that a file upload has completed"
+    in: body
+    required: true
+    schema:
+      $ref: '#/definitions/FileUploadComplete'

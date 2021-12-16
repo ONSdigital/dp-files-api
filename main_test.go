@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"testing"
 
@@ -72,6 +73,10 @@ func TestComponent(t *testing.T) {
 			TestSuiteInitializer: f.InitializeTestSuite,
 			Options:              &opts,
 		}.Run()
+
+		fmt.Println("=================================")
+		fmt.Printf("Component test coverage: %.2f%%\n", testing.Coverage()*100)
+		fmt.Println("=================================")
 
 		if status > 0 {
 			t.Fail()

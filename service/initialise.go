@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"net/http"
+
+	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/mongo"
 	"github.com/ONSdigital/log.go/v2/log"
-	"net/http"
 
 	"github.com/ONSdigital/dp-files-api/config"
 
@@ -55,6 +57,10 @@ func (e *ExternalServiceList) GetMongoDB(ctx context.Context, cfg *config.Config
 	return db, nil
 }
 
+func (e *ExternalServiceList) GetClock(ctx context.Context) clock.Clock {
+	return e.Init.DoGetClock(ctx)
+}
+
 // DoGetHTTPServer creates an HTTP Server with the provided bind address and router
 func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer {
 	s := dphttp.NewServer(bindAddr, router)
@@ -80,4 +86,8 @@ func (e *Init) DoGetMongoDB(ctx context.Context, cfg *config.Config) (mongo.Clie
 		return mongodb, err
 	}
 	return mongodb, nil
+}
+
+func (e *Init) DoGetClock(ctx context.Context) clock.Clock {
+	return clock.SystemClock{}
 }

@@ -38,6 +38,10 @@ func handleError(w http.ResponseWriter, err error) {
 	switch err {
 	case files.ErrDuplicateFile:
 		writeError(w, err, "DuplicateFileError", http.StatusBadRequest)
+	case files.ErrFileNotRegistered:
+		writeError(w, err, "FileNotRegistered", http.StatusNotFound)
+	case files.ErrFileNotInCreatedState:
+		writeError(w, err, "FileStateError", http.StatusConflict)
 	default:
 		writeError(w, err, "DatabaseError", http.StatusInternalServerError)
 	}

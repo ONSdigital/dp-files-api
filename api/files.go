@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-type ApiMetaData struct {
+type RegisterMetaData struct {
 	Path          string `json:"path" validate:"required,uri"`
 	IsPublishable *bool  `json:"is_publishable,omitempty" validate:"required"`
 	CollectionID  string `json:"collection_id" validate:"required"`
@@ -18,10 +18,15 @@ type ApiMetaData struct {
 	LicenceUrl    string `json:"licence_url" validate:"required"`
 }
 
-func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) http.HandlerFunc {
+type UploadCompleteMetaData struct {
+	Path string `json:"path" validate:"required,uri"`
+	Etag string `json:"etag" validate:"required"`
+}
+
+func CreateFileUploadStartedHandler(register files.CreateUploadStartedEntry) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
-		m := ApiMetaData{}
+		m := RegisterMetaData{}
 
 		err := json.NewDecoder(req.Body).Decode(&m)
 		if err != nil {
@@ -37,7 +42,7 @@ func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) 
 			return
 		}
 
-		err = creatorFunc(req.Context(), generateStoredMetaData(m))
+		err = register(req.Context(), generateStoredRegisterMetaData(m))
 		if err != nil {
 			handleError(w, err)
 			return
@@ -47,8 +52,34 @@ func CreateFileUploadStartedHandler(creatorFunc files.CreateUploadStartedEntry) 
 	}
 }
 
-func generateStoredMetaData(m ApiMetaData) files.StoredMetaData {
-	return files.StoredMetaData{
+func MarkUploadCompleteHandler(markUploaded files.MarkUploadComplete) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		m := UploadCompleteMetaData{}
+
+		err := json.NewDecoder(req.Body).Decode(&m)
+		if err != nil {
+			writeError(w, err, "BadJsonEncoding", http.StatusBadRequest)
+			return
+		}
+
+		validate := validator.New()
+		err = validate.Struct(m)
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+
+		err = markUploaded(req.Context(), generateStoredUploadMetaData(m))
+		if err != nil {
+			handleError(w, err)
+		}
+
+		w.WriteHeader(http.StatusCreated)
+	}
+}
+
+func generateStoredRegisterMetaData(m RegisterMetaData) files.StoredRegisteredMetaData {
+	return files.StoredRegisteredMetaData{
 		Path:          m.Path,
 		IsPublishable: *m.IsPublishable,
 		CollectionID:  m.CollectionID,
@@ -57,5 +88,12 @@ func generateStoredMetaData(m ApiMetaData) files.StoredMetaData {
 		Type:          m.Type,
 		Licence:       m.Licence,
 		LicenceUrl:    m.LicenceUrl,
+	}
+}
+
+func generateStoredUploadMetaData(m UploadCompleteMetaData) files.StoredUploadCompleteMetaData {
+	return files.StoredUploadCompleteMetaData{
+		Path: m.Path,
+		Etag: m.Etag,
 	}
 }
