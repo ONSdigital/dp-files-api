@@ -38,12 +38,19 @@ convey:
 test-component:
 	go test -cover -coverpkg=github.com/ONSdigital/dp-files-api/... -component
 
-.PHONY: docker_test
-docker_test:
+.PHONY: docker-test
+docker-test:
+	docker-compose -f docker-compose-m1.yml down
+	docker build -f Dockerfile.m1 . -t template_test --target=test
+	docker-compose -f docker-compose-m1.yml up -d
+	docker-compose -f docker-compose-m1.yml exec -T http go test -component
+	docker-compose -f docker-compose-m1.yml down
+
+dockerm1-test:
 	docker-compose -f docker-compose-m1.yml down
 	docker buildx build --platform linux/amd64 -f Dockerfile.m1 . -t template_test --target=test
 	docker-compose -f docker-compose-m1.yml up -d
-	#docker-compose -f docker-compose-m1.yml exec -T http go test ./...
+	docker-compose -f docker-compose-m1.yml exec -T http go test ./...
 	docker-compose -f docker-compose-m1.yml exec -T http go test -component
 	docker-compose -f docker-compose-m1.yml down
 
