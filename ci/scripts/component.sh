@@ -1,5 +1,5 @@
 #!/bin/bash -eux
 
 pushd dp-files-api
-  make test-component
+  make docker-test
 popd
