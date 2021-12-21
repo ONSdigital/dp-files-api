@@ -30,7 +30,7 @@ func CreateFileUploadStartedHandler(register files.CreateUploadStartedEntry) htt
 
 		err := json.NewDecoder(req.Body).Decode(&m)
 		if err != nil {
-			writeError(w, err, "BadJsonEncoding", http.StatusBadRequest)
+			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
 			return
 		}
 
@@ -58,7 +58,7 @@ func MarkUploadCompleteHandler(markUploaded files.MarkUploadComplete) http.Handl
 
 		err := json.NewDecoder(req.Body).Decode(&m)
 		if err != nil {
-			writeError(w, err, "BadJsonEncoding", http.StatusBadRequest)
+			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
 			return
 		}
 
