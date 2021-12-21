@@ -18,39 +18,39 @@ type jsonErrors struct {
 }
 
 func handleError(w http.ResponseWriter, err error) {
-	if verrs, ok := err.(validator.ValidationErrors); ok {
-		jerrs := jsonErrors{
-			Error: []jsonError{},
-		}
-		for _, verr := range verrs {
-			desc := fmt.Sprintf("%s %s", verr.Field(), verr.Tag())
-			jerrs.Error = append(jerrs.Error, jsonError{Code: "ValidationError", Description: desc})
-		}
-
-		encoder := json.NewEncoder(w)
-
-		w.WriteHeader(http.StatusBadRequest)
-		encoder.Encode(&jerrs)
-
+	if validationErrs, ok := err.(validator.ValidationErrors); ok {
+		writeError(w, buildValidationErrors(validationErrs), http.StatusBadRequest)
 		return
 	}
 
 	switch err {
 	case files.ErrDuplicateFile:
-		writeError(w, err, "DuplicateFileError", http.StatusBadRequest)
+		writeError(w, buildErrors(err, "DuplicateFileError"), http.StatusBadRequest)
 	case files.ErrFileNotRegistered:
-		writeError(w, err, "FileNotRegistered", http.StatusNotFound)
+		writeError(w, buildErrors(err, "FileNotRegistered"), http.StatusNotFound)
 	case files.ErrFileNotInCreatedState:
-		writeError(w, err, "FileStateError", http.StatusConflict)
+		writeError(w, buildErrors(err, "FileStateError"), http.StatusConflict)
 	default:
-		writeError(w, err, "DatabaseError", http.StatusInternalServerError)
+		writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)
 	}
 }
 
-func writeError(w http.ResponseWriter, err error, code string, httpCode int) {
-	encoder := json.NewEncoder(w)
+func buildValidationErrors(validationErrs validator.ValidationErrors) jsonErrors {
+	jsonErrs := jsonErrors{Error: []jsonError{}}
 
-	errs := jsonErrors{Error: []jsonError{{Description: err.Error(), Code: code}}}
+	for _, validationErr := range validationErrs {
+		desc := fmt.Sprintf("%s %s", validationErr.Field(), validationErr.Tag())
+		jsonErrs.Error = append(jsonErrs.Error, jsonError{Code: "ValidationError", Description: desc})
+	}
+	return jsonErrs
+}
+
+func writeError(w http.ResponseWriter, errs jsonErrors, httpCode int) {
+	encoder := json.NewEncoder(w)
 	w.WriteHeader(httpCode)
 	encoder.Encode(&errs)
+}
+
+func buildErrors(err error, code string) jsonErrors {
+	return jsonErrors{Error: []jsonError{{Description: err.Error(), Code: code}}}
 }
