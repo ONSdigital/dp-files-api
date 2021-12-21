@@ -23,8 +23,6 @@ func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the file upload "([^"]*)" is marked as complete with the etag "([^"]*)"$`, c.theFileUploadIsMarkedAsCompleteWithTheEtag)
 	ctx.Step(`^the following document entry should be look like:$`, c.theFollowingDocumentEntryShouldBeLookLike)
 	ctx.Step(`^the file upload "([^"]*)" has not been registered$`, c.theFileUploadHasNotBeenRegistered)
-
-
 }
 
 func (c *FilesApiComponent) iRegisterFile(payload *godog.DocString) error {
