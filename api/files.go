@@ -62,8 +62,7 @@ func MarkUploadCompleteHandler(markUploaded files.MarkUploadComplete) http.Handl
 			return
 		}
 
-		validate := validator.New()
-		err = validate.Struct(m)
+		err = validator.New().Struct(m)
 		if err != nil {
 			handleError(w, err)
 			return
