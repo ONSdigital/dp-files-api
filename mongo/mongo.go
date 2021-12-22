@@ -66,7 +66,7 @@ func (m *Mongo) Close(ctx context.Context) error {
 	return m.conn.Close(ctx)
 }
 
-// Checker is called by the healthcheck library to check the health state of this mongoDB instance
+// Checker is called by the healthcheck library to health the health state of this mongoDB instance
 func (m *Mongo) Checker(ctx context.Context, state *healthcheck.CheckState) error {
 	return m.healthClient.Checker(ctx, state)
 }

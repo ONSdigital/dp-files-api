@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -22,6 +23,9 @@ type ComponentTest struct {
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
+	buf := bytes.NewBufferString("")
+	log.SetDestination(buf, buf)
+	
 	opt := componenttest.MongoOptions{
 		MongoVersion: "4.4.0",
 		DatabaseName: "files",

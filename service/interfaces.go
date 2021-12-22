@@ -2,37 +2,20 @@ package service
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/ONSdigital/dp-files-api/health"
 	"net/http"
-
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/mongo"
-
-	"github.com/ONSdigital/dp-files-api/config"
-	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 )
 
-//go:generate moq -out mock/initialiser.go -pkg mock . Initialiser
-//go:generate moq -out mock/server.go -pkg mock . HTTPServer
-//go:generate moq -out mock/healthCheck.go -pkg mock . HealthChecker
+//go:generate moq -out mock/serviceContainer.go -pkg mock . ServiceContainer
 
-// Initialiser defines the methods to initialise external services
-type Initialiser interface {
-	DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer
-	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
-	DoGetMongoDB(ctx context.Context, cfg *config.Config) (mongo.Client, error)
-	DoGetClock(ctx context.Context) clock.Clock
-}
-
-// HTTPServer defines the required methods from the HTTP server
-type HTTPServer interface {
-	ListenAndServe() error
+type ServiceContainer interface {
+	GetHTTPServer(router http.Handler) files.HTTPServer
+	GetHealthCheck() (health.Checker, error)
+	GetMongoDB(ctx context.Context) (mongo.Client, error)
+	GetClock(ctx context.Context) clock.Clock
 	Shutdown(ctx context.Context) error
 }
 
-// HealthChecker defines the required methods from Healthcheck
-type HealthChecker interface {
-	Handler(w http.ResponseWriter, req *http.Request)
-	Start(ctx context.Context)
-	Stop()
-	AddCheck(name string, checker healthcheck.Checker) (err error)
-}

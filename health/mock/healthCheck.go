@@ -5,22 +5,22 @@ package mock
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-files-api/service"
+	"github.com/ONSdigital/dp-files-api/health"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"net/http"
 	"sync"
 )
 
-// Ensure, that HealthCheckerMock does implement service.HealthChecker.
+// Ensure, that CheckerMock does implement health.Checker.
 // If this is not the case, regenerate this file with moq.
-var _ service.HealthChecker = &HealthCheckerMock{}
+var _ health.Checker = &CheckerMock{}
 
-// HealthCheckerMock is a mock implementation of service.HealthChecker.
+// CheckerMock is a mock implementation of health.Checker.
 //
-// 	func TestSomethingThatUsesHealthChecker(t *testing.T) {
+// 	func TestSomethingThatUsesChecker(t *testing.T) {
 //
-// 		// make and configure a mocked service.HealthChecker
-// 		mockedHealthChecker := &HealthCheckerMock{
+// 		// make and configure a mocked health.Checker
+// 		mockedChecker := &CheckerMock{
 // 			AddCheckFunc: func(name string, checker healthcheck.Checker) error {
 // 				panic("mock out the AddCheck method")
 // 			},
@@ -35,11 +35,11 @@ var _ service.HealthChecker = &HealthCheckerMock{}
 // 			},
 // 		}
 //
-// 		// use mockedHealthChecker in code that requires service.HealthChecker
+// 		// use mockedChecker in code that requires health.Checker
 // 		// and then make assertions.
 //
 // 	}
-type HealthCheckerMock struct {
+type CheckerMock struct {
 	// AddCheckFunc mocks the AddCheck method.
 	AddCheckFunc func(name string, checker healthcheck.Checker) error
 
@@ -84,9 +84,9 @@ type HealthCheckerMock struct {
 }
 
 // AddCheck calls AddCheckFunc.
-func (mock *HealthCheckerMock) AddCheck(name string, checker healthcheck.Checker) error {
+func (mock *CheckerMock) AddCheck(name string, checker healthcheck.Checker) error {
 	if mock.AddCheckFunc == nil {
-		panic("HealthCheckerMock.AddCheckFunc: method is nil but HealthChecker.AddCheck was just called")
+		panic("CheckerMock.AddCheckFunc: method is nil but Checker.AddCheck was just called")
 	}
 	callInfo := struct {
 		Name    string
@@ -103,8 +103,8 @@ func (mock *HealthCheckerMock) AddCheck(name string, checker healthcheck.Checker
 
 // AddCheckCalls gets all the calls that were made to AddCheck.
 // Check the length with:
-//     len(mockedHealthChecker.AddCheckCalls())
-func (mock *HealthCheckerMock) AddCheckCalls() []struct {
+//     len(mockedChecker.AddCheckCalls())
+func (mock *CheckerMock) AddCheckCalls() []struct {
 	Name    string
 	Checker healthcheck.Checker
 } {
@@ -119,9 +119,9 @@ func (mock *HealthCheckerMock) AddCheckCalls() []struct {
 }
 
 // Handler calls HandlerFunc.
-func (mock *HealthCheckerMock) Handler(w http.ResponseWriter, req *http.Request) {
+func (mock *CheckerMock) Handler(w http.ResponseWriter, req *http.Request) {
 	if mock.HandlerFunc == nil {
-		panic("HealthCheckerMock.HandlerFunc: method is nil but HealthChecker.Handler was just called")
+		panic("CheckerMock.HandlerFunc: method is nil but Checker.Handler was just called")
 	}
 	callInfo := struct {
 		W   http.ResponseWriter
@@ -138,8 +138,8 @@ func (mock *HealthCheckerMock) Handler(w http.ResponseWriter, req *http.Request)
 
 // HandlerCalls gets all the calls that were made to Handler.
 // Check the length with:
-//     len(mockedHealthChecker.HandlerCalls())
-func (mock *HealthCheckerMock) HandlerCalls() []struct {
+//     len(mockedChecker.HandlerCalls())
+func (mock *CheckerMock) HandlerCalls() []struct {
 	W   http.ResponseWriter
 	Req *http.Request
 } {
@@ -154,9 +154,9 @@ func (mock *HealthCheckerMock) HandlerCalls() []struct {
 }
 
 // Start calls StartFunc.
-func (mock *HealthCheckerMock) Start(ctx context.Context) {
+func (mock *CheckerMock) Start(ctx context.Context) {
 	if mock.StartFunc == nil {
-		panic("HealthCheckerMock.StartFunc: method is nil but HealthChecker.Start was just called")
+		panic("CheckerMock.StartFunc: method is nil but Checker.Start was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
@@ -171,8 +171,8 @@ func (mock *HealthCheckerMock) Start(ctx context.Context) {
 
 // StartCalls gets all the calls that were made to Start.
 // Check the length with:
-//     len(mockedHealthChecker.StartCalls())
-func (mock *HealthCheckerMock) StartCalls() []struct {
+//     len(mockedChecker.StartCalls())
+func (mock *CheckerMock) StartCalls() []struct {
 	Ctx context.Context
 } {
 	var calls []struct {
@@ -185,9 +185,9 @@ func (mock *HealthCheckerMock) StartCalls() []struct {
 }
 
 // Stop calls StopFunc.
-func (mock *HealthCheckerMock) Stop() {
+func (mock *CheckerMock) Stop() {
 	if mock.StopFunc == nil {
-		panic("HealthCheckerMock.StopFunc: method is nil but HealthChecker.Stop was just called")
+		panic("CheckerMock.StopFunc: method is nil but Checker.Stop was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -199,8 +199,8 @@ func (mock *HealthCheckerMock) Stop() {
 
 // StopCalls gets all the calls that were made to Stop.
 // Check the length with:
-//     len(mockedHealthChecker.StopCalls())
-func (mock *HealthCheckerMock) StopCalls() []struct {
+//     len(mockedChecker.StopCalls())
+func (mock *CheckerMock) StopCalls() []struct {
 } {
 	var calls []struct {
 	}
