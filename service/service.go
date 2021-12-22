@@ -38,7 +38,7 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 	store := files.NewStore(mongoClient, serviceList.GetClock(ctx))
 
 	r := mux.NewRouter() // TODO: Add any middleware that your service requires
-	r.StrictSlash(true).Path("/v1/files").HandlerFunc(api.CreateFileUploadStartedHandler(store.CreateUploadStarted))
+	r.StrictSlash(true).Path("/v1/files/register").HandlerFunc(api.CreateFileUploadStartedHandler(store.CreateUploadStarted))
 	r.StrictSlash(true).Path("/v1/files/upload-complete").HandlerFunc(api.MarkUploadCompleteHandler(store.MarkUploadComplete))
 	s := serviceList.GetHTTPServer(cfg.BindAddr, r)
 

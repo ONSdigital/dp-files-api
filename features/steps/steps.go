@@ -26,7 +26,7 @@ func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 }
 
 func (c *FilesApiComponent) iRegisterFile(payload *godog.DocString) error {
-	return c.ApiFeature.IPostToWithBody("/v1/files", payload)
+	return c.ApiFeature.IPostToWithBody("/v1/files/register", payload)
 }
 
 type ExpectedMetaData struct {
