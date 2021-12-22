@@ -2,13 +2,15 @@ package service
 
 import (
 	"context"
+	"errors"
+	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/ONSdigital/dp-files-api/health"
+	"github.com/ONSdigital/log.go/v2/log"
 	"net/http"
 
 	"github.com/ONSdigital/dp-files-api/clock"
-	"github.com/ONSdigital/dp-files-api/mongo"
-	"github.com/ONSdigital/log.go/v2/log"
-
 	"github.com/ONSdigital/dp-files-api/config"
+	"github.com/ONSdigital/dp-files-api/mongo"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/http"
@@ -16,78 +18,69 @@ import (
 
 // ExternalServiceList holds the initialiser and initialisation state of external services.
 type ExternalServiceList struct {
-	HealthCheck bool
-	MongoDB     bool
-	Init        Initialiser
+	config        *config.Config
+	buildTime     string
+	gitCommit     string
+	version       string
+	mongo         mongo.Client
+	httpServer    files.HTTPServer
+	healthChecker health.Checker
 }
 
 // NewServiceList creates a new service list with the provided initialiser
-func NewServiceList(initialiser Initialiser) *ExternalServiceList {
+func NewServiceList(cfg *config.Config, buildTime, gitCommit, version string) *ExternalServiceList {
 	return &ExternalServiceList{
-		HealthCheck: false,
-		Init:        initialiser,
+		config:    cfg,
+		buildTime: buildTime,
+		gitCommit: gitCommit,
+		version:   version,
 	}
 }
-
-// Init implements the Initialiser interface to initialise dependencies
-type Init struct{}
 
 // GetHTTPServer creates an http server
-func (e *ExternalServiceList) GetHTTPServer(bindAddr string, router http.Handler) HTTPServer {
-	s := e.Init.DoGetHTTPServer(bindAddr, router)
-	return s
-}
-
-// GetHealthCheck creates a healthcheck with versionInfo and sets teh HealthCheck flag to true
-func (e *ExternalServiceList) GetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error) {
-	hc, err := e.Init.DoGetHealthCheck(cfg, buildTime, gitCommit, version)
-	if err != nil {
-		return nil, err
-	}
-	e.HealthCheck = true
-	return hc, nil
-}
-
-func (e *ExternalServiceList) GetMongoDB(ctx context.Context, cfg *config.Config) (mongo.Client, error) {
-	db, err := e.Init.DoGetMongoDB(ctx, cfg)
-	if err != nil {
-		return nil, err
-	}
-	e.MongoDB = true
-	return db, nil
-}
-
-func (e *ExternalServiceList) GetClock(ctx context.Context) clock.Clock {
-	return e.Init.DoGetClock(ctx)
-}
-
-// DoGetHTTPServer creates an HTTP Server with the provided bind address and router
-func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer {
-	s := dphttp.NewServer(bindAddr, router)
+func (e *ExternalServiceList) GetHTTPServer(router http.Handler) files.HTTPServer {
+	s := dphttp.NewServer(e.config.BindAddr, router)
 	s.HandleOSSignals = false
 	return s
 }
 
-// DoGetHealthCheck creates a healthcheck with versionInfo
-func (e *Init) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error) {
-	versionInfo, err := healthcheck.NewVersionInfo(buildTime, gitCommit, version)
+// GetHealthCheck creates a healthcheck with versionInfo and sets teh HealthCheck flag to true
+func (e *ExternalServiceList) GetHealthCheck() (health.Checker, error) {
+	versionInfo, err := healthcheck.NewVersionInfo(e.buildTime, e.gitCommit, e.version)
 	if err != nil {
 		return nil, err
 	}
-	hc := healthcheck.New(versionInfo, cfg.HealthCheckCriticalTimeout, cfg.HealthCheckInterval)
+	hc := healthcheck.New(versionInfo, e.config.HealthCheckCriticalTimeout, e.config.HealthCheckInterval)
 	return &hc, nil
 }
 
-// GetMongoDB returns a mongodb health client and dataset mongo object
-func (e *Init) DoGetMongoDB(ctx context.Context, cfg *config.Config) (mongo.Client, error) {
-	mongodb, err := mongo.New(cfg)
-	if err != nil {
-		log.Error(ctx, "failed to initialise mongo", err)
-		return mongodb, err
-	}
-	return mongodb, nil
+func (e *ExternalServiceList) GetMongoDB(ctx context.Context) (mongo.Client, error) {
+	return mongo.New(e.config)
 }
 
-func (e *Init) DoGetClock(ctx context.Context) clock.Clock {
+func (e *ExternalServiceList) GetClock(ctx context.Context) clock.Clock {
 	return clock.SystemClock{}
+}
+
+func (e *ExternalServiceList) Shutdown(ctx context.Context) error {
+	shutdownErr := false
+	e.healthChecker.Stop()
+
+	err := e.mongo.Close(ctx)
+	if err != nil {
+		shutdownErr = true
+		log.Error(ctx, "failed to shutdown mongo", err)
+	}
+
+	err = e.httpServer.Shutdown(ctx)
+	if err != nil {
+		shutdownErr = true
+		log.Error(ctx, "failed to shutdown HTTP server", err)
+	}
+
+	if shutdownErr {
+		return errors.New("failures occured durring shutdown")
+	}
+
+	return nil
 }

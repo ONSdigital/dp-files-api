@@ -5,19 +5,19 @@ package mock
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-files-api/service"
+	"github.com/ONSdigital/dp-files-api/files"
 	"sync"
 )
 
-// Ensure, that HTTPServerMock does implement service.HTTPServer.
+// Ensure, that HTTPServerMock does implement files.HTTPServer.
 // If this is not the case, regenerate this file with moq.
-var _ service.HTTPServer = &HTTPServerMock{}
+var _ files.HTTPServer = &HTTPServerMock{}
 
-// HTTPServerMock is a mock implementation of service.HTTPServer.
+// HTTPServerMock is a mock implementation of files.HTTPServer.
 //
 // 	func TestSomethingThatUsesHTTPServer(t *testing.T) {
 //
-// 		// make and configure a mocked service.HTTPServer
+// 		// make and configure a mocked files.HTTPServer
 // 		mockedHTTPServer := &HTTPServerMock{
 // 			ListenAndServeFunc: func() error {
 // 				panic("mock out the ListenAndServe method")
@@ -27,7 +27,7 @@ var _ service.HTTPServer = &HTTPServerMock{}
 // 			},
 // 		}
 //
-// 		// use mockedHTTPServer in code that requires service.HTTPServer
+// 		// use mockedHTTPServer in code that requires files.HTTPServer
 // 		// and then make assertions.
 //
 // 	}

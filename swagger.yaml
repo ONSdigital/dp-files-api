@@ -64,7 +64,7 @@ paths:
           schema:
             $ref: "#/definitions/Health"
         429:
-          description: "Services warming up or degraded (at least one check in WARNING or CRITICAL status)"
+          description: "Services warming up or degraded (at least one health in WARNING or CRITICAL status)"
         500:
           $ref: "#/responses/InternalError"
 
@@ -144,15 +144,15 @@ definitions:
         example: "mongodb is OK"
       last_checked:
         type: string
-        description: "The last health check date and time of the external service"
+        description: "The last health health date and time of the external service"
         example: "2020-06-11T11:49:50.330089Z"
       last_success:
         type: string
-        description: "The last successful health check date and time of the external service"
+        description: "The last successful health health date and time of the external service"
         example: "2020-06-11T11:49:50.330089Z"
       last_failure:
         type: string
-        description: "The last failed health check date and time of the external service"
+        description: "The last failed health health date and time of the external service"
         example: "2019-09-22T11:48:51.0000001Z"
   NewFileUpload:
     type: object

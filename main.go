@@ -43,11 +43,6 @@ func run(ctx context.Context) error {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, os.Kill)
 
-	// Run the service, providing an error channel for fatal errors
-	svcErrors := make(chan error, 1)
-	svcList := service.NewServiceList(&service.Init{})
-
-	log.Info(ctx, "dp-files-api version", log.Data{"version": Version})
 
 	// Read config
 	cfg, err := config.Get()
@@ -55,8 +50,15 @@ func run(ctx context.Context) error {
 		return errors.Wrap(err, "error getting configuration")
 	}
 
+	// Run the service, providing an error channel for fatal errors
+	svcErrors := make(chan error, 1)
+	svcList := service.NewServiceList(cfg, BuildTime, GitCommit, Version)
+
+	log.Info(ctx, "dp-files-api version", log.Data{"version": Version})
+
+
 	// Start service
-	svc, err := service.Run(ctx, cfg, svcList, "1", "1", "1", svcErrors)
+	svc, err := service.Run(ctx, svcList, svcErrors)
 	if err != nil {
 		return errors.Wrap(err, "running service failed")
 	}
@@ -68,5 +70,5 @@ func run(ctx context.Context) error {
 	case sig := <-signals:
 		log.Info(ctx, "os signal received", log.Data{"signal": sig})
 	}
-	return svc.Close(ctx)
+	return svc.Close(ctx, cfg.GracefulShutdownTimeout)
 }

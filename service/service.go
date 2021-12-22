@@ -2,9 +2,10 @@ package service
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-files-api/health"
+	"time"
 
 	"github.com/ONSdigital/dp-files-api/api"
-	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/mongo"
 	"github.com/ONSdigital/log.go/v2/log"
@@ -14,22 +15,21 @@ import (
 
 // Service contains all the configs, server and clients to run the API
 type Service struct {
-	Config      *config.Config
-	Server      HTTPServer
+	Server      files.HTTPServer
 	Router      *mux.Router
-	ServiceList *ExternalServiceList
-	HealthCheck HealthChecker
+	ServiceList ServiceContainer
+	HealthCheck health.Checker
 	MongoClient mongo.Client
 }
 
 // Run the service
-func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceList, buildTime, gitCommit, version string, svcErrors chan error) (*Service, error) {
+func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error) (*Service, error) {
 
 	log.Info(ctx, "running service")
 
-	log.Info(ctx, "using service configuration", log.Data{"config": cfg})
+	//log.Info(ctx, "using service configuration", log.Data{"config": cfg})
 
-	mongoClient, err := serviceList.GetMongoDB(ctx, cfg)
+	mongoClient, err := serviceList.GetMongoDB(ctx)
 	if err != nil {
 		log.Error(ctx, "could not obtain mongo session", err)
 		return nil, err
@@ -40,11 +40,11 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 	r := mux.NewRouter() // TODO: Add any middleware that your service requires
 	r.StrictSlash(true).Path("/v1/files/register").HandlerFunc(api.CreateFileUploadStartedHandler(store.CreateUploadStarted))
 	r.StrictSlash(true).Path("/v1/files/upload-complete").HandlerFunc(api.MarkUploadCompleteHandler(store.MarkUploadComplete))
-	s := serviceList.GetHTTPServer(cfg.BindAddr, r)
+	s := serviceList.GetHTTPServer(r)
 
 	// TODO: Add other(s) to serviceList here
 
-	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
+	hc, err := serviceList.GetHealthCheck()
 
 	if err != nil {
 		log.Fatal(ctx, "could not instantiate healthcheck", err)
@@ -52,7 +52,6 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 	}
 
 	svc := &Service{
-		Config:      cfg,
 		Router:      r,
 		HealthCheck: hc,
 		ServiceList: serviceList,
@@ -78,28 +77,15 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 }
 
 // Close gracefully shuts the service down in the required order, with timeout
-func (svc *Service) Close(ctx context.Context) error {
-	timeout := svc.Config.GracefulShutdownTimeout
-	log.Info(ctx, "commencing graceful shutdown", log.Data{"graceful_shutdown_timeout": timeout})
+func (svc *Service) Close(ctx context.Context, timeout time.Duration) error {
+	log.Info(ctx, "commencing graceful shutdown")
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 
-	// track shutown gracefully closes up
-	var hasShutdownError bool
+	var err error
 
 	go func() {
 		defer cancel()
-
-		// TODO: MOVE ALL dependency shutdown to servicelist shutdown function.
-		if svc.ServiceList.HealthCheck {
-			svc.HealthCheck.Stop()
-		}
-
-		// stop any incoming requests before closing any outbound connections
-		if err := svc.Server.Shutdown(ctx); err != nil {
-			log.Error(ctx, "failed to shutdown http server", err)
-			hasShutdownError = true
-		}
-
+		err = svc.ServiceList.Shutdown(ctx)
 	}()
 
 	// wait for shutdown success (via cancel) or failure (timeout)
@@ -112,8 +98,7 @@ func (svc *Service) Close(ctx context.Context) error {
 	}
 
 	// other error
-	if hasShutdownError {
-		err := errors.New("failed to shutdown gracefully")
+	if err != nil {
 		log.Error(ctx, "failed to shutdown gracefully ", err)
 		return err
 	}
@@ -122,12 +107,12 @@ func (svc *Service) Close(ctx context.Context) error {
 	return nil
 }
 
-func (svc *Service) registerCheckers(ctx context.Context, hc HealthChecker) (err error) {
+func (svc *Service) registerCheckers(ctx context.Context, hc health.Checker) (err error) {
 	hasErrors := false
 
 	if err = hc.AddCheck("Mongo DB", svc.MongoClient.Checker); err != nil {
 		hasErrors = true
-		log.Error(ctx, "error adding check for mongo db", err)
+		log.Error(ctx, "error adding health for mongo db", err)
 	}
 
 	if hasErrors {
