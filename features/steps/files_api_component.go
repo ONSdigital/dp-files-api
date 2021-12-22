@@ -81,7 +81,7 @@ func NewFilesApiComponent(murl string) *FilesApiComponent {
 	cfg.MongoConfig.Collection = "metadata"
 	cfg.MongoConfig.IsSSL = false
 	cfg.ConnectionTimeout = 15 * time.Second
-	mc, _ := mongo.New(context.Background(), cfg)
+	mc, _ := mongo.New(cfg)
 
 	d.svcList = service.NewServiceList(&External{
 		Server:      d.DpHttpServer,
@@ -93,8 +93,7 @@ func NewFilesApiComponent(murl string) *FilesApiComponent {
 
 func (d *FilesApiComponent) Initialiser() (http.Handler, error) {
 	cfg, _ := config.Get()
-	ctx := context.Background()
-	d.svc, _ = service.Run(ctx, cfg, d.svcList, "1", "1", "1", d.errChan)
+	d.svc, _ = service.Run(context.Background(), cfg, d.svcList, "1", "1", "1", d.errChan)
 	return d.DpHttpServer.Handler, nil
 }
 
@@ -108,5 +107,4 @@ func (d *FilesApiComponent) Close() error {
 
 	d.Mongo.Close()
 	return err
-
 }

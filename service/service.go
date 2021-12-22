@@ -35,13 +35,11 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 		return nil, err
 	}
 
-	// Get HTTP Server and ... // TODO: Add any middleware that your service requires
-	r := mux.NewRouter()
 	store := files.NewStore(mongoClient, serviceList.GetClock(ctx))
 
+	r := mux.NewRouter() // TODO: Add any middleware that your service requires
 	r.StrictSlash(true).Path("/v1/files").HandlerFunc(api.CreateFileUploadStartedHandler(store.CreateUploadStarted))
 	r.StrictSlash(true).Path("/v1/files/upload-complete").HandlerFunc(api.MarkUploadCompleteHandler(store.MarkUploadComplete))
-
 	s := serviceList.GetHTTPServer(cfg.BindAddr, r)
 
 	// TODO: Add other(s) to serviceList here
@@ -91,7 +89,7 @@ func (svc *Service) Close(ctx context.Context) error {
 	go func() {
 		defer cancel()
 
-		// stop healthcheck, as it depends on everything else
+		// TODO: MOVE ALL dependency shutdown to servicelist shutdown function.
 		if svc.ServiceList.HealthCheck {
 			svc.HealthCheck.Stop()
 		}
@@ -102,7 +100,6 @@ func (svc *Service) Close(ctx context.Context) error {
 			hasShutdownError = true
 		}
 
-		// TODO: Close other dependencies, in the expected order
 	}()
 
 	// wait for shutdown success (via cancel) or failure (timeout)

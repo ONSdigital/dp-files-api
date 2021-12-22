@@ -23,21 +23,14 @@ type Client interface {
 
 // Mongo represents a simplistic MongoDB configuration.
 type Mongo struct {
-	datasetURL string
-	conn       *dpmongo.MongoConnection
-	uri        string
+	datasetURL   string
+	conn         *dpmongo.MongoConnection
+	uri          string
 	healthClient *dpMongoHealth.CheckMongoClient
 }
 
-func New(ctx context.Context, cfg *config.Config) (*Mongo, error) {
-	m := &Mongo{
-		uri:        cfg.MongoConfig.URI,
-	}
-
+func New(cfg *config.Config) (*Mongo, error) {
 	connCfg := &dpmongo.MongoConnectionConfig{
-		ConnectTimeoutInSeconds: connectTimeoutInSeconds,
-		QueryTimeoutInSeconds:   queryTimeoutInSeconds,
-
 		Username:                      cfg.MongoConfig.Username,
 		Password:                      cfg.MongoConfig.Password,
 		ClusterEndpoint:               cfg.MongoConfig.URI,
@@ -45,7 +38,8 @@ func New(ctx context.Context, cfg *config.Config) (*Mongo, error) {
 		Collection:                    cfg.MongoConfig.Collection,
 		IsWriteConcernMajorityEnabled: true,
 		IsStrongReadConcernEnabled:    false,
-
+		ConnectTimeoutInSeconds:       connectTimeoutInSeconds,
+		QueryTimeoutInSeconds:         queryTimeoutInSeconds,
 		TLSConnectionConfig: dpmongo.TLSConnectionConfig{
 			IsSSL: cfg.MongoConfig.IsSSL,
 		},
@@ -55,12 +49,12 @@ func New(ctx context.Context, cfg *config.Config) (*Mongo, error) {
 	if err != nil {
 		return nil, err
 	}
-	m.conn = conn
 
-	m.healthClient = dpMongoHealth.NewClient(m.conn)
-
-	// create lock healthClient here when collections are known
-	return m, nil
+	return &Mongo{
+		uri:          cfg.MongoConfig.URI,
+		conn:         conn,
+		healthClient: dpMongoHealth.NewClient(conn),
+	}, nil
 }
 
 func (m *Mongo) URI() string {
