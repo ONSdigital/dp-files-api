@@ -80,7 +80,7 @@ func (e *Init) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, versio
 
 // GetMongoDB returns a mongodb health client and dataset mongo object
 func (e *Init) DoGetMongoDB(ctx context.Context, cfg *config.Config) (mongo.Client, error) {
-	mongodb, err := mongo.New(ctx, cfg)
+	mongodb, err := mongo.New(cfg)
 	if err != nil {
 		log.Error(ctx, "failed to initialise mongo", err)
 		return mongodb, err
