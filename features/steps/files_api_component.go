@@ -2,13 +2,14 @@ package steps
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-files-api/mongo"
+	"fmt"
 
 	"net/http"
 	"time"
 
 	componenttest "github.com/ONSdigital/dp-component-test"
 	"github.com/ONSdigital/dp-files-api/config"
+	"github.com/ONSdigital/dp-files-api/mongo"
 	"github.com/ONSdigital/dp-files-api/service"
 	dphttp "github.com/ONSdigital/dp-net/v2/http"
 	"github.com/ONSdigital/log.go/v2/log"
@@ -35,13 +36,12 @@ func NewFilesApiComponent(murl string) *FilesApiComponent {
 	log.Namespace = "dp-files-api"
 
 	cfg, _ := config.Get()
-	cfg.MongoConfig.URI = murl
-	cfg.MongoConfig.Database = "files"
-	cfg.MongoConfig.Collection = "metadata"
-	cfg.MongoConfig.IsSSL = false
-	cfg.ConnectionTimeout = 15 * time.Second
+	cfg.MongoConfig.ClusterEndpoint = murl
 
-	m, _ := mongo.New(cfg)
+	m, e := mongo.New(cfg.MongoConfig)
+	if e != nil {
+		panic(fmt.Sprintf("failed to create mongo connection: %s", e))
+	}
 
 	d.svcList = &fakeServiceContainer{
 		server:      s,

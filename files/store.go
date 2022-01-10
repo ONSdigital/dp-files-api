@@ -3,8 +3,11 @@ package files
 import (
 	"context"
 	"errors"
+
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/mongo"
+
+	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -13,7 +16,7 @@ var ErrFileNotRegistered = errors.New("file not registered")
 var ErrFileNotInCreatedState = errors.New("file state is not in state created")
 
 const (
-	stateCreated = "CREATED"
+	stateCreated  = "CREATED"
 	stateUploaded = "UPLOADED"
 )
 
@@ -27,8 +30,7 @@ func NewStore(m mongo.Client, c clock.Clock) *Store {
 }
 
 func (s *Store) CreateUploadStarted(ctx context.Context, metaData StoredRegisteredMetaData) error {
-	finder := s.m.Connection().C("metadata").Find(bson.M{"path": metaData.Path})
-	count, err := finder.Count(ctx)
+	count, err := s.m.Connection().C("metadata").Find(bson.M{"path": metaData.Path}).Count(ctx)
 	if err != nil {
 		return err
 	}
@@ -47,19 +49,12 @@ func (s *Store) CreateUploadStarted(ctx context.Context, metaData StoredRegister
 }
 
 func (s *Store) MarkUploadComplete(ctx context.Context, metaData StoredUploadCompleteMetaData) error {
-	finder := s.m.Connection().C("metadata").Find(bson.M{"path": metaData.Path})
-	count, err := finder.Count(ctx)
-	if err != nil {
-		return err
-	}
-
-	if count == 0 {
-		return ErrFileNotRegistered
-	}
-
 	m := StoredRegisteredMetaData{}
-	err = finder.One(ctx, &m)
+	err := s.m.Connection().C("metadata").FindOne(ctx, bson.M{"path": metaData.Path}, &m)
 	if err != nil {
+		if mongodriver.IsErrNoDocumentFound(err) {
+			return ErrFileNotRegistered
+		}
 		return err
 	}
 

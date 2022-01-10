@@ -55,7 +55,7 @@ func (e *ExternalServiceList) GetHealthCheck() (health.Checker, error) {
 }
 
 func (e *ExternalServiceList) GetMongoDB(ctx context.Context) (mongo.Client, error) {
-	return mongo.New(e.config)
+	return mongo.New(e.config.MongoConfig)
 }
 
 func (e *ExternalServiceList) GetClock(ctx context.Context) clock.Clock {
