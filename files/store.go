@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/ONSdigital/dp-files-api/clock"
+	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/mongo"
 
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
@@ -30,7 +31,7 @@ func NewStore(m mongo.Client, c clock.Clock) *Store {
 }
 
 func (s *Store) CreateUploadStarted(ctx context.Context, metaData StoredRegisteredMetaData) error {
-	count, err := s.m.Connection().C("metadata").Find(bson.M{"path": metaData.Path}).Count(ctx)
+	count, err := s.m.Collection(config.MetadataCollection).Count(ctx, bson.M{"path": metaData.Path})
 	if err != nil {
 		return err
 	}
@@ -43,16 +44,16 @@ func (s *Store) CreateUploadStarted(ctx context.Context, metaData StoredRegister
 	metaData.LastModified = s.c.GetCurrentTime()
 	metaData.State = stateCreated
 
-	_, err = s.m.Connection().C("metadata").Insert(ctx, metaData)
+	_, err = s.m.Collection(config.MetadataCollection).Insert(ctx, metaData)
 
 	return err
 }
 
 func (s *Store) MarkUploadComplete(ctx context.Context, metaData StoredUploadCompleteMetaData) error {
 	m := StoredRegisteredMetaData{}
-	err := s.m.Connection().C("metadata").FindOne(ctx, bson.M{"path": metaData.Path}, &m)
+	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": metaData.Path}, &m)
 	if err != nil {
-		if mongodriver.IsErrNoDocumentFound(err) {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			return ErrFileNotRegistered
 		}
 		return err
@@ -62,7 +63,7 @@ func (s *Store) MarkUploadComplete(ctx context.Context, metaData StoredUploadCom
 		return ErrFileNotInCreatedState
 	}
 
-	_, err = s.m.Connection().C("metadata").Update(
+	_, err = s.m.Collection(config.MetadataCollection).Update(
 		ctx,
 		bson.M{"path": metaData.Path},
 		bson.D{

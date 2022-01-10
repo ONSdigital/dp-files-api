@@ -27,6 +27,9 @@ var _ mongo.Client = &ClientMock{}
 // 			CloseFunc: func(contextMoqParam context.Context) error {
 // 				panic("mock out the Close method")
 // 			},
+// 			CollectionFunc: func(s string) *mongodriver.Collection {
+// 				panic("mock out the Collection method")
+// 			},
 // 			ConnectionFunc: func() *mongodriver.MongoConnection {
 // 				panic("mock out the Connection method")
 // 			},
@@ -45,6 +48,9 @@ type ClientMock struct {
 
 	// CloseFunc mocks the Close method.
 	CloseFunc func(contextMoqParam context.Context) error
+
+	// CollectionFunc mocks the Collection method.
+	CollectionFunc func(s string) *mongodriver.Collection
 
 	// ConnectionFunc mocks the Connection method.
 	ConnectionFunc func() *mongodriver.MongoConnection
@@ -66,6 +72,11 @@ type ClientMock struct {
 			// ContextMoqParam is the contextMoqParam argument value.
 			ContextMoqParam context.Context
 		}
+		// Collection holds details about calls to the Collection method.
+		Collection []struct {
+			// S is the s argument value.
+			S string
+		}
 		// Connection holds details about calls to the Connection method.
 		Connection []struct {
 		}
@@ -75,6 +86,7 @@ type ClientMock struct {
 	}
 	lockChecker    sync.RWMutex
 	lockClose      sync.RWMutex
+	lockCollection sync.RWMutex
 	lockConnection sync.RWMutex
 	lockURI        sync.RWMutex
 }
@@ -142,6 +154,37 @@ func (mock *ClientMock) CloseCalls() []struct {
 	mock.lockClose.RLock()
 	calls = mock.calls.Close
 	mock.lockClose.RUnlock()
+	return calls
+}
+
+// Collection calls CollectionFunc.
+func (mock *ClientMock) Collection(s string) *mongodriver.Collection {
+	if mock.CollectionFunc == nil {
+		panic("ClientMock.CollectionFunc: method is nil but Client.Collection was just called")
+	}
+	callInfo := struct {
+		S string
+	}{
+		S: s,
+	}
+	mock.lockCollection.Lock()
+	mock.calls.Collection = append(mock.calls.Collection, callInfo)
+	mock.lockCollection.Unlock()
+	return mock.CollectionFunc(s)
+}
+
+// CollectionCalls gets all the calls that were made to Collection.
+// Check the length with:
+//     len(mockedClient.CollectionCalls())
+func (mock *ClientMock) CollectionCalls() []struct {
+	S string
+} {
+	var calls []struct {
+		S string
+	}
+	mock.lockCollection.RLock()
+	calls = mock.calls.Collection
+	mock.lockCollection.RUnlock()
 	return calls
 }
 
