@@ -15,25 +15,27 @@ type Client interface {
 	Close(context.Context) error
 	Checker(context.Context, *healthcheck.CheckState) error
 	Connection() *mongodriver.MongoConnection
+	Collection(string) *mongodriver.Collection
 }
 
 // Mongo represents a simplistic MongoDB configuration.
 type Mongo struct {
-	mongodriver.MongoConnectionConfig
+	mongodriver.MongoDriverConfig
 
 	conn         *mongodriver.MongoConnection
 	healthClient *mongohealth.CheckMongoClient
 }
 
 func New(cfg config.MongoConfig) (m *Mongo, err error) {
-
-	m = &Mongo{MongoConnectionConfig: cfg}
-	m.conn, err = mongodriver.Open(&m.MongoConnectionConfig)
+	m = &Mongo{MongoDriverConfig: cfg}
+	m.conn, err = mongodriver.Open(&m.MongoDriverConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	m.healthClient = mongohealth.NewClient(m.conn)
+	databaseCollectionBuilder := map[mongohealth.Database][]mongohealth.Collection{
+		mongohealth.Database(m.Database): {mongohealth.Collection(m.ActualCollectionName(config.MetadataCollection))}}
+	m.healthClient = mongohealth.NewClientWithCollections(m.conn, databaseCollectionBuilder)
 
 	return m, nil
 }
@@ -54,4 +56,8 @@ func (m *Mongo) Checker(ctx context.Context, state *healthcheck.CheckState) erro
 
 func (m *Mongo) Connection() *mongodriver.MongoConnection {
 	return m.conn
+}
+
+func (m *Mongo) Collection(wellKnownName string) *mongodriver.Collection {
+	return m.conn.Collection(m.ActualCollectionName(wellKnownName))
 }

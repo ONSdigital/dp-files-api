@@ -8,7 +8,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-type MongoConfig = mongodb.MongoConnectionConfig
+type MongoConfig = mongodb.MongoDriverConfig
 
 // Config represents service configuration for dp-files-api
 type Config struct {
@@ -20,6 +20,8 @@ type Config struct {
 }
 
 var cfg *Config
+
+const MetadataCollection = "MetadataCollection"
 
 // Get returns the default config with any modifications through environment
 // variables
@@ -38,12 +40,12 @@ func Get() (*Config, error) {
 			Username:                      "",
 			Password:                      "",
 			Database:                      "files",
-			Collection:                    "metadata",
+			Collections:                   map[string]string{MetadataCollection: "metadata"},
 			ReplicaSet:                    "",
 			IsStrongReadConcernEnabled:    false,
 			IsWriteConcernMajorityEnabled: true,
-			ConnectTimeoutInSeconds:       5 * time.Second,
-			QueryTimeoutInSeconds:         15 * time.Second,
+			ConnectTimeout:                5 * time.Second,
+			QueryTimeout:                  15 * time.Second,
 			TLSConnectionConfig: mongodb.TLSConnectionConfig{
 				IsSSL: false,
 			},

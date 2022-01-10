@@ -33,13 +33,13 @@ func TestConfig(t *testing.T) {
 					MongoConfig: MongoConfig{
 						ClusterEndpoint:               "localhost:27017",
 						Database:                      "files",
-						Collection:                    "metadata",
+						Collections:                   map[string]string{MetadataCollection: "metadata"},
 						Username:                      "",
 						Password:                      "",
 						IsStrongReadConcernEnabled:    false,
 						IsWriteConcernMajorityEnabled: true,
-						QueryTimeoutInSeconds:         15 * time.Second,
-						ConnectTimeoutInSeconds:       5 * time.Second,
+						QueryTimeout:                  15 * time.Second,
+						ConnectTimeout:                5 * time.Second,
 						TLSConnectionConfig: mongodb.TLSConnectionConfig{
 							IsSSL: false,
 						},
