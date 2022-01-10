@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ONSdigital/dp-mongodb/v3/mongodb"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -29,16 +31,18 @@ func TestConfig(t *testing.T) {
 					HealthCheckInterval:        30 * time.Second,
 					HealthCheckCriticalTimeout: 90 * time.Second,
 					MongoConfig: MongoConfig{
-						URI:                "localhost:27017",
-						Collection:         "datasets",
-						Database:           "datasets",
-						Username:           "",
-						Password:           "",
-						IsSSL:              false,
-						EnableReadConcern:  false,
-						EnableWriteConcern: true,
-						QueryTimeout:       15 * time.Second,
-						ConnectionTimeout:  5 * time.Second,
+						ClusterEndpoint:               "localhost:27017",
+						Database:                      "files",
+						Collection:                    "metadata",
+						Username:                      "",
+						Password:                      "",
+						IsStrongReadConcernEnabled:    false,
+						IsWriteConcernMajorityEnabled: true,
+						QueryTimeoutInSeconds:         15 * time.Second,
+						ConnectTimeoutInSeconds:       5 * time.Second,
+						TLSConnectionConfig: mongodb.TLSConnectionConfig{
+							IsSSL: false,
+						},
 					},
 				})
 			})

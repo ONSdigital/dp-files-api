@@ -2,15 +2,11 @@ package mongo
 
 import (
 	"context"
+
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	dpMongoHealth "github.com/ONSdigital/dp-mongodb/v3/health"
-	dpmongo "github.com/ONSdigital/dp-mongodb/v3/mongodb"
-)
-
-const (
-	connectTimeoutInSeconds = 5
-	queryTimeoutInSeconds   = 5
+	mongohealth "github.com/ONSdigital/dp-mongodb/v3/health"
+	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 )
 
 //go:generate moq -out mock/Client.go -pkg mock . Client
@@ -18,47 +14,32 @@ type Client interface {
 	URI() string
 	Close(context.Context) error
 	Checker(context.Context, *healthcheck.CheckState) error
-	Connection() *dpmongo.MongoConnection
+	Connection() *mongodriver.MongoConnection
 }
 
 // Mongo represents a simplistic MongoDB configuration.
 type Mongo struct {
-	datasetURL   string
-	conn         *dpmongo.MongoConnection
-	uri          string
-	healthClient *dpMongoHealth.CheckMongoClient
+	mongodriver.MongoConnectionConfig
+
+	conn         *mongodriver.MongoConnection
+	healthClient *mongohealth.CheckMongoClient
 }
 
-func New(cfg *config.Config) (*Mongo, error) {
-	connCfg := &dpmongo.MongoConnectionConfig{
-		Username:                      cfg.MongoConfig.Username,
-		Password:                      cfg.MongoConfig.Password,
-		ClusterEndpoint:               cfg.MongoConfig.URI,
-		Database:                      cfg.MongoConfig.Database,
-		Collection:                    cfg.MongoConfig.Collection,
-		IsWriteConcernMajorityEnabled: true,
-		IsStrongReadConcernEnabled:    false,
-		ConnectTimeoutInSeconds:       connectTimeoutInSeconds,
-		QueryTimeoutInSeconds:         queryTimeoutInSeconds,
-		TLSConnectionConfig: dpmongo.TLSConnectionConfig{
-			IsSSL: cfg.MongoConfig.IsSSL,
-		},
-	}
+func New(cfg config.MongoConfig) (m *Mongo, err error) {
 
-	conn, err := dpmongo.Open(connCfg)
+	m = &Mongo{MongoConnectionConfig: cfg}
+	m.conn, err = mongodriver.Open(&m.MongoConnectionConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Mongo{
-		uri:          cfg.MongoConfig.URI,
-		conn:         conn,
-		healthClient: dpMongoHealth.NewClient(conn),
-	}, nil
+	m.healthClient = mongohealth.NewClient(m.conn)
+
+	return m, nil
 }
 
 func (m *Mongo) URI() string {
-	return m.uri
+	return m.ClusterEndpoint
 }
 
 // Close represents mongo session closing within the context deadline
@@ -71,6 +52,6 @@ func (m *Mongo) Checker(ctx context.Context, state *healthcheck.CheckState) erro
 	return m.healthClient.Checker(ctx, state)
 }
 
-func (m *Mongo) Connection() *dpmongo.MongoConnection {
+func (m *Mongo) Connection() *mongodriver.MongoConnection {
 	return m.conn
 }

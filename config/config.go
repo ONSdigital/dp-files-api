@@ -3,23 +3,12 @@ package config
 import (
 	"time"
 
+	"github.com/ONSdigital/dp-mongodb/v3/mongodb"
+
 	"github.com/kelseyhightower/envconfig"
 )
 
-// MongoConfig contains the config required to connect to MongoDB.
-type MongoConfig struct {
-	URI                string        `envconfig:"MONGODB_BIND_ADDR"   json:"-"`
-	Collection         string        `envconfig:"MONGODB_FILES_COLLECTION"`
-	Database           string        `envconfig:"MONGODB_FILES_DATABASE"`
-	Username           string        `envconfig:"MONGODB_USERNAME"    json:"-"`
-	Password           string        `envconfig:"MONGODB_PASSWORD"    json:"-"`
-	IsSSL              bool          `envconfig:"MONGODB_IS_SSL"`
-	EnableReadConcern  bool          `envconfig:"MONGODB_ENABLE_READ_CONCERN"`
-	EnableWriteConcern bool          `envconfig:"MONGODB_ENABLE_WRITE_CONCERN"`
-	QueryTimeout       time.Duration `envconfig:"MONGODB_QUERY_TIMEOUT"`
-	ConnectionTimeout  time.Duration `envconfig:"MONGODB_CONNECT_TIMEOUT"`
-}
-
+type MongoConfig = mongodb.MongoConnectionConfig
 
 // Config represents service configuration for dp-files-api
 type Config struct {
@@ -45,12 +34,19 @@ func Get() (*Config, error) {
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
 		MongoConfig: MongoConfig{
-			URI:                "localhost:27017",
-			Database:           "datasets",
-			Collection:         "datasets",
-			QueryTimeout:       15 * time.Second,
-			ConnectionTimeout:  5 * time.Second,
-			EnableWriteConcern: true,
+			ClusterEndpoint:               "localhost:27017",
+			Username:                      "",
+			Password:                      "",
+			Database:                      "files",
+			Collection:                    "metadata",
+			ReplicaSet:                    "",
+			IsStrongReadConcernEnabled:    false,
+			IsWriteConcernMajorityEnabled: true,
+			ConnectTimeoutInSeconds:       5 * time.Second,
+			QueryTimeoutInSeconds:         15 * time.Second,
+			TLSConnectionConfig: mongodb.TLSConnectionConfig{
+				IsSSL: false,
+			},
 		},
 	}
 

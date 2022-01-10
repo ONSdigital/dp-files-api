@@ -7,7 +7,7 @@ import (
 	"context"
 	"github.com/ONSdigital/dp-files-api/mongo"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	dpmongo "github.com/ONSdigital/dp-mongodb/v3/mongodb"
+	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"sync"
 )
 
@@ -27,7 +27,7 @@ var _ mongo.Client = &ClientMock{}
 // 			CloseFunc: func(contextMoqParam context.Context) error {
 // 				panic("mock out the Close method")
 // 			},
-// 			ConnectionFunc: func() *dpmongo.MongoConnection {
+// 			ConnectionFunc: func() *mongodriver.MongoConnection {
 // 				panic("mock out the Connection method")
 // 			},
 // 			URIFunc: func() string {
@@ -47,7 +47,7 @@ type ClientMock struct {
 	CloseFunc func(contextMoqParam context.Context) error
 
 	// ConnectionFunc mocks the Connection method.
-	ConnectionFunc func() *dpmongo.MongoConnection
+	ConnectionFunc func() *mongodriver.MongoConnection
 
 	// URIFunc mocks the URI method.
 	URIFunc func() string
@@ -146,7 +146,7 @@ func (mock *ClientMock) CloseCalls() []struct {
 }
 
 // Connection calls ConnectionFunc.
-func (mock *ClientMock) Connection() *dpmongo.MongoConnection {
+func (mock *ClientMock) Connection() *mongodriver.MongoConnection {
 	if mock.ConnectionFunc == nil {
 		panic("ClientMock.ConnectionFunc: method is nil but Client.Connection was just called")
 	}
