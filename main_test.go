@@ -25,17 +25,12 @@ type ComponentTest struct {
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	buf := bytes.NewBufferString("")
 	log.SetDestination(buf, buf)
-	
-	opt := componenttest.MongoOptions{
-		MongoVersion: "4.4.0",
-		DatabaseName: "files",
-	}
-	f.MongoFeature = componenttest.NewMongoFeature(opt)
-	component := steps.NewFilesApiComponent(f.MongoFeature.Server.URI())
+
+	component := steps.NewFilesApiComponent()
 
 	apiFeature := componenttest.NewAPIFeature(component.Initialiser)
 	component.ApiFeature = apiFeature
-	component.Mongo = f.MongoFeature
+	//component.Mongo = f.MongoFeature
 
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		component.Reset()
@@ -51,7 +46,7 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	})
 
 	apiFeature.RegisterSteps(ctx)
-	f.MongoFeature.RegisterSteps(ctx)
+	//f.MongoFeature.RegisterSteps(ctx)
 	component.RegisterSteps(ctx)
 }
 

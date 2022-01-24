@@ -2,6 +2,7 @@ package steps
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/health"
 	"net/http"
@@ -15,8 +16,7 @@ import (
 )
 
 type fakeServiceContainer struct {
-	server      *dphttp.Server
-	mongoClient mongo.Client
+	server *dphttp.Server
 }
 
 func (e *fakeServiceContainer) GetHTTPServer(r http.Handler) files.HTTPServer {
@@ -32,7 +32,8 @@ func (e *fakeServiceContainer) GetHealthCheck() (health.Checker, error) {
 }
 
 func (e *fakeServiceContainer) GetMongoDB(ctx context.Context) (mongo.Client, error) {
-	return e.mongoClient, nil
+	cfg, _ := config.Get()
+	return mongo.New(cfg.MongoConfig)
 }
 
 func (e *fakeServiceContainer) GetClock(ctx context.Context) clock.Clock {

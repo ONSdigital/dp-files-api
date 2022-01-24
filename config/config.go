@@ -37,11 +37,8 @@ func Get() (*Config, error) {
 		HealthCheckCriticalTimeout: 90 * time.Second,
 		MongoConfig: MongoConfig{
 			ClusterEndpoint:               "localhost:27017",
-			Username:                      "",
-			Password:                      "",
 			Database:                      "files",
 			Collections:                   map[string]string{MetadataCollection: "metadata"},
-			ReplicaSet:                    "",
 			IsStrongReadConcernEnabled:    false,
 			IsWriteConcernMajorityEnabled: true,
 			ConnectTimeout:                5 * time.Second,

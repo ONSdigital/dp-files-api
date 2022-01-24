@@ -62,7 +62,7 @@ func (c *FilesApiComponent) theFollowingDocumentShouldBeCreated(table *godog.Tab
 
 	expectedMetaData := keyValues.(*ExpectedMetaData)
 
-	res := c.Mongo.Client.Database("files").Collection("metadata").FindOne(ctx, bson.M{"path": expectedMetaData.Path})
+	res := c.mongoClient.Database("files").Collection("metadata").FindOne(ctx, bson.M{"path": expectedMetaData.Path})
 	assert.NoError(c.ApiFeature, res.Decode(&metaData))
 
 	isPublishable, _ := strconv.ParseBool(expectedMetaData.IsPublishable)
@@ -86,7 +86,7 @@ func (c *FilesApiComponent) theFileUploadHasBeenRegistered(path string) error {
 
 	m := files.StoredRegisteredMetaData{Path: path}
 
-	_, err := c.Mongo.Client.Database("files").Collection("metadata").InsertOne(ctx, &m)
+	_, err := c.mongoClient.Database("files").Collection("metadata").InsertOne(ctx, &m)
 	assert.NoError(c.ApiFeature, err)
 
 	return c.ApiFeature.StepError()
@@ -120,7 +120,7 @@ func (c *FilesApiComponent) theFileUploadHasBeenRegisteredWith(path string, tabl
 		CreatedAt:     createdAt,
 		LastModified:  lastModified,
 	}
-	_, err = c.Mongo.Client.Database("files").Collection("metadata").InsertOne(ctx, &m)
+	_, err = c.mongoClient.Database("files").Collection("metadata").InsertOne(ctx, &m)
 	assert.NoError(c.ApiFeature, err)
 
 	return c.ApiFeature.StepError()
@@ -128,7 +128,7 @@ func (c *FilesApiComponent) theFileUploadHasBeenRegisteredWith(path string, tabl
 
 func (c *FilesApiComponent) theFileUploadHasNotBeenRegistered(path string) error {
 	ctx := context.Background()
-	_, err := c.Mongo.Client.Database("files").Collection("metadata").DeleteMany(ctx, bson.M{"path": path})
+	_, err := c.mongoClient.Database("files").Collection("metadata").DeleteMany(ctx, bson.M{"path": path})
 
 	assert.NoError(c.ApiFeature, err)
 
@@ -161,7 +161,7 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 
 	expectedMetaData := keyValues.(*ExpectedMetaDataUploadComplete)
 
-	res := c.Mongo.Client.Database("files").Collection("metadata").FindOne(ctx, bson.M{"path": expectedMetaData.Path})
+	res := c.mongoClient.Database("files").Collection("metadata").FindOne(ctx, bson.M{"path": expectedMetaData.Path})
 	assert.NoError(c.ApiFeature, res.Decode(&metaData))
 
 	isPublishable, _ := strconv.ParseBool(expectedMetaData.IsPublishable)
