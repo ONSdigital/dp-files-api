@@ -17,12 +17,11 @@ import (
 )
 
 type External struct {
-	Server      *dphttp.Server
-	MongoClient mongo.Client
+	Server *dphttp.Server
 }
 
 func (e *External) DoGetMongoDB(ctx context.Context, cfg *config.Config) (mongo.Client, error) {
-	return e.MongoClient, nil
+	return mongo.New(cfg.MongoConfig)
 }
 
 func (e *External) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (health.Checker, error) {
