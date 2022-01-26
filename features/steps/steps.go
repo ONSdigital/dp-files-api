@@ -23,6 +23,8 @@ func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the file upload "([^"]*)" is marked as complete with the etag "([^"]*)"$`, c.theFileUploadIsMarkedAsCompleteWithTheEtag)
 	ctx.Step(`^the following document entry should be look like:$`, c.theFollowingDocumentEntryShouldBeLookLike)
 	ctx.Step(`^the file upload "([^"]*)" has not been registered$`, c.theFileUploadHasNotBeenRegistered)
+	ctx.Step(`^the file metadata is requested for the file "([^"]*)"$`, c.theFileMetadataIsRequested)
+	ctx.Step(`^the file "([^"]*)" has not been registered$`, c.theFileHasNotBeenRegistered)
 }
 
 func (c *FilesApiComponent) iRegisterFile(payload *godog.DocString) error {
@@ -47,6 +49,10 @@ type ExpectedMetaDataUploadComplete struct {
 	ExpectedMetaData
 	Etag              string
 	UploadCompletedAt string
+}
+
+func (c *FilesApiComponent) theFileHasNotBeenRegistered(arg1 string) error {
+	return nil
 }
 
 func (c *FilesApiComponent) theFollowingDocumentShouldBeCreated(table *godog.Table) error {
@@ -135,7 +141,6 @@ func (c *FilesApiComponent) theFileUploadHasNotBeenRegistered(path string) error
 	return c.ApiFeature.StepError()
 }
 
-
 func (c *FilesApiComponent) theFileUploadIsMarkedAsCompleteWithTheEtag(path, etag string) error {
 	json := fmt.Sprintf(`{
 	"path": "%s",
@@ -146,6 +151,10 @@ func (c *FilesApiComponent) theFileUploadIsMarkedAsCompleteWithTheEtag(path, eta
 		Content:   json,
 	}
 	return c.ApiFeature.IPostToWithBody("/v1/files/upload-complete", &payload)
+}
+
+func (c *FilesApiComponent) theFileMetadataIsRequested(filepath string) error {
+	return c.ApiFeature.IGet(fmt.Sprintf("/v1/files/%s", filepath))
 }
 
 func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *godog.Table) error {
