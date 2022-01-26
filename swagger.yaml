@@ -50,6 +50,27 @@ paths:
         500:
           $ref: '#/responses/InternalError'
 
+  /v1/files/{filepath}:
+    get:
+      tags:
+        - Fetch file metadata
+      summary: GET the metadata for a file whose upload has started
+      produces:
+        - application/json
+      parameters:
+        - name: filepath
+          in: path
+          required: true
+          description: filepath of required file
+      responses:
+        200:
+          schema:
+            $ref: '#/definitions/metadata'
+        404:
+          $ref: '#/responses/JsonErrors'
+        500:
+          $ref: '#/responses/InternalError'
+
   /health:
     get:
       tags:
@@ -213,6 +234,50 @@ definitions:
         type: string
         description: "The etag for the file"
         example: "194577a7e20bdcc7afbb718f502c134c"
+  metadata:
+    type: object
+    description: "File metadata"
+    properties:
+      path:
+        type: string
+        description: "Path to file"
+        example: "images/meme.jpg"
+      is_publishable:
+        type: boolean
+        description: "Is the file publishable"
+        example: true
+      collection_id:
+        type: string
+        description: "The collection ID to which the file is attached"
+        example: "1234-asdfg-54321-qwerty"
+      title:
+        type: string
+        description: "The title given to the file"
+        example: "The latest Meme"
+      size_in_bytes:
+        type: integer
+        description: "Size of the file in bytes"
+        example: 14794
+      type:
+        type: string
+        description: "The file type"
+        example: "image/jpeg"
+      licence:
+        type: string
+        description: "The type of licence the file has"
+        example: "OGL v3"
+      licence_url:
+        type: string
+        description: "Licence URL"
+        example: "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+      etag:
+        type: string
+        description: "File etag"
+        example: "1234567890asdfghjk"
+      status:
+        type: string
+        description: "File status"
+        example: "UPLOADED"
   Error:
     type: object
     properties:
