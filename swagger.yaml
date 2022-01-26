@@ -169,7 +169,7 @@ definitions:
       path:
         type: string
         description: "Path to file"
-        example: "/images/meme.jpg"
+        example: "images/meme.jpg"
       is_publishable:
         type: boolean
         description: "Is the file publishable"
@@ -208,7 +208,7 @@ definitions:
       path:
         type: string
         description: "Path to file"
-        example: "/images/meme.jpg"
+        example: "images/meme.jpg"
       etag:
         type: string
         description: "The etag for the file"

@@ -30,7 +30,18 @@ func NewStore(m mongo.Client, c clock.Clock) *Store {
 	return &Store{m, c}
 }
 
-func (s *Store) CreateUploadStarted(ctx context.Context, metaData StoredRegisteredMetaData) error {
+func (s *Store) GetFileMetadata(ctx context.Context, path string) (StoredRegisteredMetaData, error) {
+	metadata := StoredRegisteredMetaData{}
+
+	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": path}, &metadata)
+	if err != nil && errors.Is(err, mongodriver.ErrNoDocumentFound) {
+		return metadata, ErrFileNotRegistered
+	}
+
+	return metadata, err
+}
+
+func (s *Store) RegisterFileUpload(ctx context.Context, metaData StoredRegisteredMetaData) error {
 	count, err := s.m.Collection(config.MetadataCollection).Count(ctx, bson.M{"path": metaData.Path})
 	if err != nil {
 		return err
@@ -50,8 +61,8 @@ func (s *Store) CreateUploadStarted(ctx context.Context, metaData StoredRegister
 }
 
 func (s *Store) MarkUploadComplete(ctx context.Context, metaData StoredUploadCompleteMetaData) error {
-	m := StoredRegisteredMetaData{}
-	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": metaData.Path}, &m)
+	metadata := StoredRegisteredMetaData{}
+	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": metaData.Path}, &metadata)
 	if err != nil {
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			return ErrFileNotRegistered
@@ -59,7 +70,7 @@ func (s *Store) MarkUploadComplete(ctx context.Context, metaData StoredUploadCom
 		return err
 	}
 
-	if m.State != stateCreated {
+	if metadata.State != stateCreated {
 		return ErrFileNotInCreatedState
 	}
 

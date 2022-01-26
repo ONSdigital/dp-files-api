@@ -5,7 +5,7 @@ Feature: Register new file upload
     When the file upload is registered with payload:
         """
         {
-          "path": "/images/meme.jpg",
+          "path": "images/meme.jpg",
           "is_publishable": true,
           "collection_id": "1234-asdfg-54321-qwerty",
           "title": "The latest Meme",
@@ -17,7 +17,7 @@ Feature: Register new file upload
         """
     Then the HTTP status code should be "201"
     And the following document entry should be created:
-      | Path          | /images/meme.jpg                                                          |
+      | Path          | images/meme.jpg                                                          |
       | IsPublishable | true                                                                      |
       | CollectionID  | 1234-asdfg-54321-qwerty                                                   |
       | Title         | The latest Meme                                                           |
@@ -30,11 +30,11 @@ Feature: Register new file upload
       | State         | CREATED                                                                   |
 
   Scenario: Attempting to register a file with a path that is already register
-    Given the file upload "/images/old-meme.jpg" has been registered
+    Given the file upload "images/old-meme.jpg" has been registered
     When the file upload is registered with payload:
         """
         {
-          "path": "/images/old-meme.jpg",
+          "path": "images/old-meme.jpg",
           "is_publishable": true,
           "collection_id": "1234-asdfg-54321-qwerty",
           "title": "The latest Meme",

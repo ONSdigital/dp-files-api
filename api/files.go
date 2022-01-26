@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/go-playground/validator"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
 type RegisterMetaData struct {
-	Path          string `json:"path" validate:"required,uri"`
+	Path          string `json:"path" validate:"required,aws-upload-key"`
 	IsPublishable *bool  `json:"is_publishable,omitempty" validate:"required"`
 	CollectionID  string `json:"collection_id" validate:"required"`
 	Title         string `json:"title"`
@@ -19,11 +20,27 @@ type RegisterMetaData struct {
 }
 
 type UploadCompleteMetaData struct {
-	Path string `json:"path" validate:"required,uri"`
+	Path string `json:"path" validate:"required,aws-upload-key"`
 	Etag string `json:"etag" validate:"required"`
 }
 
-func CreateFileUploadStartedHandler(register files.CreateUploadStartedEntry) http.HandlerFunc {
+func CreateGetFileMetadataHandler(getMetadata files.GetFileMetadata) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		w.Header().Add("Content-Type", "application/json")
+		metadata, err := getMetadata(req.Context(), vars["path"])
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+
+		json.NewEncoder(w).Encode(metadata)
+
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func CreateFileUploadStartedHandler(register files.RegisterFileUpload) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		m := RegisterMetaData{}
@@ -36,6 +53,7 @@ func CreateFileUploadStartedHandler(register files.CreateUploadStartedEntry) htt
 
 		validate := validator.New()
 		validate.RegisterValidation("mime-type", mimeValidator)
+		validate.RegisterValidation("aws-upload-key", awsUploadKeyValidator)
 		err = validate.Struct(m)
 		if err != nil {
 			handleError(w, err)
@@ -52,7 +70,7 @@ func CreateFileUploadStartedHandler(register files.CreateUploadStartedEntry) htt
 	}
 }
 
-func MarkUploadCompleteHandler(markUploaded files.MarkUploadComplete) http.HandlerFunc {
+func CreateMarkUploadCompleteHandler(markUploaded files.MarkUploadComplete) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		m := UploadCompleteMetaData{}
 
@@ -62,7 +80,9 @@ func MarkUploadCompleteHandler(markUploaded files.MarkUploadComplete) http.Handl
 			return
 		}
 
-		err = validator.New().Struct(m)
+		validate := validator.New()
+		validate.RegisterValidation("aws-upload-key", awsUploadKeyValidator)
+		err = validate.Struct(m)
 		if err != nil {
 			handleError(w, err)
 			return

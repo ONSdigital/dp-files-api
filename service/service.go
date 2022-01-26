@@ -38,8 +38,10 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	store := files.NewStore(mongoClient, serviceList.GetClock(ctx))
 
 	r := mux.NewRouter() // TODO: Add any middleware that your service requires
-	r.StrictSlash(true).Path("/v1/files/register").HandlerFunc(api.CreateFileUploadStartedHandler(store.CreateUploadStarted))
-	r.StrictSlash(true).Path("/v1/files/upload-complete").HandlerFunc(api.MarkUploadCompleteHandler(store.MarkUploadComplete))
+	r.StrictSlash(true).Path("/v1/files/register").HandlerFunc(api.CreateFileUploadStartedHandler(store.RegisterFileUpload))
+	r.StrictSlash(true).Path("/v1/files/upload-complete").HandlerFunc(api.CreateMarkUploadCompleteHandler(store.MarkUploadComplete))
+	r.StrictSlash(true).Path("/v1/files/{path:[a-zA-Z0-9\\.\\-\\/]+}").HandlerFunc(api.CreateGetFileMetadataHandler(store.GetFileMetadata))
+
 	s := serviceList.GetHTTPServer(r)
 
 	// TODO: Add other(s) to serviceList here
