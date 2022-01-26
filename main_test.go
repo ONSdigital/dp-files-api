@@ -17,20 +17,22 @@ import (
 )
 
 var componentFlag = flag.Bool("component", false, "perform component tests")
+var loggingFlag = flag.Bool("logging", false, "output application logging")
 
 type ComponentTest struct {
 	MongoFeature *componenttest.MongoFeature
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
-	buf := bytes.NewBufferString("")
-	log.SetDestination(buf, buf)
+	if !*loggingFlag {
+		buf := bytes.NewBufferString("")
+		log.SetDestination(buf, buf)
+	}
 
 	component := steps.NewFilesApiComponent()
 
 	apiFeature := componenttest.NewAPIFeature(component.Initialiser)
 	component.ApiFeature = apiFeature
-	//component.Mongo = f.MongoFeature
 
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		component.Reset()
@@ -46,7 +48,6 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	})
 
 	apiFeature.RegisterSteps(ctx)
-	//f.MongoFeature.RegisterSteps(ctx)
 	component.RegisterSteps(ctx)
 }
 
