@@ -2,7 +2,6 @@ package steps
 
 import (
 	"context"
-	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
@@ -41,14 +40,7 @@ func NewFilesApiComponent() *FilesApiComponent {
 }
 
 func (d *FilesApiComponent) Initialiser() (http.Handler, error) {
-
-	s, err := service.Run(context.Background(), d.svcList, d.errChan)
-
-	if err != nil {
-		fmt.Println("ERROR: " + err.Error())
-	}
-
-	d.svc = s
+	d.svc , _ = service.Run(context.Background(), d.svcList, d.errChan)
 
 	return d.DpHttpServer.Handler, nil
 }

@@ -46,15 +46,6 @@ docker-test-component:
 	docker-compose -f docker-compose.yml exec -T dp-files-api go test -component
 	docker-compose -f docker-compose.yml down
 
-# Enabling components to run on an M1 chip as Mongo cannot be installed on Apple Silicon
-m1-docker-test:
-	docker-compose -f docker-compose.yml down
-	docker buildx build --platform linux/amd64 -f Dockerfile . -t template_test --target=test
-	docker-compose -f docker-compose.yml up -d
-	docker-compose -f docker-compose.yml exec -T dp-files-api go test ./...
-	docker-compose -f docker-compose.yml exec -T dp-files-api go test -component
-	docker-compose -f docker-compose.yml down
-
 .PHONY: test-coverage
 test-coverage:
 	rm combined-coverage.out component-coverage.out coverage.out

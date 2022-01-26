@@ -3,6 +3,8 @@ package files
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/ONSdigital/log.go/v2/log"
 
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/config"
@@ -35,6 +37,7 @@ func (s *Store) GetFileMetadata(ctx context.Context, path string) (StoredRegiste
 
 	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": path}, &metadata)
 	if err != nil && errors.Is(err, mongodriver.ErrNoDocumentFound) {
+		log.Error(ctx, "file metadata not found", err, log.Data{"path": path})
 		return metadata, ErrFileNotRegistered
 	}
 
@@ -44,10 +47,12 @@ func (s *Store) GetFileMetadata(ctx context.Context, path string) (StoredRegiste
 func (s *Store) RegisterFileUpload(ctx context.Context, metaData StoredRegisteredMetaData) error {
 	count, err := s.m.Collection(config.MetadataCollection).Count(ctx, bson.M{"path": metaData.Path})
 	if err != nil {
+		log.Error(ctx, "mongo driver count error", err, log.Data{"path": metaData.Path})
 		return err
 	}
 
 	if count > 0 {
+		log.Error(ctx, "file upload already registered", err, log.Data{"path": metaData.Path})
 		return ErrDuplicateFile
 	}
 
@@ -56,8 +61,13 @@ func (s *Store) RegisterFileUpload(ctx context.Context, metaData StoredRegistere
 	metaData.State = stateCreated
 
 	_, err = s.m.Collection(config.MetadataCollection).Insert(ctx, metaData)
+	if err != nil {
+		log.Error(ctx, "failed to insert metadata", err, log.Data{"collection": config.MetadataCollection, "metadata": metaData})
+		return err
+	}
 
-	return err
+	log.Info(ctx, "registering new file upload", log.Data{"path": metaData.Path})
+	return nil
 }
 
 func (s *Store) MarkUploadComplete(ctx context.Context, metaData StoredUploadCompleteMetaData) error {
@@ -65,12 +75,17 @@ func (s *Store) MarkUploadComplete(ctx context.Context, metaData StoredUploadCom
 	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": metaData.Path}, &metadata)
 	if err != nil {
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			log.Error(ctx, "mark upload complete: attempted to operate on unregistered file", err, log.Data{"path": metaData.Path})
 			return ErrFileNotRegistered
 		}
+
+		log.Error(ctx, "failed finding metadata to mark upload complete", err, log.Data{"path": metaData.Path})
 		return err
 	}
 
 	if metadata.State != stateCreated {
+		log.Error(ctx, fmt.Sprintf("mark upload complete: file was not in state %s", stateCreated),
+			err, log.Data{"path": metaData.Path, "current_state": metadata.State})
 		return ErrFileNotInCreatedState
 	}
 
@@ -85,5 +100,11 @@ func (s *Store) MarkUploadComplete(ctx context.Context, metaData StoredUploadCom
 				{"upload_completed_at", s.c.GetCurrentTime()}}},
 		})
 
-	return err
+	if err != nil {
+		log.Error(ctx, "failed to mark upload complete", err, log.Data{"metadata": metaData, "collection": config.MetadataCollection})
+		return err
+	}
+
+	log.Info(ctx, "marking file upload complete", log.Data{"path": metaData.Path})
+	return nil
 }
