@@ -5,14 +5,15 @@ import (
 	"errors"
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/files"
-	mock4 "github.com/ONSdigital/dp-files-api/files/mock"
+	mockFiles "github.com/ONSdigital/dp-files-api/files/mock"
 	"github.com/ONSdigital/dp-files-api/health"
-	mock2 "github.com/ONSdigital/dp-files-api/health/mock"
+	hcMock "github.com/ONSdigital/dp-files-api/health/mock"
 	"github.com/ONSdigital/dp-files-api/mongo"
-	mock3 "github.com/ONSdigital/dp-files-api/mongo/mock"
+	mongoMock "github.com/ONSdigital/dp-files-api/mongo/mock"
 	"github.com/ONSdigital/dp-files-api/service"
 	"github.com/ONSdigital/dp-files-api/service/mock"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
@@ -26,18 +27,21 @@ var svc service.Service
 func TestClose(t *testing.T) {
 
 	Convey("Having a correctly initialised service", t, func() {
-		hc := &mock2.CheckerMock{
+		hc := &hcMock.CheckerMock{
 			AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
 			StartFunc:    func(context.Context) {},
 		}
-		m := &mock3.ClientMock{}
-		hs := &mock4.HTTPServerMock{ListenAndServeFunc: func() error { return nil }}
+		m := &mongoMock.ClientMock{}
+		hs := &mockFiles.HTTPServerMock{ListenAndServeFunc: func() error { return nil }}
+
+		km := &mock.OurProducerMock{}
 
 		serviceList := &mock.ServiceContainerMock{
 			GetMongoDBFunc:     func(ctx context.Context) (mongo.Client, error) { return m, nil },
 			GetClockFunc:       func(ctx context.Context) clock.Clock { return nil },
 			GetHTTPServerFunc:  func(router http.Handler) files.HTTPServer { return hs },
 			GetHealthCheckFunc: func() (health.Checker, error) { return hc, nil },
+			GetKafkaProducerFunc: func(ctx context.Context) (kafka.IProducer, error) { return km, nil },
 		}
 		svcErrors := make(chan error, 1)
 

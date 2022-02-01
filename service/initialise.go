@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/health"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"github.com/ONSdigital/log.go/v2/log"
 	"net/http"
 
@@ -60,6 +61,26 @@ func (e *ExternalServiceList) GetMongoDB(ctx context.Context) (mongo.Client, err
 
 func (e *ExternalServiceList) GetClock(ctx context.Context) clock.Clock {
 	return clock.SystemClock{}
+}
+
+// GetKafkaProducer returns a kafka producer with the provided config
+func (e *ExternalServiceList) GetKafkaProducer(ctx context.Context) (kafka.IProducer, error) {
+	pConfig := &kafka.ProducerConfig{
+		BrokerAddrs:       e.config.KafkaConfig.Addr,
+		Topic:             e.config.KafkaConfig.StaticFilePublishedTopic,
+		MinBrokersHealthy: &e.config.KafkaConfig.ProducerMinBrokersHealthy,
+		KafkaVersion:      &e.config.KafkaConfig.Version,
+		MaxMessageBytes:   &e.config.KafkaConfig.MaxBytes,
+	}
+	//if cfg.KafkaConfig.SecProtocol == config.KafkaTLSProtocolFlag {
+	//	pConfig.SecurityConfig = kafka.GetSecurityConfig(
+	//		cfg.KafkaConfig.SecCACerts,
+	//		cfg.KafkaConfig.SecClientCert,
+	//		cfg.KafkaConfig.SecClientKey,
+	//		cfg.KafkaConfig.SecSkipVerify,
+	//	)
+	//}
+	return kafka.NewProducer(ctx, pConfig)
 }
 
 func (e *ExternalServiceList) Shutdown(ctx context.Context) error {

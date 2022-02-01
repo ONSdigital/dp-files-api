@@ -10,6 +10,7 @@ import (
 	"github.com/ONSdigital/dp-files-api/health"
 	"github.com/ONSdigital/dp-files-api/mongo"
 	"github.com/ONSdigital/dp-files-api/service"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"net/http"
 	"sync"
 )
@@ -33,6 +34,9 @@ var _ service.ServiceContainer = &ServiceContainerMock{}
 // 			GetHealthCheckFunc: func() (health.Checker, error) {
 // 				panic("mock out the GetHealthCheck method")
 // 			},
+// 			GetKafkaProducerFunc: func(ctx context.Context) (kafka.IProducer, error) {
+// 				panic("mock out the GetKafkaProducer method")
+// 			},
 // 			GetMongoDBFunc: func(ctx context.Context) (mongo.Client, error) {
 // 				panic("mock out the GetMongoDB method")
 // 			},
@@ -55,6 +59,9 @@ type ServiceContainerMock struct {
 	// GetHealthCheckFunc mocks the GetHealthCheck method.
 	GetHealthCheckFunc func() (health.Checker, error)
 
+	// GetKafkaProducerFunc mocks the GetKafkaProducer method.
+	GetKafkaProducerFunc func(ctx context.Context) (kafka.IProducer, error)
+
 	// GetMongoDBFunc mocks the GetMongoDB method.
 	GetMongoDBFunc func(ctx context.Context) (mongo.Client, error)
 
@@ -76,6 +83,11 @@ type ServiceContainerMock struct {
 		// GetHealthCheck holds details about calls to the GetHealthCheck method.
 		GetHealthCheck []struct {
 		}
+		// GetKafkaProducer holds details about calls to the GetKafkaProducer method.
+		GetKafkaProducer []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
 		// GetMongoDB holds details about calls to the GetMongoDB method.
 		GetMongoDB []struct {
 			// Ctx is the ctx argument value.
@@ -87,11 +99,12 @@ type ServiceContainerMock struct {
 			Ctx context.Context
 		}
 	}
-	lockGetClock       sync.RWMutex
-	lockGetHTTPServer  sync.RWMutex
-	lockGetHealthCheck sync.RWMutex
-	lockGetMongoDB     sync.RWMutex
-	lockShutdown       sync.RWMutex
+	lockGetClock         sync.RWMutex
+	lockGetHTTPServer    sync.RWMutex
+	lockGetHealthCheck   sync.RWMutex
+	lockGetKafkaProducer sync.RWMutex
+	lockGetMongoDB       sync.RWMutex
+	lockShutdown         sync.RWMutex
 }
 
 // GetClock calls GetClockFunc.
@@ -179,6 +192,37 @@ func (mock *ServiceContainerMock) GetHealthCheckCalls() []struct {
 	mock.lockGetHealthCheck.RLock()
 	calls = mock.calls.GetHealthCheck
 	mock.lockGetHealthCheck.RUnlock()
+	return calls
+}
+
+// GetKafkaProducer calls GetKafkaProducerFunc.
+func (mock *ServiceContainerMock) GetKafkaProducer(ctx context.Context) (kafka.IProducer, error) {
+	if mock.GetKafkaProducerFunc == nil {
+		panic("ServiceContainerMock.GetKafkaProducerFunc: method is nil but ServiceContainer.GetKafkaProducer was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockGetKafkaProducer.Lock()
+	mock.calls.GetKafkaProducer = append(mock.calls.GetKafkaProducer, callInfo)
+	mock.lockGetKafkaProducer.Unlock()
+	return mock.GetKafkaProducerFunc(ctx)
+}
+
+// GetKafkaProducerCalls gets all the calls that were made to GetKafkaProducer.
+// Check the length with:
+//     len(mockedServiceContainer.GetKafkaProducerCalls())
+func (mock *ServiceContainerMock) GetKafkaProducerCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockGetKafkaProducer.RLock()
+	calls = mock.calls.GetKafkaProducer
+	mock.lockGetKafkaProducer.RUnlock()
 	return calls
 }
 
