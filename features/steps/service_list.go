@@ -5,6 +5,7 @@ import (
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/health"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"net/http"
 	"time"
 
@@ -38,6 +39,19 @@ func (e *fakeServiceContainer) GetMongoDB(ctx context.Context) (mongo.Client, er
 
 func (e *fakeServiceContainer) GetClock(ctx context.Context) clock.Clock {
 	return testClock{}
+}
+
+func (e *fakeServiceContainer) GetKafkaProducer(ctx context.Context) (kafka.IProducer, error) {
+	cfg, _ := config.Get()
+	pConfig := &kafka.ProducerConfig{
+		BrokerAddrs:       cfg.KafkaConfig.Addr,
+		Topic:             cfg.KafkaConfig.StaticFilePublishedTopic,
+		MinBrokersHealthy: &cfg.KafkaConfig.ProducerMinBrokersHealthy,
+		KafkaVersion:      &cfg.KafkaConfig.Version,
+		MaxMessageBytes:   &cfg.KafkaConfig.MaxBytes,
+	}
+
+	return kafka.NewProducer(ctx, pConfig)
 }
 
 func (e *fakeServiceContainer) Shutdown(ctx context.Context) error {

@@ -17,6 +17,23 @@ type Config struct {
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
 	MongoConfig
+	KafkaConfig
+}
+
+// KafkaConfig contains the config required to connect to Kafka
+type KafkaConfig struct {
+	Addr                      []string `envconfig:"KAFKA_ADDR"                            json:"-"`
+	ProducerMinBrokersHealthy int      `envconfig:"KAFKA_PRODUCER_MIN_BROKERS_HEALTHY"`
+	Version                   string   `envconfig:"KAFKA_VERSION"`
+	OffsetOldest              bool     `envconfig:"KAFKA_OFFSET_OLDEST"`
+	NumWorkers                int      `envconfig:"KAFKA_NUM_WORKERS"`
+	MaxBytes                  int      `envconfig:"KAFKA_MAX_BYTES"`
+	SecProtocol               string   `envconfig:"KAFKA_SEC_PROTO"`
+	SecCACerts                string   `envconfig:"KAFKA_SEC_CA_CERTS"`
+	SecClientKey              string   `envconfig:"KAFKA_SEC_CLIENT_KEY"                  json:"-"`
+	SecClientCert             string   `envconfig:"KAFKA_SEC_CLIENT_CERT"`
+	SecSkipVerify             bool     `envconfig:"KAFKA_SEC_SKIP_VERIFY"`
+	StaticFilePublishedTopic  string   `envconfig:"STATIC_FILE_PUBLISHED_TOPIC"`
 }
 
 var cfg *Config
@@ -46,6 +63,20 @@ func Get() (*Config, error) {
 			TLSConnectionConfig: mongodb.TLSConnectionConfig{
 				IsSSL: false,
 			},
+		},
+		KafkaConfig: KafkaConfig{
+			Addr:                      []string{"kafka:9092"},
+			ProducerMinBrokersHealthy: 1,
+			Version:                   "2.6.1",
+			OffsetOldest:              true,
+			NumWorkers:                1,
+			MaxBytes:                  2000000,
+			SecProtocol:               "",
+			SecCACerts:                "",
+			SecClientKey:              "",
+			SecClientCert:             "",
+			SecSkipVerify:             false,
+			StaticFilePublishedTopic:  "static-file-published",
 		},
 	}
 

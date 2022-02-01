@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"github.com/ONSdigital/dp-files-api/health"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"time"
 
 	"github.com/ONSdigital/dp-files-api/api"
@@ -15,11 +16,12 @@ import (
 
 // Service contains all the configs, server and clients to run the API
 type Service struct {
-	Server      files.HTTPServer
-	Router      *mux.Router
-	ServiceList ServiceContainer
-	HealthCheck health.Checker
-	MongoClient mongo.Client
+	Server        files.HTTPServer
+	Router        *mux.Router
+	ServiceList   ServiceContainer
+	HealthCheck   health.Checker
+	MongoClient   mongo.Client
+	KafkaProducer kafka.IProducer
 }
 
 // Run the service
@@ -32,6 +34,12 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	mongoClient, err := serviceList.GetMongoDB(ctx)
 	if err != nil {
 		log.Error(ctx, "could not obtain mongo session", err)
+		return nil, err
+	}
+
+	kafkaProducer, err := serviceList.GetKafkaProducer(ctx)
+	if err != nil {
+		log.Error(ctx, "could not obtain kafka connection", err)
 		return nil, err
 	}
 
@@ -59,6 +67,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		ServiceList: serviceList,
 		Server:      s,
 		MongoClient: mongoClient,
+		KafkaProducer: kafkaProducer,
 	}
 
 	if err := svc.registerCheckers(ctx, hc); err != nil {
@@ -115,6 +124,11 @@ func (svc *Service) registerCheckers(ctx context.Context, hc health.Checker) (er
 	if err = hc.AddCheck("Mongo DB", svc.MongoClient.Checker); err != nil {
 		hasErrors = true
 		log.Error(ctx, "error adding health for mongo db", err)
+	}
+
+	if err = hc.AddCheck("Kafka Producer", svc.KafkaProducer.Checker); err != nil {
+		hasErrors = true
+		log.Error(ctx, "error adding health for kafka producer", err)
 	}
 
 	if hasErrors {
