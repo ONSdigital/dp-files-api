@@ -24,6 +24,20 @@ type UploadCompleteMetaData struct {
 	Etag string `json:"etag" validate:"required"`
 }
 
+type PublishData struct {
+	CollectionID string `json:"collection_id"`
+}
+
+func CreatePublishHandler(publish files.PublishCollection) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		p := PublishData{}
+		json.NewDecoder(req.Body).Decode(&p)
+
+		publish(req.Context(), p.CollectionID)
+		w.WriteHeader(http.StatusCreated)
+	}
+}
+
 func CreateGetFileMetadataHandler(getMetadata files.GetFileMetadata) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
