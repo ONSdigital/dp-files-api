@@ -5,6 +5,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/cucumber/godog/colors"
 	"os"
 	"testing"
 
@@ -13,11 +14,12 @@ import (
 	componenttest "github.com/ONSdigital/dp-component-test"
 	"github.com/ONSdigital/dp-files-api/features/steps"
 	"github.com/cucumber/godog"
-	"github.com/cucumber/godog/colors"
 )
 
-var componentFlag = flag.Bool("component", false, "perform component tests")
-var loggingFlag = flag.Bool("logging", false, "output application logging")
+var (
+	componentFlag = flag.Bool("component", false, "perform component tests")
+	loggingFlag   = flag.Bool("logging", false, "print logging")
+)
 
 type ComponentTest struct {
 	MongoFeature *componenttest.MongoFeature
@@ -57,22 +59,17 @@ func (f *ComponentTest) InitializeTestSuite(ctx *godog.TestSuiteContext) {
 
 func TestComponent(t *testing.T) {
 	if *componentFlag {
-		status := 0
-
-		var opts = godog.Options{
-			Output: colors.Colored(os.Stdout),
-			Format: "pretty",
-			Paths:  flag.Args(),
-		}
-
 		f := &ComponentTest{}
 
-		status = godog.TestSuite{
+		status := godog.TestSuite{
 			Name:                 "feature_tests",
 			ScenarioInitializer:  f.InitializeScenario,
 			TestSuiteInitializer: f.InitializeTestSuite,
-			Options:              &opts,
-		}.Run()
+			Options: &godog.Options{
+				Output: colors.Colored(os.Stdout),
+				Format: "pretty",
+				Paths:  flag.Args(),
+			}}.Run()
 
 		fmt.Println("=================================")
 		fmt.Printf("Component test coverage: %.2f%%\n", testing.Coverage()*100)

@@ -19,8 +19,9 @@ var ErrFileNotRegistered = errors.New("file not registered")
 var ErrFileNotInCreatedState = errors.New("file state is not in state created")
 
 const (
-	stateCreated  = "CREATED"
-	stateUploaded = "UPLOADED"
+	stateCreated   = "CREATED"
+	stateUploaded  = "UPLOADED"
+	statePublished = "PUBLISHED"
 )
 
 type Store struct {
@@ -106,5 +107,19 @@ func (s *Store) MarkUploadComplete(ctx context.Context, metaData StoredUploadCom
 	}
 
 	log.Info(ctx, "marking file upload complete", log.Data{"path": metaData.Path})
+	return nil
+}
+
+func (s *Store) PublishCollection(ctx context.Context, collectionID string) error {
+	s.m.Collection(config.MetadataCollection).UpdateMany(
+		ctx,
+		bson.M{"collection_id": collectionID},
+		bson.D{
+			{"$set", bson.D{
+				{"state", statePublished},
+				{"last_modified", s.c.GetCurrentTime()},
+				{"published_at", s.c.GetCurrentTime()}}},
+		})
+
 	return nil
 }

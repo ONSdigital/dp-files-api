@@ -29,3 +29,4 @@ type StoredUploadCompleteMetaData struct {
 type RegisterFileUpload func(ctx context.Context, metaData StoredRegisteredMetaData) error
 type MarkUploadComplete func(ctx context.Context, metaData StoredUploadCompleteMetaData) error
 type GetFileMetadata func(ctx context.Context, path string) (StoredRegisteredMetaData, error)
+type PublishCollection func(ctx context.Context, collectionID string) error

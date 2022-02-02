@@ -48,6 +48,9 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	r := mux.NewRouter() // TODO: Add any middleware that your service requires
 	r.StrictSlash(true).Path("/v1/files/register").HandlerFunc(api.CreateFileUploadStartedHandler(store.RegisterFileUpload))
 	r.StrictSlash(true).Path("/v1/files/upload-complete").HandlerFunc(api.CreateMarkUploadCompleteHandler(store.MarkUploadComplete))
+	r.StrictSlash(true).Path("/v1/files/publish").HandlerFunc(api.CreatePublishHandler(store.PublishCollection))
+
+	// The path below is the catchall route and MUST be the last one
 	r.StrictSlash(true).Path("/v1/files/{path:[a-zA-Z0-9\\.\\-\\/]+}").HandlerFunc(api.CreateGetFileMetadataHandler(store.GetFileMetadata))
 
 	s := serviceList.GetHTTPServer(r)
@@ -62,11 +65,11 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	}
 
 	svc := &Service{
-		Router:      r,
-		HealthCheck: hc,
-		ServiceList: serviceList,
-		Server:      s,
-		MongoClient: mongoClient,
+		Router:        r,
+		HealthCheck:   hc,
+		ServiceList:   serviceList,
+		Server:        s,
+		MongoClient:   mongoClient,
 		KafkaProducer: kafkaProducer,
 	}
 
