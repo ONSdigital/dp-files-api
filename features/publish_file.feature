@@ -149,4 +149,8 @@ Feature: Publishing file to Kafka from a collection ID
       | Etag              | 123456789                                                                 |
       | State             | UPLOADED                                                                  |
 
+    Scenario: Publishing file for a collection that does not exists
+      When I publish the collection "1234-asdfg-54321-qwerty"
+      Then the HTTP status code should be "404"
+
 
