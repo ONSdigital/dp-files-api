@@ -19,6 +19,7 @@ var (
 	ErrFileNotRegistered      = errors.New("file not registered")
 	ErrFileNotInCreatedState  = errors.New("file state is not in state created")
 	ErrFileNotInUploadedState = errors.New("file state is not in state uploaded")
+	ErrNoFilesInCollection    = errors.New("no files found in collection")
 )
 
 const (
@@ -114,7 +115,19 @@ func (s *Store) MarkUploadComplete(ctx context.Context, metaData StoredUploadCom
 }
 
 func (s *Store) PublishCollection(ctx context.Context, collectionID string) error {
-	count, err := s.m.Collection(config.MetadataCollection).
+
+	count, err := s.m.Collection(config.MetadataCollection).Count(ctx, bson.M{"collection_id": collectionID})
+	if err != nil {
+		log.Error(ctx, "failed to count files collection", err, log.Data{"collection_id": collectionID})
+		return err
+	}
+
+	if count == 0 {
+		log.Info(ctx, "no files found in collection", log.Data{"collection_id": collectionID})
+		return ErrNoFilesInCollection
+	}
+
+	count, err = s.m.Collection(config.MetadataCollection).
 		Count(ctx, createCollectionContainsNotUploadedFilesQuery(collectionID))
 
 	if err != nil {

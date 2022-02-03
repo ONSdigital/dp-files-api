@@ -32,6 +32,8 @@ func handleError(w http.ResponseWriter, err error) {
 		writeError(w, buildErrors(err, "FileStateError"), http.StatusConflict)
 	case files.ErrFileNotInUploadedState:
 		writeError(w, buildErrors(err, "FileStateError"), http.StatusConflict)
+	case files.ErrNoFilesInCollection:
+		writeError(w, buildErrors(err, "EmptyCollection"), http.StatusNotFound)
 	default:
 		writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)
 	}
