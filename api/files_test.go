@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -223,6 +224,36 @@ func TestGetFileMetadataHandlesUnexpectedError(t *testing.T) {
 	h := api.CreateGetFileMetadataHandler(func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 		return files.StoredRegisteredMetaData{}, errors.New("broken")
 	})
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	assert.Contains(t, string(response), "InternalError")
+}
+
+func TestPublishHandlerHandlesInvalidJSONContent(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/files/publish", strings.NewReader("<json>invalid</json>"))
+
+	h := api.CreatePublishHandler(func(ctx context.Context, collectionID string) error {
+		return nil
+	})
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	assert.Contains(t, string(response), "BadJsonEncoding")
+}
+
+func TestPublishHandlerHandlesUnexpectedPublishingError(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/files/publish", strings.NewReader(`{"collection_id": "asdfghjkl"}`))
+
+	h := api.CreatePublishHandler(func(ctx context.Context, collectionID string) error {
+		return errors.New("broken")
+	})
+
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
