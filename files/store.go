@@ -14,9 +14,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-var ErrDuplicateFile = errors.New("duplicate file path")
-var ErrFileNotRegistered = errors.New("file not registered")
-var ErrFileNotInCreatedState = errors.New("file state is not in state created")
+var (
+	ErrDuplicateFile          = errors.New("duplicate file path")
+	ErrFileNotRegistered      = errors.New("file not registered")
+	ErrFileNotInCreatedState  = errors.New("file state is not in state created")
+	ErrFileNotInUploadedState = errors.New("file state is not in state uploaded")
+)
 
 const (
 	stateCreated   = "CREATED"
@@ -111,7 +114,21 @@ func (s *Store) MarkUploadComplete(ctx context.Context, metaData StoredUploadCom
 }
 
 func (s *Store) PublishCollection(ctx context.Context, collectionID string) error {
-	s.m.Collection(config.MetadataCollection).UpdateMany(
+	count, err := s.m.Collection(config.MetadataCollection).
+		Count(ctx, createCollectionContainsNotUploadedFilesQuery(collectionID))
+
+	if err != nil {
+		log.Error(ctx, "failed to count unpublishable files", err, log.Data{"collection_id": collectionID})
+		return err
+	}
+
+	if count > 0 {
+		event := fmt.Sprintf("can not publish collection, not all files in %s state", stateUploaded)
+		log.Info(ctx, event, log.Data{"collection_id": collectionID, "num_file_not_state_uploaded": count})
+		return ErrFileNotInUploadedState
+	}
+
+	_, err = s.m.Collection(config.MetadataCollection).UpdateMany(
 		ctx,
 		bson.M{"collection_id": collectionID},
 		bson.D{
@@ -121,5 +138,18 @@ func (s *Store) PublishCollection(ctx context.Context, collectionID string) erro
 				{"published_at", s.c.GetCurrentTime()}}},
 		})
 
+	if err != nil {
+		event := fmt.Sprintf("failed to change files to %s state", statePublished)
+		log.Error(ctx, event, err, log.Data{"collection_id": collectionID})
+		return err
+	}
+
 	return nil
+}
+
+func createCollectionContainsNotUploadedFilesQuery(collectionID string) bson.M {
+	return bson.M{"$and": []bson.M{
+		{"collection_id": collectionID},
+		{"state": bson.M{"$ne": stateUploaded}},
+	}}
 }

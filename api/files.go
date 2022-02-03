@@ -31,9 +31,17 @@ type PublishData struct {
 func CreatePublishHandler(publish files.PublishCollection) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		p := PublishData{}
-		json.NewDecoder(req.Body).Decode(&p)
+		err := json.NewDecoder(req.Body).Decode(&p)
+		if err != nil {
+			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
+			return
+		}
 
-		publish(req.Context(), p.CollectionID)
+		err = publish(req.Context(), p.CollectionID)
+		if err != nil {
+			handleError(w, err)
+		}
+
 		w.WriteHeader(http.StatusCreated)
 	}
 }
