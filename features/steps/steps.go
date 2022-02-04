@@ -27,6 +27,8 @@ func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the file metadata is requested for the file "([^"]*)"$`, c.theFileMetadataIsRequested)
 	ctx.Step(`^the file "([^"]*)" has not been registered$`, c.theFileHasNotBeenRegistered)
 	ctx.Step(`^I publish the collection "([^"]*)"$`, c.iPublishTheCollection)
+	ctx.Step(`^the file "([^"]*)" is marked as decrypted with etag "([^"]*)"$`, c.theFileIsMarkedAsDecrypted)
+	ctx.Step(`^the file upload "([^"]*)" has been published with:$`, c.theFileUploadHasBeenPublishedWith)
 }
 
 func (c *FilesApiComponent) iRegisterFile(payload *godog.DocString) error {
@@ -56,6 +58,11 @@ type ExpectedMetaDataUploadComplete struct {
 type ExpectedMetaDataPublished struct {
 	ExpectedMetaDataUploadComplete
 	PublishedAt string
+}
+
+type ExpectedMetaDataDecrypted struct {
+	ExpectedMetaDataPublished
+	DecryptedAt string
 }
 
 func (c *FilesApiComponent) theFileHasNotBeenRegistered(arg1 string) error {
@@ -100,6 +107,44 @@ func (c *FilesApiComponent) theFileUploadHasBeenRegistered(path string) error {
 	m := files.StoredRegisteredMetaData{Path: path}
 
 	_, err := c.mongoClient.Database("files").Collection("metadata").InsertOne(ctx, &m)
+	assert.NoError(c.ApiFeature, err)
+
+	return c.ApiFeature.StepError()
+}
+
+func (c *FilesApiComponent) theFileUploadHasBeenPublishedWith(path string, table *godog.Table) error {
+	keyValues, err := assistdog.NewDefault().CreateInstance(&ExpectedMetaDataPublished{}, table)
+	if err != nil {
+		return err
+	}
+
+	data := keyValues.(*ExpectedMetaDataPublished)
+
+	isPublishable, _ := strconv.ParseBool(data.IsPublishable)
+	sizeInBytes, _ := strconv.ParseUint(data.SizeInBytes, 10, 64)
+	createdAt, _ := time.Parse(time.RFC3339, data.CreatedAt)
+	lastModified, _ := time.Parse(time.RFC3339, data.LastModified)
+	uploadCompletedAt, _ := time.Parse(time.RFC3339, data.UploadCompletedAt)
+	publishedAt, _ := time.Parse(time.RFC3339, data.PublishedAt)
+
+	m := files.StoredRegisteredMetaData{
+		Path:              path,
+		IsPublishable:     isPublishable,
+		CollectionID:      data.CollectionID,
+		Title:             data.Title,
+		SizeInBytes:       sizeInBytes,
+		Type:              data.Type,
+		Licence:           data.Licence,
+		LicenceUrl:        data.LicenceUrl,
+		State:             data.State,
+		CreatedAt:         createdAt,
+		LastModified:      lastModified,
+		UploadCompletedAt: uploadCompletedAt,
+		PublishedAt:       publishedAt,
+		Etag:              data.Etag,
+	}
+
+	_, err = c.mongoClient.Database("files").Collection("metadata").InsertOne(context.Background(), &m)
 	assert.NoError(c.ApiFeature, err)
 
 	return c.ApiFeature.StepError()
@@ -183,16 +228,17 @@ func (c *FilesApiComponent) theFileUploadHasNotBeenRegistered(path string) error
 	return c.ApiFeature.StepError()
 }
 
+func (c *FilesApiComponent) theFileIsMarkedAsDecrypted(path, etag string) error {
+	json := fmt.Sprintf(`{"path": "%s","etag": "%s"}`, path, etag)
+	return c.ApiFeature.IPostToWithBody("/v1/files/decrypted", &messages.PickleDocString{Content: json})
+}
+
 func (c *FilesApiComponent) theFileUploadIsMarkedAsCompleteWithTheEtag(path, etag string) error {
 	json := fmt.Sprintf(`{
 	"path": "%s",
 	"etag": "%s"
 }`, path, etag)
-	payload := messages.PickleDocString{
-		MediaType: "application/json",
-		Content:   json,
-	}
-	return c.ApiFeature.IPostToWithBody("/v1/files/upload-complete", &payload)
+	return c.ApiFeature.IPostToWithBody("/v1/files/upload-complete", &messages.PickleDocString{Content: json})
 }
 
 func (c *FilesApiComponent) theFileMetadataIsRequested(filepath string) error {
@@ -205,12 +251,12 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 	metaData := files.StoredRegisteredMetaData{}
 
 	assist := assistdog.NewDefault()
-	keyValues, err := assist.CreateInstance(&ExpectedMetaDataPublished{}, table)
+	keyValues, err := assist.CreateInstance(&ExpectedMetaDataDecrypted{}, table)
 	if err != nil {
 		return err
 	}
 
-	expectedMetaData := keyValues.(*ExpectedMetaDataPublished)
+	expectedMetaData := keyValues.(*ExpectedMetaDataDecrypted)
 
 	res := c.mongoClient.Database("files").Collection("metadata").FindOne(ctx, bson.M{"path": expectedMetaData.Path})
 	assert.NoError(c.ApiFeature, res.Decode(&metaData))
@@ -228,7 +274,12 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 	assert.Equal(c.ApiFeature, expectedMetaData.Etag, metaData.Etag)
 	assert.Equal(c.ApiFeature, expectedMetaData.CreatedAt, metaData.CreatedAt.Format(time.RFC3339), "CREATED AT")
 	assert.Equal(c.ApiFeature, expectedMetaData.LastModified, metaData.LastModified.Format(time.RFC3339), "LAST MODIFIED")
-	assert.Equal(c.ApiFeature, expectedMetaData.UploadCompletedAt, metaData.UploadCompletedAt.Format(time.RFC3339), "UPLOAD COMPLETED AT")
+	if expectedMetaData.PublishedAt != "" {
+		assert.Equal(c.ApiFeature, expectedMetaData.PublishedAt, metaData.PublishedAt.Format(time.RFC3339), "DECRYPTED AT")
+	}
+	if expectedMetaData.DecryptedAt != "" {
+		assert.Equal(c.ApiFeature, expectedMetaData.DecryptedAt, metaData.DecryptedAt.Format(time.RFC3339), "DECRYPTED AT")
+	}
 
 	return c.ApiFeature.StepError()
 }

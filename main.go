@@ -43,7 +43,6 @@ func run(ctx context.Context) error {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, os.Kill)
 
-
 	// Read config
 	cfg, err := config.Get()
 	if err != nil {
@@ -55,7 +54,6 @@ func run(ctx context.Context) error {
 	svcList := service.NewServiceList(cfg, BuildTime, GitCommit, Version)
 
 	log.Info(ctx, "dp-files-api version", log.Data{"version": Version})
-
 
 	// Start service
 	svc, err := service.Run(ctx, svcList, svcErrors)

@@ -143,7 +143,7 @@ func TestMarkFileUploadCompleteUnsuccessful(t *testing.T) {
         }`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
 
-	errFunc := func(ctx context.Context, metaData files.StoredUploadCompleteMetaData) error {
+	errFunc := func(ctx context.Context, metaData files.FileEtagChange) error {
 		return errors.New("it's all gone very wrong")
 	}
 
@@ -163,7 +163,7 @@ func TestJsonDecodingUploadComplete(t *testing.T) {
         }`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
 
-	errFunc := func(ctx context.Context, metaData files.StoredUploadCompleteMetaData) error {
+	errFunc := func(ctx context.Context, metaData files.FileEtagChange) error {
 		return errors.New("it's all gone very wrong")
 	}
 
@@ -204,7 +204,7 @@ func TestValidateUploadComplete(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 
-			nilFunc := func(ctx context.Context, metaData files.StoredUploadCompleteMetaData) error { return nil }
+			nilFunc := func(ctx context.Context, metaData files.FileEtagChange) error { return nil }
 
 			h := api.CreateMarkUploadCompleteHandler(nilFunc)
 			h.ServeHTTP(rec, req)
