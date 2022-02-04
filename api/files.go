@@ -3,10 +3,11 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/go-playground/validator"
 	"github.com/gorilla/mux"
-	"net/http"
 )
 
 type RegisterMetaData struct {
@@ -39,9 +40,14 @@ func CreateDecryptHandler(decrypted MarkDecryptionComplete) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		m := EtagChange{}
 
-		json.NewDecoder(req.Body).Decode(&m)
+		if err := json.NewDecoder(req.Body).Decode(&m); err != nil {
+			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
+			return
+		}
 
-		decrypted(req.Context(), generateStoredUploadMetaData(m))
+		if err := decrypted(req.Context(), generateStoredUploadMetaData(m)); err != nil {
+			handleError(w, err)
+		}
 
 		w.WriteHeader(http.StatusCreated)
 	}
@@ -50,14 +56,13 @@ func CreateDecryptHandler(decrypted MarkDecryptionComplete) http.HandlerFunc {
 func CreatePublishHandler(publish PublishCollection) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		p := PublishData{}
-		err := json.NewDecoder(req.Body).Decode(&p)
-		if err != nil {
+
+		if err := json.NewDecoder(req.Body).Decode(&p); err != nil {
 			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
 			return
 		}
 
-		err = publish(req.Context(), p.CollectionID)
-		if err != nil {
+		if err := publish(req.Context(), p.CollectionID); err != nil {
 			handleError(w, err)
 		}
 
