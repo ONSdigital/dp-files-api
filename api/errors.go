@@ -28,9 +28,9 @@ func handleError(w http.ResponseWriter, err error) {
 		writeError(w, buildErrors(err, "DuplicateFileError"), http.StatusBadRequest)
 	case files.ErrFileNotRegistered:
 		writeError(w, buildErrors(err, "FileNotRegistered"), http.StatusNotFound)
-	case files.ErrFileNotInCreatedState:
-		writeError(w, buildErrors(err, "FileStateError"), http.StatusConflict)
-	case files.ErrFileNotInUploadedState:
+	case files.ErrFileNotInCreatedState,
+		files.ErrFileNotInUploadedState,
+		files.ErrFileNotInPublishedState:
 		writeError(w, buildErrors(err, "FileStateError"), http.StatusConflict)
 	case files.ErrNoFilesInCollection:
 		writeError(w, buildErrors(err, "EmptyCollection"), http.StatusNotFound)

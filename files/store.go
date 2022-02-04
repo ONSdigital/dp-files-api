@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/ONSdigital/log.go/v2/log"
 
 	"github.com/ONSdigital/dp-files-api/clock"
@@ -15,11 +16,12 @@ import (
 )
 
 var (
-	ErrDuplicateFile          = errors.New("duplicate file path")
-	ErrFileNotRegistered      = errors.New("file not registered")
-	ErrFileNotInCreatedState  = errors.New("file state is not in state created")
-	ErrFileNotInUploadedState = errors.New("file state is not in state uploaded")
-	ErrNoFilesInCollection    = errors.New("no files found in collection")
+	ErrDuplicateFile           = errors.New("duplicate file path")
+	ErrFileNotRegistered       = errors.New("file not registered")
+	ErrFileNotInCreatedState   = errors.New("file state is not in state created")
+	ErrFileNotInUploadedState  = errors.New("file state is not in state uploaded")
+	ErrFileNotInPublishedState = errors.New("file state is not in state published")
+	ErrNoFilesInCollection     = errors.New("no files found in collection")
 )
 
 const (
@@ -162,6 +164,11 @@ func (s *Store) PublishCollection(ctx context.Context, collectionID string) erro
 }
 
 func (s *Store) MarkFileDecrypted(ctx context.Context, metaData FileEtagChange) error {
+	count, _ := s.m.Collection(config.MetadataCollection).Count(ctx, createPathContainsNotPublishedFileQuery(metaData.Path))
+	if count > 0 {
+		return ErrFileNotInPublishedState
+	}
+
 	s.m.Collection(config.MetadataCollection).Update(
 		ctx,
 		bson.M{"path": metaData.Path},
@@ -180,5 +187,12 @@ func createCollectionContainsNotUploadedFilesQuery(collectionID string) bson.M {
 	return bson.M{"$and": []bson.M{
 		{"collection_id": collectionID},
 		{"state": bson.M{"$ne": stateUploaded}},
+	}}
+}
+
+func createPathContainsNotPublishedFileQuery(path string) bson.M {
+	return bson.M{"$and": []bson.M{
+		{"path": path},
+		{"state": bson.M{"$ne": statePublished}},
 	}}
 }

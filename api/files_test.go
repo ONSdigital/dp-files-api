@@ -5,14 +5,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ONSdigital/dp-files-api/api"
-	"github.com/ONSdigital/dp-files-api/files"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/ONSdigital/dp-files-api/api"
+	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFileMetaDataCreationUnsuccessful(t *testing.T) {
@@ -251,6 +252,36 @@ func TestPublishHandlerHandlesUnexpectedPublishingError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/v1/files/publish", strings.NewReader(`{"collection_id": "asdfghjkl"}`))
 
 	h := api.CreatePublishHandler(func(ctx context.Context, collectionID string) error {
+		return errors.New("broken")
+	})
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	assert.Contains(t, string(response), "InternalError")
+}
+
+func TestDecryptedHandlerHandlesInvalidJSONContent(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/files/decrypted", strings.NewReader("<json>invalid</json>"))
+
+	h := api.CreateDecryptHandler(func(ctx context.Context, change files.FileEtagChange) error {
+		return nil
+	})
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	assert.Contains(t, string(response), "BadJsonEncoding")
+}
+
+func TestDecryptedHandlerHandlesUnexpectedPublishingError(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/files/decrypted", strings.NewReader(`{"path": "dir/file.txt"}`))
+
+	h := api.CreateDecryptHandler(func(ctx context.Context, change files.FileEtagChange) error {
 		return errors.New("broken")
 	})
 
