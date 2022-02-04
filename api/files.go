@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/go-playground/validator"
@@ -19,7 +20,7 @@ type RegisterMetaData struct {
 	LicenceUrl    string `json:"licence_url" validate:"required"`
 }
 
-type UploadCompleteMetaData struct {
+type EtagChange struct {
 	Path string `json:"path" validate:"required,aws-upload-key"`
 	Etag string `json:"etag" validate:"required"`
 }
@@ -28,7 +29,25 @@ type PublishData struct {
 	CollectionID string `json:"collection_id"`
 }
 
-func CreatePublishHandler(publish files.PublishCollection) http.HandlerFunc {
+type RegisterFileUpload func(ctx context.Context, metaData files.StoredRegisteredMetaData) error
+type MarkUploadComplete func(ctx context.Context, metaData files.FileEtagChange) error
+type GetFileMetadata func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error)
+type PublishCollection func(ctx context.Context, collectionID string) error
+type MarkDecryptionComplete func(ctx context.Context, change files.FileEtagChange) error
+
+func CreateDecryptHandler(decrypted MarkDecryptionComplete) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		m := EtagChange{}
+
+		json.NewDecoder(req.Body).Decode(&m)
+
+		decrypted(req.Context(), generateStoredUploadMetaData(m))
+
+		w.WriteHeader(http.StatusCreated)
+	}
+}
+
+func CreatePublishHandler(publish PublishCollection) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		p := PublishData{}
 		err := json.NewDecoder(req.Body).Decode(&p)
@@ -46,7 +65,7 @@ func CreatePublishHandler(publish files.PublishCollection) http.HandlerFunc {
 	}
 }
 
-func CreateGetFileMetadataHandler(getMetadata files.GetFileMetadata) http.HandlerFunc {
+func CreateGetFileMetadataHandler(getMetadata GetFileMetadata) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		w.Header().Add("Content-Type", "application/json")
@@ -62,7 +81,7 @@ func CreateGetFileMetadataHandler(getMetadata files.GetFileMetadata) http.Handle
 	}
 }
 
-func CreateFileUploadStartedHandler(register files.RegisterFileUpload) http.HandlerFunc {
+func CreateFileUploadStartedHandler(register RegisterFileUpload) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		m := RegisterMetaData{}
@@ -92,11 +111,12 @@ func CreateFileUploadStartedHandler(register files.RegisterFileUpload) http.Hand
 	}
 }
 
-func CreateMarkUploadCompleteHandler(markUploaded files.MarkUploadComplete) http.HandlerFunc {
+func CreateMarkUploadCompleteHandler(markUploaded MarkUploadComplete) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		m := UploadCompleteMetaData{}
+		m := EtagChange{}
 
 		err := json.NewDecoder(req.Body).Decode(&m)
+
 		if err != nil {
 			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
 			return
@@ -132,8 +152,8 @@ func generateStoredRegisterMetaData(m RegisterMetaData) files.StoredRegisteredMe
 	}
 }
 
-func generateStoredUploadMetaData(m UploadCompleteMetaData) files.StoredUploadCompleteMetaData {
-	return files.StoredUploadCompleteMetaData{
+func generateStoredUploadMetaData(m EtagChange) files.FileEtagChange {
+	return files.FileEtagChange{
 		Path: m.Path,
 		Etag: m.Etag,
 	}

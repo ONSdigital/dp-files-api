@@ -1,7 +1,6 @@
 package files
 
 import (
-	"context"
 	"time"
 )
 
@@ -17,16 +16,13 @@ type StoredRegisteredMetaData struct {
 	CreatedAt         time.Time `bson:"created_at" json:"-"`
 	LastModified      time.Time `bson:"last_modified" json:"-"`
 	UploadCompletedAt time.Time `bson:"upload_completed_at" json:"-"`
+	PublishedAt       time.Time `bson:"published_at" json:"-"`
+	DecryptedAt       time.Time `bson:"decrypted_at" json:"-"`
 	State             string    `bson:"state" json:"state"`
 	Etag              string    `bson:"etag" json:"etag"`
 }
 
-type StoredUploadCompleteMetaData struct {
-	Path string `bson:"path"`
-	Etag string `bson:"etag"`
+type FileEtagChange struct {
+	Path string
+	Etag string
 }
-
-type RegisterFileUpload func(ctx context.Context, metaData StoredRegisteredMetaData) error
-type MarkUploadComplete func(ctx context.Context, metaData StoredUploadCompleteMetaData) error
-type GetFileMetadata func(ctx context.Context, path string) (StoredRegisteredMetaData, error)
-type PublishCollection func(ctx context.Context, collectionID string) error

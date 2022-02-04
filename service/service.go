@@ -29,8 +29,6 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 
 	log.Info(ctx, "running service")
 
-	//log.Info(ctx, "using service configuration", log.Data{"config": cfg})
-
 	mongoClient, err := serviceList.GetMongoDB(ctx)
 	if err != nil {
 		log.Error(ctx, "could not obtain mongo session", err)
@@ -43,26 +41,25 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		return nil, err
 	}
 
-	store := files.NewStore(mongoClient, serviceList.GetClock(ctx))
-
-	r := mux.NewRouter() // TODO: Add any middleware that your service requires
-	r.StrictSlash(true).Path("/v1/files/register").HandlerFunc(api.CreateFileUploadStartedHandler(store.RegisterFileUpload))
-	r.StrictSlash(true).Path("/v1/files/upload-complete").HandlerFunc(api.CreateMarkUploadCompleteHandler(store.MarkUploadComplete))
-	r.StrictSlash(true).Path("/v1/files/publish").HandlerFunc(api.CreatePublishHandler(store.PublishCollection))
-
-	// The path below is the catchall route and MUST be the last one
-	r.StrictSlash(true).Path("/v1/files/{path:[a-zA-Z0-9\\.\\-\\/]+}").HandlerFunc(api.CreateGetFileMetadataHandler(store.GetFileMetadata))
-
-	s := serviceList.GetHTTPServer(r)
-
-	// TODO: Add other(s) to serviceList here
-
 	hc, err := serviceList.GetHealthCheck()
-
 	if err != nil {
 		log.Fatal(ctx, "could not instantiate healthcheck", err)
 		return nil, err
 	}
+
+	store := files.NewStore(mongoClient, serviceList.GetClock(ctx))
+
+	r := mux.NewRouter().StrictSlash(true)
+	r.Path("/health").HandlerFunc(hc.Handler)
+	r.Path("/v1/files/register").HandlerFunc(api.CreateFileUploadStartedHandler(store.RegisterFileUpload))
+	r.Path("/v1/files/upload-complete").HandlerFunc(api.CreateMarkUploadCompleteHandler(store.MarkUploadComplete))
+	r.Path("/v1/files/publish").HandlerFunc(api.CreatePublishHandler(store.PublishCollection))
+	r.Path("/v1/files/decrypted").HandlerFunc(api.CreateDecryptHandler(store.MarkFileDecrypted))
+
+	// The path below is the catchall route and MUST be the last one
+	r.Path("/v1/files/{path:[a-zA-Z0-9\\.\\-\\/]+}").HandlerFunc(api.CreateGetFileMetadataHandler(store.GetFileMetadata))
+
+	s := serviceList.GetHTTPServer(r)
 
 	svc := &Service{
 		Router:        r,
@@ -77,7 +74,6 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
-	r.StrictSlash(true).Path("/health").HandlerFunc(hc.Handler)
 	hc.Start(ctx)
 
 	// Run the http server in a new go-routine

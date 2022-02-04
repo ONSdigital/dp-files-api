@@ -26,6 +26,7 @@ const (
 	stateCreated   = "CREATED"
 	stateUploaded  = "UPLOADED"
 	statePublished = "PUBLISHED"
+	stateDecrypted = "DECRYPTED"
 )
 
 type Store struct {
@@ -75,7 +76,7 @@ func (s *Store) RegisterFileUpload(ctx context.Context, metaData StoredRegistere
 	return nil
 }
 
-func (s *Store) MarkUploadComplete(ctx context.Context, metaData StoredUploadCompleteMetaData) error {
+func (s *Store) MarkUploadComplete(ctx context.Context, metaData FileEtagChange) error {
 	metadata := StoredRegisteredMetaData{}
 	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": metaData.Path}, &metadata)
 	if err != nil {
@@ -156,6 +157,21 @@ func (s *Store) PublishCollection(ctx context.Context, collectionID string) erro
 		log.Error(ctx, event, err, log.Data{"collection_id": collectionID})
 		return err
 	}
+
+	return nil
+}
+
+func (s *Store) MarkFileDecrypted(ctx context.Context, metaData FileEtagChange) error {
+	s.m.Collection(config.MetadataCollection).Update(
+		ctx,
+		bson.M{"path": metaData.Path},
+		bson.D{
+			{"$set", bson.D{
+				{"etag", metaData.Etag},
+				{"state", stateDecrypted},
+				{"last_modified", s.c.GetCurrentTime()},
+				{"decrypted_at", s.c.GetCurrentTime()}}},
+		})
 
 	return nil
 }
