@@ -6,6 +6,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ONSdigital/dp-files-api/config"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
+	"github.com/ONSdigital/dp-kafka/v3/avro"
+
 	"github.com/cucumber/messages-go/v16"
 
 	"github.com/ONSdigital/dp-files-api/files"
@@ -29,6 +33,8 @@ func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I publish the collection "([^"]*)"$`, c.iPublishTheCollection)
 	ctx.Step(`^the file "([^"]*)" is marked as decrypted with etag "([^"]*)"$`, c.theFileIsMarkedAsDecrypted)
 	ctx.Step(`^the file upload "([^"]*)" has been published with:$`, c.theFileUploadHasBeenPublishedWith)
+	ctx.Step(`^the following PUBLISHED message is sent to Kakfa:$`, c.theFollowingPublishedMessageIsSent)
+	ctx.Step(`^Kafka Consumer Group is running$`, c.kafkaConsumerGroupIsRunning)
 }
 
 func (c *FilesApiComponent) iRegisterFile(payload *godog.DocString) error {
@@ -287,6 +293,73 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 func (c *FilesApiComponent) iPublishTheCollection(collectionID string) error {
 	body := fmt.Sprintf(`{"collection_id": "%s"}`, collectionID)
 	c.ApiFeature.IPostToWithBody("/v1/files/publish", &messages.PickleDocString{MediaType: "application/json", Content: body})
+
+	return c.ApiFeature.StepError()
+}
+
+func (c *FilesApiComponent) theFollowingPublishedMessageIsSent(table *godog.Table) error {
+	expectedMessage, _ := assistdog.NewDefault().ParseMap(table)
+	for i := 0; i < 30; i++ {
+		if msg, ok := c.msgs[expectedMessage["path"]]; ok {
+			assert.True(c.ApiFeature, ok, "Could not find message")
+			assert.Equal(c.ApiFeature, expectedMessage["path"], msg.Path)
+			assert.Equal(c.ApiFeature, expectedMessage["etag"], msg.Etag)
+			assert.Equal(c.ApiFeature, expectedMessage["type"], msg.Type)
+			assert.Equal(c.ApiFeature, expectedMessage["sizeInBytes"], msg.SizeInBytes)
+			return c.ApiFeature.StepError()
+		}
+
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	assert.Fail(c.ApiFeature, "Could not find kafka message")
+	return c.ApiFeature.StepError()
+}
+
+func (c *FilesApiComponent) kafkaConsumerGroupIsRunning() error {
+	c.msgs = make(map[string]files.FilePublished)
+	ctx := context.Background()
+	cfg, _ := config.Get()
+	min := 1 * time.Millisecond
+	max := 5 * time.Millisecond
+	cgConfig := &kafka.ConsumerGroupConfig{
+		KafkaVersion:      &cfg.KafkaConfig.Version,
+		MinBrokersHealthy: &cfg.KafkaConfig.ProducerMinBrokersHealthy,
+		Topic:             cfg.KafkaConfig.StaticFilePublishedTopic,
+		GroupName:         "testing-stuff",
+		BrokerAddrs:       cfg.KafkaConfig.Addr,
+		MinRetryPeriod:    &min,
+		MaxRetryPeriod:    &max,
+	}
+	c.cg, _ = kafka.NewConsumerGroup(ctx, cgConfig)
+	c.cg.Start()
+	c.cg.RegisterHandler(ctx, func(ctx context.Context, workerID int, msg kafka.Message) error {
+		schema := &avro.Schema{
+			Definition: `{
+					"type": "record",
+					"name": "file-published",
+					"fields": [
+					  {"name": "path", "type": "string"},
+					  {"name": "etag", "type": "string"},
+					  {"name": "type", "type": "string"},
+					  {"name": "sizeInBytes", "type": "string"}
+					]
+				  }`,
+		}
+		fp := files.FilePublished{}
+		schema.Unmarshal(msg.GetData(), &fp)
+
+		c.msgs[fp.Path] = fp
+
+		return nil
+	})
+
+	for {
+		if c.cg.State().String() == "Consuming" {
+			break
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
 
 	return c.ApiFeature.StepError()
 }

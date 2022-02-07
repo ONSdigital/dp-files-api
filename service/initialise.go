@@ -3,11 +3,12 @@ package service
 import (
 	"context"
 	"errors"
+	"net/http"
+
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/health"
 	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"github.com/ONSdigital/log.go/v2/log"
-	"net/http"
 
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/config"
@@ -72,14 +73,15 @@ func (e *ExternalServiceList) GetKafkaProducer(ctx context.Context) (kafka.IProd
 		KafkaVersion:      &e.config.KafkaConfig.Version,
 		MaxMessageBytes:   &e.config.KafkaConfig.MaxBytes,
 	}
-	//if cfg.KafkaConfig.SecProtocol == config.KafkaTLSProtocolFlag {
-	//	pConfig.SecurityConfig = kafka.GetSecurityConfig(
-	//		cfg.KafkaConfig.SecCACerts,
-	//		cfg.KafkaConfig.SecClientCert,
-	//		cfg.KafkaConfig.SecClientKey,
-	//		cfg.KafkaConfig.SecSkipVerify,
-	//	)
-	//}
+
+	if e.config.KafkaConfig.SecProtocol != "" {
+		pConfig.SecurityConfig = kafka.GetSecurityConfig(
+			e.config.KafkaConfig.SecCACerts,
+			e.config.KafkaConfig.SecClientCert,
+			e.config.KafkaConfig.SecClientKey,
+			e.config.KafkaConfig.SecSkipVerify,
+		)
+	}
 	return kafka.NewProducer(ctx, pConfig)
 }
 

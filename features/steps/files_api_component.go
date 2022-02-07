@@ -2,10 +2,14 @@ package steps
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
 	"time"
+
+	"github.com/ONSdigital/dp-files-api/files"
+
+	kafka "github.com/ONSdigital/dp-kafka/v3"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	componenttest "github.com/ONSdigital/dp-component-test"
 	"github.com/ONSdigital/dp-files-api/config"
@@ -21,6 +25,8 @@ type FilesApiComponent struct {
 	ApiFeature   *componenttest.APIFeature
 	errChan      chan error
 	mongoClient  *mongo.Client
+	cg           *kafka.ConsumerGroup
+	msgs         map[string]files.FilePublished
 }
 
 func NewFilesApiComponent() *FilesApiComponent {
@@ -40,7 +46,7 @@ func NewFilesApiComponent() *FilesApiComponent {
 }
 
 func (d *FilesApiComponent) Initialiser() (http.Handler, error) {
-	d.svc , _ = service.Run(context.Background(), d.svcList, d.errChan)
+	d.svc, _ = service.Run(context.Background(), d.svcList, d.errChan)
 
 	return d.DpHttpServer.Handler, nil
 }
@@ -58,6 +64,10 @@ func (d *FilesApiComponent) Reset() {
 }
 
 func (d *FilesApiComponent) Close() error {
+	if d.cg != nil {
+		d.cg.Stop()
+	}
+
 	cfg, _ := config.Get()
 
 	if d.svc != nil {
