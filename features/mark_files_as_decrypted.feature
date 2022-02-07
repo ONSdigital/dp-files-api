@@ -53,3 +53,7 @@ Feature: Mark files as decrypted
       | State         | CREATED                                                                   |
     When the file "images/meme.jpg" is marked as decrypted with etag "987654321"
     Then the HTTP status code should be "409"
+
+  Scenario: The one where the file does not exist
+    When the file "images/not-found.jpg" is marked as decrypted with etag "987654321"
+    Then the HTTP status code should be "404"
