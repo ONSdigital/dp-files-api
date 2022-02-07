@@ -79,46 +79,10 @@ func (s *Store) RegisterFileUpload(ctx context.Context, metaData StoredRegistere
 }
 
 func (s *Store) MarkUploadComplete(ctx context.Context, metaData FileEtagChange) error {
-	metadata := StoredRegisteredMetaData{}
-	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": metaData.Path}, &metadata)
-	if err != nil {
-		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
-			log.Error(ctx, "mark upload complete: attempted to operate on unregistered file", err, log.Data{"path": metaData.Path})
-			return ErrFileNotRegistered
-		}
-
-		log.Error(ctx, "failed finding metadata to mark upload complete", err, log.Data{"path": metaData.Path})
-		return err
-	}
-
-	if metadata.State != stateCreated {
-		log.Error(ctx, fmt.Sprintf("mark upload complete: file was not in state %s", stateCreated),
-			err, log.Data{"path": metaData.Path, "current_state": metadata.State})
-		return ErrFileNotInCreatedState
-	}
-
-	_, err = s.m.Collection(config.MetadataCollection).Update(
-		ctx,
-		bson.M{"path": metaData.Path},
-		bson.D{
-			{"$set", bson.D{
-				{"etag", metaData.Etag},
-				{"state", stateUploaded},
-				{"last_modified", s.c.GetCurrentTime()},
-				{"upload_completed_at", s.c.GetCurrentTime()}}},
-		})
-
-	if err != nil {
-		log.Error(ctx, "failed to mark upload complete", err, log.Data{"metadata": metaData, "collection": config.MetadataCollection})
-		return err
-	}
-
-	log.Info(ctx, "marking file upload complete", log.Data{"path": metaData.Path})
-	return nil
+	return s.updateStatus(ctx, metaData.Path, metaData.Etag, stateUploaded, stateCreated, "upload_completed_at")
 }
 
 func (s *Store) PublishCollection(ctx context.Context, collectionID string) error {
-
 	count, err := s.m.Collection(config.MetadataCollection).Count(ctx, bson.M{"collection_id": collectionID})
 	if err != nil {
 		log.Error(ctx, "failed to count files collection", err, log.Data{"collection_id": collectionID})
@@ -164,36 +128,7 @@ func (s *Store) PublishCollection(ctx context.Context, collectionID string) erro
 }
 
 func (s *Store) MarkFileDecrypted(ctx context.Context, metaData FileEtagChange) error {
-	metadata := StoredRegisteredMetaData{}
-	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": metaData.Path}, &metadata)
-	if err != nil {
-		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
-			log.Error(ctx, "mark file as decrypted: attempted to operate on unregistered file", err, log.Data{"path": metaData.Path})
-			return ErrFileNotRegistered
-		}
-
-		log.Error(ctx, "failed finding metadata to mark file as decrypted", err, log.Data{"path": metaData.Path})
-		return err
-	}
-
-	if metadata.State != statePublished {
-		log.Error(ctx, fmt.Sprintf("mark file decrypted: file was not in state %s", stateCreated),
-			err, log.Data{"path": metaData.Path, "current_state": metadata.State})
-		return ErrFileNotInPublishedState
-	}
-
-	s.m.Collection(config.MetadataCollection).Update(
-		ctx,
-		bson.M{"path": metaData.Path},
-		bson.D{
-			{"$set", bson.D{
-				{"etag", metaData.Etag},
-				{"state", stateDecrypted},
-				{"last_modified", s.c.GetCurrentTime()},
-				{"decrypted_at", s.c.GetCurrentTime()}}},
-		})
-
-	return nil
+	return s.updateStatus(ctx, metaData.Path, metaData.Etag, stateDecrypted, statePublished, "decrypted_at")
 }
 
 func createCollectionContainsNotUploadedFilesQuery(collectionID string) bson.M {
@@ -201,4 +136,37 @@ func createCollectionContainsNotUploadedFilesQuery(collectionID string) bson.M {
 		{"collection_id": collectionID},
 		{"state": bson.M{"$ne": stateUploaded}},
 	}}
+}
+
+func (s *Store) updateStatus(ctx context.Context, path, etag, toState, expectedCurrentState, timestampField string) error {
+	metadata := StoredRegisteredMetaData{}
+	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": path}, &metadata)
+	if err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			log.Error(ctx, "mark file as decrypted: attempted to operate on unregistered file", err, log.Data{"path": path})
+			return ErrFileNotRegistered
+		}
+
+		log.Error(ctx, "failed finding metadata to mark file as decrypted", err, log.Data{"path": path})
+		return err
+	}
+
+	if metadata.State != expectedCurrentState {
+		log.Error(ctx, fmt.Sprintf("mark file decrypted: file was not in state %s", stateCreated),
+			err, log.Data{"path": path, "current_state": metadata.State})
+		return ErrFileNotInPublishedState
+	}
+
+	s.m.Collection(config.MetadataCollection).Update(
+		ctx,
+		bson.M{"path": path},
+		bson.D{
+			{"$set", bson.D{
+				{"etag", etag},
+				{"state", toState},
+				{"last_modified", s.c.GetCurrentTime()},
+				{timestampField, s.c.GetCurrentTime()}}},
+		})
+
+	return nil
 }
