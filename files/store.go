@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
+	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"github.com/ONSdigital/log.go/v2/log"
 
 	"github.com/ONSdigital/dp-files-api/clock"
@@ -33,11 +35,12 @@ const (
 
 type Store struct {
 	m mongo.Client
+	k kafka.IProducer
 	c clock.Clock
 }
 
-func NewStore(m mongo.Client, c clock.Clock) *Store {
-	return &Store{m, c}
+func NewStore(m mongo.Client, k kafka.IProducer, c clock.Clock) *Store {
+	return &Store{m, k, c}
 }
 
 func (s *Store) GetFileMetadata(ctx context.Context, path string) (StoredRegisteredMetaData, error) {
@@ -122,6 +125,23 @@ func (s *Store) PublishCollection(ctx context.Context, collectionID string) erro
 		event := fmt.Sprintf("failed to change files to %s state", statePublished)
 		log.Error(ctx, event, err, log.Data{"collection_id": collectionID})
 		return err
+	}
+
+	col := make([]StoredRegisteredMetaData, 0)
+	s.m.Collection(config.MetadataCollection).Find(ctx, bson.M{"collection_id": collectionID}, &col)
+	for _, m := range col {
+		err = s.k.Send(avroSchema, &FilePublished{
+			Path:        m.Path,
+			Etag:        m.Etag,
+			Type:        m.Type,
+			SizeInBytes: strconv.FormatUint(m.SizeInBytes, 10),
+		})
+
+		if err != nil {
+			fmt.Printf("PUBLISH ERROR: %s", err.Error())
+		} else {
+			fmt.Println("MESSAGE SENT SUCCESSFULLY!")
+		}
 	}
 
 	return nil

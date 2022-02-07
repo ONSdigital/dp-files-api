@@ -40,11 +40,11 @@ test-component:
 
 .PHONY: docker-test
 docker-test-component:
-	docker-compose -f docker-compose.yml down
+	docker-compose -f docker-compose-services.yml -f docker-compose.yml down
 	docker build -f Dockerfile . -t template_test --target=test
-	docker-compose -f docker-compose.yml up -d
-	docker-compose -f docker-compose.yml exec -T dp-files-api go test -component
-	docker-compose -f docker-compose.yml down
+	docker-compose -f docker-compose-services.yml -f docker-compose.yml up -d
+	docker-compose -f docker-compose-services.yml -f docker-compose.yml exec -T dp-files-api go test -component
+	docker-compose -f docker-compose-services.yml -f docker-compose.yml down
 
 .PHONY: test-coverage
 test-coverage:
@@ -55,6 +55,6 @@ test-coverage:
 	go tool cover -html=combined-coverage.out
 
 docker-local:
-	docker-compose -f docker-compose-local.yml down
-	docker-compose -f docker-compose-local.yml up -d
-	docker-compose -f docker-compose-local.yml exec dp-files-api bash
+	docker-compose  -f docker-compose-services.yml -f docker-compose-local.yml down
+	docker-compose  -f docker-compose-services.yml -f docker-compose-local.yml up -d
+	docker-compose  -f docker-compose-services.yml -f docker-compose-local.yml exec dp-files-api bash

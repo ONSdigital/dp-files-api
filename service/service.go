@@ -47,7 +47,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		return nil, err
 	}
 
-	store := files.NewStore(mongoClient, serviceList.GetClock(ctx))
+	store := files.NewStore(mongoClient, kafkaProducer, serviceList.GetClock(ctx))
 
 	r := mux.NewRouter().StrictSlash(true)
 	r.Path("/health").HandlerFunc(hc.Handler)
