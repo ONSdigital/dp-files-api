@@ -164,8 +164,21 @@ func (s *Store) PublishCollection(ctx context.Context, collectionID string) erro
 }
 
 func (s *Store) MarkFileDecrypted(ctx context.Context, metaData FileEtagChange) error {
-	count, _ := s.m.Collection(config.MetadataCollection).Count(ctx, createPathContainsNotPublishedFileQuery(metaData.Path))
-	if count > 0 {
+	metadata := StoredRegisteredMetaData{}
+	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": metaData.Path}, &metadata)
+	if err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			log.Error(ctx, "mark file as decrypted: attempted to operate on unregistered file", err, log.Data{"path": metaData.Path})
+			return ErrFileNotRegistered
+		}
+
+		log.Error(ctx, "failed finding metadata to mark file as decrypted", err, log.Data{"path": metaData.Path})
+		return err
+	}
+
+	if metadata.State != statePublished {
+		log.Error(ctx, fmt.Sprintf("mark file decrypted: file was not in state %s", stateCreated),
+			err, log.Data{"path": metaData.Path, "current_state": metadata.State})
 		return ErrFileNotInPublishedState
 	}
 
@@ -187,12 +200,5 @@ func createCollectionContainsNotUploadedFilesQuery(collectionID string) bson.M {
 	return bson.M{"$and": []bson.M{
 		{"collection_id": collectionID},
 		{"state": bson.M{"$ne": stateUploaded}},
-	}}
-}
-
-func createPathContainsNotPublishedFileQuery(path string) bson.M {
-	return bson.M{"$and": []bson.M{
-		{"path": path},
-		{"state": bson.M{"$ne": statePublished}},
 	}}
 }
