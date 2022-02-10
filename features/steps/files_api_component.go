@@ -27,6 +27,7 @@ type FilesApiComponent struct {
 	mongoClient  *mongo.Client
 	cg           *kafka.ConsumerGroup
 	msgs         map[string]files.FilePublished
+	isPublishing bool
 }
 
 func NewFilesApiComponent() *FilesApiComponent {
@@ -41,12 +42,13 @@ func NewFilesApiComponent() *FilesApiComponent {
 	log.Namespace = "dp-files-api"
 
 	d.svcList = &fakeServiceContainer{s}
+	d.isPublishing = true
 
 	return d
 }
 
 func (d *FilesApiComponent) Initialiser() (http.Handler, error) {
-	d.svc, _ = service.Run(context.Background(), d.svcList, d.errChan)
+	d.svc, _ = service.Run(context.Background(), d.svcList, d.errChan, d.isPublishing)
 
 	return d.DpHttpServer.Handler, nil
 }
@@ -61,6 +63,8 @@ func (d *FilesApiComponent) Reset() {
 
 	d.mongoClient = client
 	d.mongoClient.Database("files").Collection("metadata").Drop(ctx)
+
+	d.isPublishing = true
 }
 
 func (d *FilesApiComponent) Close() error {
