@@ -16,6 +16,7 @@ type Config struct {
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
+	IsPublishing               bool          `envconfig:"IS_PUBLISHING"`
 	MongoConfig
 	KafkaConfig
 }
@@ -25,8 +26,6 @@ type KafkaConfig struct {
 	Addr                      []string `envconfig:"KAFKA_ADDR"                            json:"-"`
 	ProducerMinBrokersHealthy int      `envconfig:"KAFKA_PRODUCER_MIN_BROKERS_HEALTHY"`
 	Version                   string   `envconfig:"KAFKA_VERSION"`
-	OffsetOldest              bool     `envconfig:"KAFKA_OFFSET_OLDEST"`
-	NumWorkers                int      `envconfig:"KAFKA_NUM_WORKERS"`
 	MaxBytes                  int      `envconfig:"KAFKA_MAX_BYTES"`
 	SecProtocol               string   `envconfig:"KAFKA_SEC_PROTO"`
 	SecCACerts                string   `envconfig:"KAFKA_SEC_CA_CERTS"`
@@ -52,6 +51,7 @@ func Get() (*Config, error) {
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
+		IsPublishing:               false,
 		MongoConfig: MongoConfig{
 			ClusterEndpoint:               "localhost:27017",
 			Database:                      "files",
@@ -68,15 +68,13 @@ func Get() (*Config, error) {
 			Addr:                      []string{"kafka:9092"},
 			ProducerMinBrokersHealthy: 1,
 			Version:                   "2.6.1",
-			OffsetOldest:              true,
-			NumWorkers:                1,
 			MaxBytes:                  2000000,
 			SecProtocol:               "",
 			SecCACerts:                "",
 			SecClientKey:              "",
 			SecClientCert:             "",
 			SecSkipVerify:             false,
-			StaticFilePublishedTopic:  "static-file-published",
+			StaticFilePublishedTopic:  "static-file-published-v2",
 		},
 	}
 

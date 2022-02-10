@@ -25,7 +25,7 @@ type Service struct {
 }
 
 // Run the service
-func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error) (*Service, error) {
+func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error, isPublishing bool) (*Service, error) {
 
 	log.Info(ctx, "running service")
 
@@ -51,10 +51,12 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 
 	r := mux.NewRouter().StrictSlash(true)
 	r.Path("/health").HandlerFunc(hc.Handler)
-	r.Path("/v1/files/register").HandlerFunc(api.CreateFileUploadStartedHandler(store.RegisterFileUpload))
-	r.Path("/v1/files/upload-complete").HandlerFunc(api.CreateMarkUploadCompleteHandler(store.MarkUploadComplete))
-	r.Path("/v1/files/publish").HandlerFunc(api.CreatePublishHandler(store.PublishCollection))
-	r.Path("/v1/files/decrypted").HandlerFunc(api.CreateDecryptHandler(store.MarkFileDecrypted))
+	if isPublishing {
+		r.Path("/v1/files/register").HandlerFunc(api.CreateFileUploadStartedHandler(store.RegisterFileUpload))
+		r.Path("/v1/files/upload-complete").HandlerFunc(api.CreateMarkUploadCompleteHandler(store.MarkUploadComplete))
+		r.Path("/v1/files/publish").HandlerFunc(api.CreatePublishHandler(store.PublishCollection))
+		r.Path("/v1/files/decrypted").HandlerFunc(api.CreateDecryptHandler(store.MarkFileDecrypted))
+	}
 
 	// The path below is the catchall route and MUST be the last one
 	r.Path("/v1/files/{path:[a-zA-Z0-9\\.\\-\\/]+}").HandlerFunc(api.CreateGetFileMetadataHandler(store.GetFileMetadata))
@@ -70,7 +72,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		KafkaProducer: kafkaProducer,
 	}
 
-	if err := svc.registerCheckers(ctx, hc); err != nil {
+	if err := svc.registerCheckers(ctx, hc, isPublishing); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
@@ -117,7 +119,7 @@ func (svc *Service) Close(ctx context.Context, timeout time.Duration) error {
 	return nil
 }
 
-func (svc *Service) registerCheckers(ctx context.Context, hc health.Checker) (err error) {
+func (svc *Service) registerCheckers(ctx context.Context, hc health.Checker, isPublishing bool) (err error) {
 	hasErrors := false
 
 	if err = hc.AddCheck("Mongo DB", svc.MongoClient.Checker); err != nil {
@@ -125,9 +127,11 @@ func (svc *Service) registerCheckers(ctx context.Context, hc health.Checker) (er
 		log.Error(ctx, "error adding health for mongo db", err)
 	}
 
-	if err = hc.AddCheck("Kafka Producer", svc.KafkaProducer.Checker); err != nil {
-		hasErrors = true
-		log.Error(ctx, "error adding health for kafka producer", err)
+	if isPublishing {
+		if err = hc.AddCheck("Kafka Producer", svc.KafkaProducer.Checker); err != nil {
+			hasErrors = true
+			log.Error(ctx, "error adding health for kafka producer", err)
+		}
 	}
 
 	if hasErrors {

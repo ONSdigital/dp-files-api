@@ -35,6 +35,7 @@ func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the file upload "([^"]*)" has been published with:$`, c.theFileUploadHasBeenPublishedWith)
 	ctx.Step(`^the following PUBLISHED message is sent to Kakfa:$`, c.theFollowingPublishedMessageIsSent)
 	ctx.Step(`^Kafka Consumer Group is running$`, c.kafkaConsumerGroupIsRunning)
+	ctx.Step(`^I am in web mode$`, c.iAmInWebMode)
 }
 
 func (c *FilesApiComponent) iRegisterFile(payload *godog.DocString) error {
@@ -360,6 +361,12 @@ func (c *FilesApiComponent) kafkaConsumerGroupIsRunning() error {
 		}
 		time.Sleep(250 * time.Millisecond)
 	}
+
+	return c.ApiFeature.StepError()
+}
+
+func (c *FilesApiComponent) iAmInWebMode() error {
+	c.isPublishing = false
 
 	return c.ApiFeature.StepError()
 }
