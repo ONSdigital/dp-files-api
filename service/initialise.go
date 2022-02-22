@@ -82,7 +82,14 @@ func (e *ExternalServiceList) GetKafkaProducer(ctx context.Context) (kafka.IProd
 			e.config.KafkaConfig.SecSkipVerify,
 		)
 	}
-	return kafka.NewProducer(ctx, pConfig)
+	p, err := kafka.NewProducer(ctx, pConfig)
+
+	if !e.config.IsPublishing {
+		// In Web mode we do not want to produce kafka messages
+		p.Close(ctx)
+	}
+
+	return p, err
 }
 
 func (e *ExternalServiceList) Shutdown(ctx context.Context) error {
