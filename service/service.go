@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"net/http"
+	"time"
+
 	"github.com/ONSdigital/dp-files-api/health"
 	kafka "github.com/ONSdigital/dp-kafka/v3"
-	"time"
 
 	"github.com/ONSdigital/dp-files-api/api"
 	"github.com/ONSdigital/dp-files-api/files"
@@ -56,6 +58,15 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path("/v1/files/upload-complete").HandlerFunc(api.CreateMarkUploadCompleteHandler(store.MarkUploadComplete))
 		r.Path("/v1/files/publish").HandlerFunc(api.CreatePublishHandler(store.PublishCollection))
 		r.Path("/v1/files/decrypted").HandlerFunc(api.CreateDecryptHandler(store.MarkFileDecrypted))
+	} else {
+		forbiddenHandler := func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusForbidden)
+		}
+
+		r.Path("/v1/files/register").HandlerFunc(forbiddenHandler)
+		r.Path("/v1/files/upload-complete").HandlerFunc(forbiddenHandler)
+		r.Path("/v1/files/publish").HandlerFunc(forbiddenHandler)
+		r.Path("/v1/files/decrypted").HandlerFunc(forbiddenHandler)
 	}
 
 	// The path below is the catchall route and MUST be the last one
