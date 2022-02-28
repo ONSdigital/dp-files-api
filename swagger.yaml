@@ -16,7 +16,7 @@ tags:
   - name: "private"
 
 paths:
-  /v1/files/register:
+  /files:
     post:
       tags:
         - File upload started
