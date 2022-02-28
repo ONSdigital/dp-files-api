@@ -54,7 +54,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	r := mux.NewRouter().StrictSlash(true)
 	r.Path("/health").HandlerFunc(hc.Handler)
 	if isPublishing {
-		r.Path("/v1/files/register").HandlerFunc(api.CreateFileUploadStartedHandler(store.RegisterFileUpload))
+		r.Path("/files").HandlerFunc(api.CreateFileUploadStartedHandler(store.RegisterFileUpload)).Methods(http.MethodPost)
 		r.Path("/v1/files/upload-complete").HandlerFunc(api.CreateMarkUploadCompleteHandler(store.MarkUploadComplete))
 		r.Path("/v1/files/publish").HandlerFunc(api.CreatePublishHandler(store.PublishCollection))
 		r.Path("/v1/files/decrypted").HandlerFunc(api.CreateDecryptHandler(store.MarkFileDecrypted))
@@ -63,7 +63,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 			w.WriteHeader(http.StatusForbidden)
 		}
 
-		r.Path("/v1/files/register").HandlerFunc(forbiddenHandler)
+		r.Path("/files").HandlerFunc(forbiddenHandler).Methods(http.MethodPost)
 		r.Path("/v1/files/upload-complete").HandlerFunc(forbiddenHandler)
 		r.Path("/v1/files/publish").HandlerFunc(forbiddenHandler)
 		r.Path("/v1/files/decrypted").HandlerFunc(forbiddenHandler)
