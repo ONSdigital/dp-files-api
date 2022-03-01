@@ -26,6 +26,8 @@ type Service struct {
 	KafkaProducer kafka.IProducer
 }
 
+var filesURI = "/files/{path:[a-zA-Z0-9_\\.\\-\\/]+}"
+
 // Run the service
 func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error, isPublishing bool) (*Service, error) {
 
@@ -54,23 +56,23 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	r := mux.NewRouter().StrictSlash(true)
 	r.Path("/health").HandlerFunc(hc.Handler)
 	if isPublishing {
-		r.Path("/files").HandlerFunc(api.CreateFileUploadStartedHandler(store.RegisterFileUpload)).Methods(http.MethodPost)
-		r.Path("/v1/files/upload-complete").HandlerFunc(api.CreateMarkUploadCompleteHandler(store.MarkUploadComplete))
-		r.Path("/v1/files/publish").HandlerFunc(api.CreatePublishHandler(store.PublishCollection))
-		r.Path("/v1/files/decrypted").HandlerFunc(api.CreateDecryptHandler(store.MarkFileDecrypted))
+		r.Path("/files").HandlerFunc(api.HandlerRegisterUploadStarted(store.RegisterFileUpload)).Methods(http.MethodPost)
+		r.Path(filesURI).HandlerFunc(api.StateToHandler(
+			api.HandleMarkUploadComplete(store.MarkUploadComplete),
+			api.HandleMarkCollectionPublished(store.MarkCollectionPublished),
+			api.HandleMarkFileDecrypted(store.MarkFileDecrypted),
+		)).Methods(http.MethodPatch)
 	} else {
 		forbiddenHandler := func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusForbidden)
 		}
 
 		r.Path("/files").HandlerFunc(forbiddenHandler).Methods(http.MethodPost)
-		r.Path("/v1/files/upload-complete").HandlerFunc(forbiddenHandler)
-		r.Path("/v1/files/publish").HandlerFunc(forbiddenHandler)
-		r.Path("/v1/files/decrypted").HandlerFunc(forbiddenHandler)
+		r.Path(filesURI).HandlerFunc(forbiddenHandler).Methods(http.MethodPatch)
 	}
 
 	// The path below is the catchall route and MUST be the last one
-	r.Path("/v1/files/{path:[a-zA-Z0-9\\.\\-\\/]+}").HandlerFunc(api.CreateGetFileMetadataHandler(store.GetFileMetadata))
+	r.Path(filesURI).HandlerFunc(api.HandleGetFileMetadata(store.GetFileMetadata))
 
 	s := serviceList.GetHTTPServer(r)
 
@@ -98,6 +100,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 
 	return svc, nil
 }
+
 
 // Close gracefully shuts the service down in the required order, with timeout
 func (svc *Service) Close(ctx context.Context, timeout time.Duration) error {

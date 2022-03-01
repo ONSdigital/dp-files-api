@@ -27,10 +27,10 @@ var (
 )
 
 const (
-	stateCreated   = "CREATED"
-	stateUploaded  = "UPLOADED"
-	statePublished = "PUBLISHED"
-	stateDecrypted = "DECRYPTED"
+	StateCreated  = "CREATED"
+	StateUploaded = "UPLOADED"
+	StatePublished = "PUBLISHED"
+	StateDecrypted = "DECRYPTED"
 )
 
 type Store struct {
@@ -69,7 +69,7 @@ func (s *Store) RegisterFileUpload(ctx context.Context, metaData StoredRegistere
 
 	metaData.CreatedAt = s.c.GetCurrentTime()
 	metaData.LastModified = s.c.GetCurrentTime()
-	metaData.State = stateCreated
+	metaData.State = StateCreated
 
 	_, err = s.m.Collection(config.MetadataCollection).Insert(ctx, metaData)
 	if err != nil {
@@ -82,10 +82,10 @@ func (s *Store) RegisterFileUpload(ctx context.Context, metaData StoredRegistere
 }
 
 func (s *Store) MarkUploadComplete(ctx context.Context, metaData FileEtagChange) error {
-	return s.updateStatus(ctx, metaData.Path, metaData.Etag, stateUploaded, stateCreated, "upload_completed_at")
+	return s.updateStatus(ctx, metaData.Path, metaData.Etag, StateUploaded, StateCreated, "upload_completed_at")
 }
 
-func (s *Store) PublishCollection(ctx context.Context, collectionID string) error {
+func (s *Store) MarkCollectionPublished(ctx context.Context, collectionID string) error {
 	count, err := s.m.Collection(config.MetadataCollection).Count(ctx, bson.M{"collection_id": collectionID})
 	if err != nil {
 		log.Error(ctx, "failed to count files collection", err, log.Data{"collection_id": collectionID})
@@ -106,7 +106,7 @@ func (s *Store) PublishCollection(ctx context.Context, collectionID string) erro
 	}
 
 	if count > 0 {
-		event := fmt.Sprintf("can not publish collection, not all files in %s state", stateUploaded)
+		event := fmt.Sprintf("can not publish collection, not all files in %s state", StateUploaded)
 		log.Info(ctx, event, log.Data{"collection_id": collectionID, "num_file_not_state_uploaded": count})
 		return ErrFileNotInUploadedState
 	}
@@ -116,13 +116,13 @@ func (s *Store) PublishCollection(ctx context.Context, collectionID string) erro
 		bson.M{"collection_id": collectionID},
 		bson.D{
 			{"$set", bson.D{
-				{"state", statePublished},
+				{"state", StatePublished},
 				{"last_modified", s.c.GetCurrentTime()},
 				{"published_at", s.c.GetCurrentTime()}}},
 		})
 
 	if err != nil {
-		event := fmt.Sprintf("failed to change files to %s state", statePublished)
+		event := fmt.Sprintf("failed to change files to %s state", StatePublished)
 		log.Error(ctx, event, err, log.Data{"collection_id": collectionID})
 		return err
 	}
@@ -148,13 +148,13 @@ func (s *Store) PublishCollection(ctx context.Context, collectionID string) erro
 }
 
 func (s *Store) MarkFileDecrypted(ctx context.Context, metaData FileEtagChange) error {
-	return s.updateStatus(ctx, metaData.Path, metaData.Etag, stateDecrypted, statePublished, "decrypted_at")
+	return s.updateStatus(ctx, metaData.Path, metaData.Etag, StateDecrypted, StatePublished, "decrypted_at")
 }
 
 func createCollectionContainsNotUploadedFilesQuery(collectionID string) bson.M {
 	return bson.M{"$and": []bson.M{
 		{"collection_id": collectionID},
-		{"state": bson.M{"$ne": stateUploaded}},
+		{"state": bson.M{"$ne": StateUploaded}},
 	}}
 }
 
@@ -172,7 +172,7 @@ func (s *Store) updateStatus(ctx context.Context, path, etag, toState, expectedC
 	}
 
 	if metadata.State != expectedCurrentState {
-		log.Error(ctx, fmt.Sprintf("mark file decrypted: file was not in state %s", stateCreated),
+		log.Error(ctx, fmt.Sprintf("mark file decrypted: file was not in state %s", StateCreated),
 			err, log.Data{"path": path, "current_state": metadata.State})
 		return ErrFileNotInPublishedState
 	}

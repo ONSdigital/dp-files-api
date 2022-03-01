@@ -236,20 +236,20 @@ func (c *FilesApiComponent) theFileUploadHasNotBeenRegistered(path string) error
 }
 
 func (c *FilesApiComponent) theFileIsMarkedAsDecrypted(path, etag string) error {
-	json := fmt.Sprintf(`{"path": "%s","etag": "%s"}`, path, etag)
-	return c.ApiFeature.IPostToWithBody("/v1/files/decrypted", &messages.PickleDocString{Content: json})
+	json := fmt.Sprintf(`{"etag": "%s", "state": "%s"}`, etag, files.StateDecrypted)
+	return c.ApiFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
 }
 
 func (c *FilesApiComponent) theFileUploadIsMarkedAsCompleteWithTheEtag(path, etag string) error {
 	json := fmt.Sprintf(`{
-	"path": "%s",
-	"etag": "%s"
-}`, path, etag)
-	return c.ApiFeature.IPostToWithBody("/v1/files/upload-complete", &messages.PickleDocString{Content: json})
+	"etag": "%s",
+	"state": "%s"
+}`, etag, files.StateUploaded)
+	return c.ApiFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
 }
 
 func (c *FilesApiComponent) theFileMetadataIsRequested(filepath string) error {
-	return c.ApiFeature.IGet(fmt.Sprintf("/v1/files/%s", filepath))
+	return c.ApiFeature.IGet(fmt.Sprintf("/files/%s", filepath))
 }
 
 func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *godog.Table) error {
@@ -292,8 +292,11 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 }
 
 func (c *FilesApiComponent) iPublishTheCollection(collectionID string) error {
-	body := fmt.Sprintf(`{"collection_id": "%s"}`, collectionID)
-	c.ApiFeature.IPostToWithBody("/v1/files/publish", &messages.PickleDocString{MediaType: "application/json", Content: body})
+	body := fmt.Sprintf(`{
+	"collection_id": "%s",
+	"state": "%s"
+}`, collectionID, files.StatePublished)
+	c.ApiFeature.IPatch("/files/ignore_for_now.jpg", &messages.PickleDocString{MediaType: "application/json", Content: body})
 
 	return c.ApiFeature.StepError()
 }
