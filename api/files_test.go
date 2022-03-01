@@ -28,13 +28,13 @@ func TestFileMetaDataCreationUnsuccessful(t *testing.T) {
           "licence": "OGL v3",
           "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
         }`)
-	req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
+	req := httptest.NewRequest(http.MethodPost, "/files", body)
 
 	errFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 		return errors.New("it's all gone very wrong")
 	}
 
-	h := api.CreateFileUploadStartedHandler(errFunc)
+	h := api.HandlerRegisterUploadStarted(errFunc)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
@@ -54,13 +54,13 @@ func TestJsonDecodingMetaDataCreation(t *testing.T) {
           "licence": "OGL v3",
           "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
         }`)
-	req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
+	req := httptest.NewRequest(http.MethodPost, "/files", body)
 
 	errFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 		return errors.New("it's all gone very wrong")
 	}
 
-	h := api.CreateFileUploadStartedHandler(errFunc)
+	h := api.HandlerRegisterUploadStarted(errFunc)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -118,13 +118,13 @@ func TestValidationMetaDataCreation(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			body := bytes.NewBufferString(test.incomingJson)
-			req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
+			req := httptest.NewRequest(http.MethodPost, "/files", body)
 
 			rec := httptest.NewRecorder()
 
 			errFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error { return nil }
 
-			h := api.CreateFileUploadStartedHandler(errFunc)
+			h := api.HandlerRegisterUploadStarted(errFunc)
 			h.ServeHTTP(rec, req)
 
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -139,16 +139,15 @@ func TestValidationMetaDataCreation(t *testing.T) {
 func TestMarkFileUploadCompleteUnsuccessful(t *testing.T) {
 	rec := httptest.NewRecorder()
 	body := bytes.NewBufferString(`{
-          "path": "images/meme.jpg",
           "etag": "1234-asdfg-54321-qwerty"
         }`)
-	req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
+	req := httptest.NewRequest(http.MethodPatch, "/files/meme.jpg", body)
 
 	errFunc := func(ctx context.Context, metaData files.FileEtagChange) error {
 		return errors.New("it's all gone very wrong")
 	}
 
-	h := api.CreateMarkUploadCompleteHandler(errFunc)
+	h := api.HandleMarkUploadComplete(errFunc)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
@@ -159,16 +158,15 @@ func TestMarkFileUploadCompleteUnsuccessful(t *testing.T) {
 func TestJsonDecodingUploadComplete(t *testing.T) {
 	rec := httptest.NewRecorder()
 	body := bytes.NewBufferString(`{
-          "path": true,
           "etag": 1234,
         }`)
-	req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
+	req := httptest.NewRequest(http.MethodPatch, "/files/path.txt", body)
 
 	errFunc := func(ctx context.Context, metaData files.FileEtagChange) error {
 		return errors.New("it's all gone very wrong")
 	}
 
-	h := api.CreateMarkUploadCompleteHandler(errFunc)
+	h := api.HandleMarkUploadComplete(errFunc)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -183,31 +181,21 @@ func TestValidateUploadComplete(t *testing.T) {
 		expectedErrorDescription string
 	}{
 		{
-			name:                     "Validate that path is required",
-			incomingJson:             `{"etag": "1234-asdfg-54321-qwerty"}`,
-			expectedErrorDescription: "Path required",
-		},
-		{
-			name:                     "Validate that path uri is valid",
-			incomingJson:             `{"path": "/bad/path.jpg","etag": "1234-asdfg-54321-qwerty"}`,
-			expectedErrorDescription: "Path aws-upload-key",
-		},
-		{
 			name:                     "Validate that etag is required",
-			incomingJson:             `{"path": "valid/path.jpg"}`,
+			incomingJson:             `{"": ""}`,
 			expectedErrorDescription: "Etag required",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			body := bytes.NewBufferString(test.incomingJson)
-			req := httptest.NewRequest(http.MethodPost, "/v1/files", body)
+			req := httptest.NewRequest(http.MethodPatch, "/files/path.jpg", body)
 
 			rec := httptest.NewRecorder()
 
 			nilFunc := func(ctx context.Context, metaData files.FileEtagChange) error { return nil }
 
-			h := api.CreateMarkUploadCompleteHandler(nilFunc)
+			h := api.HandleMarkUploadComplete(nilFunc)
 			h.ServeHTTP(rec, req)
 
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -221,8 +209,8 @@ func TestValidateUploadComplete(t *testing.T) {
 
 func TestGetFileMetadataHandlesUnexpectedError(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/v1/files/file/path.jpg", nil)
-	h := api.CreateGetFileMetadataHandler(func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
+	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", nil)
+	h := api.HandleGetFileMetadata(func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 		return files.StoredRegisteredMetaData{}, errors.New("broken")
 	})
 	h.ServeHTTP(rec, req)
@@ -234,9 +222,9 @@ func TestGetFileMetadataHandlesUnexpectedError(t *testing.T) {
 
 func TestPublishHandlerHandlesInvalidJSONContent(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/v1/files/publish", strings.NewReader("<json>invalid</json>"))
+	req := httptest.NewRequest(http.MethodPatch, "/files/ignore.txt", strings.NewReader("<json>invalid</json>"))
 
-	h := api.CreatePublishHandler(func(ctx context.Context, collectionID string) error {
+	h := api.HandleMarkCollectionPublished(func(ctx context.Context, collectionID string) error {
 		return nil
 	})
 
@@ -249,9 +237,9 @@ func TestPublishHandlerHandlesInvalidJSONContent(t *testing.T) {
 
 func TestPublishHandlerHandlesUnexpectedPublishingError(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/v1/files/publish", strings.NewReader(`{"collection_id": "asdfghjkl"}`))
+	req := httptest.NewRequest(http.MethodPatch, "/files/ignore.txt", strings.NewReader(`{"collection_id": "asdfghjkl"}`))
 
-	h := api.CreatePublishHandler(func(ctx context.Context, collectionID string) error {
+	h := api.HandleMarkCollectionPublished(func(ctx context.Context, collectionID string) error {
 		return errors.New("broken")
 	})
 
@@ -264,9 +252,9 @@ func TestPublishHandlerHandlesUnexpectedPublishingError(t *testing.T) {
 
 func TestDecryptedHandlerHandlesInvalidJSONContent(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/v1/files/decrypted", strings.NewReader("<json>invalid</json>"))
+	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader("<json>invalid</json>"))
 
-	h := api.CreateDecryptHandler(func(ctx context.Context, change files.FileEtagChange) error {
+	h := api.HandleMarkFileDecrypted(func(ctx context.Context, change files.FileEtagChange) error {
 		return nil
 	})
 
@@ -279,9 +267,9 @@ func TestDecryptedHandlerHandlesInvalidJSONContent(t *testing.T) {
 
 func TestDecryptedHandlerHandlesUnexpectedPublishingError(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/v1/files/decrypted", strings.NewReader(`{"path": "dir/file.txt"}`))
+	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader(`{"path": "dir/file.txt"}`))
 
-	h := api.CreateDecryptHandler(func(ctx context.Context, change files.FileEtagChange) error {
+	h := api.HandleMarkFileDecrypted(func(ctx context.Context, change files.FileEtagChange) error {
 		return errors.New("broken")
 	})
 
