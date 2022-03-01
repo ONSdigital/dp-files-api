@@ -71,8 +71,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path(filesURI).HandlerFunc(forbiddenHandler).Methods(http.MethodPatch)
 	}
 
-	// The path below is the catchall route and MUST be the last one
-	r.Path(filesURI).HandlerFunc(api.HandleGetFileMetadata(store.GetFileMetadata))
+	r.Path(filesURI).HandlerFunc(api.HandleGetFileMetadata(store.GetFileMetadata)).Methods(http.MethodGet)
 
 	s := serviceList.GetHTTPServer(r)
 

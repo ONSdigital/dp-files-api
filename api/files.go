@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/ONSdigital/log.go/v2/log"
 	"io/ioutil"
 	"net/http"
 
@@ -64,7 +65,8 @@ func StateToHandler(uploadComplete http.HandlerFunc, published http.HandlerFunc,
 		} else if m.State == files.StateDecrypted {
 			decrypted.ServeHTTP(w, req)
 		} else {
-			writeError(w, buildErrors(errors.New("Expected STATE change"), "MissingStateChange"), http.StatusBadRequest)
+			log.Error(req.Context(), "InvalidStateChange", errors.New("Invalid STATE change"), log.Data{"state": m.State})
+			writeError(w, buildErrors(errors.New("Invalid STATE change"), "InvalidStateChange"), http.StatusBadRequest)
 		}
 	}
 }
