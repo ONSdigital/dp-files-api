@@ -43,7 +43,6 @@ type GetFileMetadata func(ctx context.Context, path string) (files.StoredRegiste
 type MarkCollectionPublished func(ctx context.Context, collectionID string) error
 type MarkDecryptionComplete func(ctx context.Context, change files.FileEtagChange) error
 
-
 func StateToHandler(uploadComplete http.HandlerFunc, published http.HandlerFunc, decrypted http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
@@ -167,7 +166,7 @@ func HandleMarkUploadComplete(markUploaded MarkUploadComplete) http.HandlerFunc 
 			handleError(w, err)
 		}
 
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
