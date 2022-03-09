@@ -146,8 +146,8 @@ func (c *FilesApiComponent) theFileUploadHasBeenPublishedWith(path string, table
 		State:             data.State,
 		CreatedAt:         createdAt,
 		LastModified:      lastModified,
-		UploadCompletedAt: uploadCompletedAt,
-		PublishedAt:       publishedAt,
+		UploadCompletedAt: &uploadCompletedAt,
+		PublishedAt:       &publishedAt,
 		Etag:              data.Etag,
 	}
 
@@ -183,7 +183,7 @@ func (c *FilesApiComponent) theFileUploadHasBeenCompletedWith(path string, table
 		State:             data.State,
 		CreatedAt:         createdAt,
 		LastModified:      lastModified,
-		UploadCompletedAt: uploadCompletedAt,
+		UploadCompletedAt: &uploadCompletedAt,
 		Etag:              data.Etag,
 	}
 
