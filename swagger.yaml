@@ -178,7 +178,6 @@ definitions:
     required:
       - "path"
       - "is_publishable"
-      - "collection_id"
       - "size_in_bytes"
       - "type"
       - "licence"
