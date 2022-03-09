@@ -37,6 +37,7 @@ convey:
 .PHONY: test-component
 test-component:
 	go test -cover -coverpkg=github.com/ONSdigital/dp-files-api/... -component
+	go test ./files -component
 
 .PHONY: docker-test
 docker-test-component:
