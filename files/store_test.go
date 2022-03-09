@@ -40,10 +40,11 @@ func TestRegisterFileUpload(t *testing.T) {
 		path := "testing.txt"
 		Convey("Given a file has been registered", func() {
 
+			collectionID := "1234567890"
 			m := files.StoredRegisteredMetaData{
 				Path:          path,
 				IsPublishable: false,
-				CollectionID:  "1234567890",
+				CollectionID:  &collectionID,
 				Title:         "Testing",
 				SizeInBytes:   10,
 				Type:          "text/plain",
