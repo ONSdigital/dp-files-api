@@ -92,10 +92,16 @@ func (c *FilesApiComponent) theFollowingDocumentShouldBeCreated(table *godog.Tab
 	res := c.mongoClient.Database("files").Collection("metadata").FindOne(ctx, bson.M{"path": expectedMetaData.Path})
 	assert.NoError(c.ApiFeature, res.Decode(&metaData))
 
+	fmt.Println("EXPECTD METADATA", expectedMetaData.CollectionID)
+
 	isPublishable, _ := strconv.ParseBool(expectedMetaData.IsPublishable)
 	sizeInBytes, _ := strconv.ParseUint(expectedMetaData.SizeInBytes, 10, 64)
 	assert.Equal(c.ApiFeature, isPublishable, metaData.IsPublishable)
-	assert.Equal(c.ApiFeature, expectedMetaData.CollectionID, metaData.CollectionID)
+	if expectedMetaData.CollectionID == "" {
+		assert.Nil(c.ApiFeature, metaData.CollectionID)
+	} else {
+		assert.Equal(c.ApiFeature, expectedMetaData.CollectionID, *metaData.CollectionID)
+	}
 	assert.Equal(c.ApiFeature, expectedMetaData.Title, metaData.Title)
 	assert.Equal(c.ApiFeature, sizeInBytes, metaData.SizeInBytes)
 	assert.Equal(c.ApiFeature, expectedMetaData.Type, metaData.Type)
@@ -137,7 +143,7 @@ func (c *FilesApiComponent) theFileUploadHasBeenPublishedWith(path string, table
 	m := files.StoredRegisteredMetaData{
 		Path:              path,
 		IsPublishable:     isPublishable,
-		CollectionID:      data.CollectionID,
+		CollectionID:      &data.CollectionID,
 		Title:             data.Title,
 		SizeInBytes:       sizeInBytes,
 		Type:              data.Type,
@@ -174,7 +180,7 @@ func (c *FilesApiComponent) theFileUploadHasBeenCompletedWith(path string, table
 	m := files.StoredRegisteredMetaData{
 		Path:              path,
 		IsPublishable:     isPublishable,
-		CollectionID:      data.CollectionID,
+		CollectionID:      &data.CollectionID,
 		Title:             data.Title,
 		SizeInBytes:       sizeInBytes,
 		Type:              data.Type,
@@ -209,7 +215,7 @@ func (c *FilesApiComponent) theFileUploadHasBeenRegisteredWith(path string, tabl
 	m := files.StoredRegisteredMetaData{
 		Path:          path,
 		IsPublishable: isPublishable,
-		CollectionID:  data.CollectionID,
+		CollectionID:  &data.CollectionID,
 		Title:         data.Title,
 		SizeInBytes:   sizeInBytes,
 		Type:          data.Type,
@@ -271,7 +277,7 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 	isPublishable, _ := strconv.ParseBool(expectedMetaData.IsPublishable)
 	sizeInBytes, _ := strconv.ParseUint(expectedMetaData.SizeInBytes, 10, 64)
 	assert.Equal(c.ApiFeature, isPublishable, metaData.IsPublishable)
-	assert.Equal(c.ApiFeature, expectedMetaData.CollectionID, metaData.CollectionID)
+	assert.Equal(c.ApiFeature, expectedMetaData.CollectionID, *metaData.CollectionID)
 	assert.Equal(c.ApiFeature, expectedMetaData.Title, metaData.Title)
 	assert.Equal(c.ApiFeature, sizeInBytes, metaData.SizeInBytes)
 	assert.Equal(c.ApiFeature, expectedMetaData.Type, metaData.Type)

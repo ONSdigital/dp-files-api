@@ -7,7 +7,7 @@ import (
 type StoredRegisteredMetaData struct {
 	Path              string     `bson:"path" json:"path"`
 	IsPublishable     bool       `bson:"is_publishable" json:"is_publishable"`
-	CollectionID      string     `bson:"collection_id" json:"collection_id"`
+	CollectionID      *string    `bson:"collection_id,omitempty" json:"collection_id"`
 	Title             string     `bson:"title" json:"title"`
 	SizeInBytes       uint64     `bson:"size_in_bytes" json:"size_in_bytes"`
 	Type              string     `bson:"type" json:"type"`

@@ -8,7 +8,7 @@ import (
 	"github.com/ONSdigital/dp-files-api/files"
 	mongo "github.com/ONSdigital/dp-files-api/mongo"
 	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/suite"
 	mongoRaw "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"testing"
@@ -19,47 +19,81 @@ var (
 	loggingFlag   = flag.Bool("logging", false, "print logging")
 )
 
-func TestRegisterFileUpload(t *testing.T) {
+const (
+	path = "testing.txt"
+)
+
+type StoreIntegrationTest struct {
+	suite.Suite
+
+	cfg   *config.Config
+	mc    *mongo.Mongo
+	ctx   context.Context
+	store *files.Store
+}
+
+func (s *StoreIntegrationTest) SetupTest() {
+	s.cfg, _ = config.Get()
+	s.mc, _ = mongo.New(s.cfg.MongoConfig)
+	s.ctx = context.Background()
+
+	client, _ := mongoRaw.Connect(
+		s.ctx,
+		options.Client().ApplyURI("mongodb://root:password@mongo:27017"),
+	)
+	client.Database("files").Collection("metadata").Drop(s.ctx)
+
+	s.store = files.NewStore(s.mc, &kafkatest.IProducerMock{}, steps.TestClock{})
+}
+
+func TestStoreIntegration(t *testing.T) {
 	if !*componentFlag {
 		t.Skip("This test can only run in a docker environment")
 	}
 
-	Convey("Ensure unset dates are left out of the document", t, func() {
-		cfg, _ := config.Get()
-		mc, _ := mongo.New(cfg.MongoConfig)
-		ctx := context.Background()
+	suite.Run(t, new(StoreIntegrationTest))
+}
 
-		client, _ := mongoRaw.Connect(
-			ctx,
-			options.Client().ApplyURI("mongodb://root:password@mongo:27017"),
-		)
-		client.Database("files").Collection("metadata").Drop(ctx)
+func (s *StoreIntegrationTest) TestOptionalFieldsExcluded() {
 
-		s := files.NewStore(mc, &kafkatest.IProducerMock{}, steps.TestClock{})
+	m := files.StoredRegisteredMetaData{
+		Path:          path,
+		IsPublishable: false,
+		Title:         "Testing",
+		SizeInBytes:   10,
+		Type:          "text/plain",
+		Licence:       "MIT",
+		LicenceUrl:    "www.licence.com/MIT",
+	}
 
-		path := "testing.txt"
-		Convey("Given a file has been registered", func() {
+	s.store.RegisterFileUpload(s.ctx, m)
 
-			m := files.StoredRegisteredMetaData{
-				Path:          path,
-				IsPublishable: false,
-				CollectionID:  "1234567890",
-				Title:         "Testing",
-				SizeInBytes:   10,
-				Type:          "text/plain",
-				Licence:       "MIT",
-				LicenceUrl:    "www.licence.com/MIT",
-			}
+	out, _ := s.store.GetFileMetadata(s.ctx, path)
 
-			s.RegisterFileUpload(ctx, m)
+	s.Nil(out.UploadCompletedAt)
+	s.Nil(out.PublishedAt)
+	s.Nil(out.DecryptedAt)
+	s.Nil(out.CollectionID)
+}
 
-			Convey("Then the UploadCompletedAt, PublishedAt & DecryptedAt fields do not exist in the document", func() {
-				out, _ := s.GetFileMetadata(ctx, path)
+func (s *StoreIntegrationTest) TestOptionalCollectionIDIncluded() {
 
-				So(out.UploadCompletedAt, ShouldBeNil)
-				So(out.PublishedAt, ShouldBeNil)
-				So(out.DecryptedAt, ShouldBeNil)
-			})
-		})
-	})
+	collectionID := "1234"
+
+	m := files.StoredRegisteredMetaData{
+		Path:          path,
+		CollectionID:  &collectionID,
+		IsPublishable: false,
+		Title:         "Testing",
+		SizeInBytes:   10,
+		Type:          "text/plain",
+		Licence:       "MIT",
+		LicenceUrl:    "www.licence.com/MIT",
+	}
+
+	s.store.RegisterFileUpload(s.ctx, m)
+
+	out, _ := s.store.GetFileMetadata(s.ctx, path)
+
+	s.Equal(collectionID, out.CollectionID)
 }

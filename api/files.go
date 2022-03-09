@@ -15,14 +15,14 @@ import (
 )
 
 type RegisterMetadata struct {
-	Path          string `json:"path" validate:"required,aws-upload-key"`
-	IsPublishable *bool  `json:"is_publishable,omitempty" validate:"required"`
-	CollectionID  string `json:"collection_id" validate:"required"`
-	Title         string `json:"title"`
-	SizeInBytes   uint64 `json:"size_in_bytes" validate:"gt=0"`
-	Type          string `json:"type" validate:"mime-type"`
-	Licence       string `json:"licence" validate:"required"`
-	LicenceUrl    string `json:"licence_url" validate:"required"`
+	Path          string  `json:"path" validate:"required,aws-upload-key"`
+	IsPublishable *bool   `json:"is_publishable,omitempty" validate:"required"`
+	CollectionID  *string `json:"collection_id"`
+	Title         string  `json:"title"`
+	SizeInBytes   uint64  `json:"size_in_bytes" validate:"gt=0"`
+	Type          string  `json:"type" validate:"mime-type"`
+	Licence       string  `json:"licence" validate:"required"`
+	LicenceUrl    string  `json:"licence_url" validate:"required"`
 }
 
 type StateMetadata struct {
