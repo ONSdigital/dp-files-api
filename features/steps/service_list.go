@@ -38,7 +38,7 @@ func (e *fakeServiceContainer) GetMongoDB(ctx context.Context) (mongo.Client, er
 }
 
 func (e *fakeServiceContainer) GetClock(ctx context.Context) clock.Clock {
-	return testClock{}
+	return TestClock{}
 }
 
 func (e *fakeServiceContainer) GetKafkaProducer(ctx context.Context) (kafka.IProducer, error) {
