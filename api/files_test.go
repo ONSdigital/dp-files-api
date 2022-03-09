@@ -95,11 +95,6 @@ func TestValidationMetaDataCreation(t *testing.T) {
 			expectedErrorDescription: "SizeInBytes gt",
 		},
 		{
-			name:                     "Validate that type is valid mime type",
-			incomingJson:             `{"path": "some/file.txt", "is_publishable":false,"collection_id":"1234-asdfg-54321-qwerty","title":"The latest Meme", "size_in_bytes": 10, "type":"image/jpeg123","licence":"OGL v3","licence_url":"http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"}`,
-			expectedErrorDescription: "Type mime-type",
-		},
-		{
 			name:                     "Validate that licence is required",
 			incomingJson:             `{"path": "some/file.txt", "is_publishable":false,"collection_id":"1234-asdfg-54321-qwerty","title":"The latest Meme", "size_in_bytes": 10, "type":"image/jpeg","licence_url":"http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"}`,
 			expectedErrorDescription: "Licence required",
