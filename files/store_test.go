@@ -19,8 +19,31 @@ var (
 	loggingFlag   = flag.Bool("logging", false, "print logging")
 )
 
+const (
+	path = "testing.txt"
+)
+
 type StoreIntegrationTest struct {
 	suite.Suite
+
+	cfg   *config.Config
+	mc    *mongo.Mongo
+	ctx   context.Context
+	store *files.Store
+}
+
+func (s *StoreIntegrationTest) SetupTest() {
+	s.cfg, _ = config.Get()
+	s.mc, _ = mongo.New(s.cfg.MongoConfig)
+	s.ctx = context.Background()
+
+	client, _ := mongoRaw.Connect(
+		s.ctx,
+		options.Client().ApplyURI("mongodb://root:password@mongo:27017"),
+	)
+	client.Database("files").Collection("metadata").Drop(s.ctx)
+
+	s.store = files.NewStore(s.mc, &kafkatest.IProducerMock{}, steps.TestClock{})
 }
 
 func TestStoreIntegration(t *testing.T) {
@@ -31,26 +54,11 @@ func TestStoreIntegration(t *testing.T) {
 	suite.Run(t, new(StoreIntegrationTest))
 }
 
-func (s *StoreIntegrationTest) TestOptionalTimeFields() {
-	cfg, _ := config.Get()
-	mc, _ := mongo.New(cfg.MongoConfig)
-	ctx := context.Background()
+func (s *StoreIntegrationTest) TestOptionalFieldsExcluded() {
 
-	client, _ := mongoRaw.Connect(
-		ctx,
-		options.Client().ApplyURI("mongodb://root:password@mongo:27017"),
-	)
-	client.Database("files").Collection("metadata").Drop(ctx)
-
-	store := files.NewStore(mc, &kafkatest.IProducerMock{}, steps.TestClock{})
-
-	path := "testing.txt"
-
-	collectionID := "1234567890"
 	m := files.StoredRegisteredMetaData{
 		Path:          path,
 		IsPublishable: false,
-		CollectionID:  &collectionID,
 		Title:         "Testing",
 		SizeInBytes:   10,
 		Type:          "text/plain",
@@ -58,11 +66,34 @@ func (s *StoreIntegrationTest) TestOptionalTimeFields() {
 		LicenceUrl:    "www.licence.com/MIT",
 	}
 
-	store.RegisterFileUpload(ctx, m)
+	s.store.RegisterFileUpload(s.ctx, m)
 
-	out, _ := store.GetFileMetadata(ctx, path)
+	out, _ := s.store.GetFileMetadata(s.ctx, path)
 
 	s.Nil(out.UploadCompletedAt)
 	s.Nil(out.PublishedAt)
 	s.Nil(out.DecryptedAt)
+	s.Nil(out.CollectionID)
+}
+
+func (s *StoreIntegrationTest) TestOptionalCollectionIDIncluded() {
+
+	collectionID := "1234"
+
+	m := files.StoredRegisteredMetaData{
+		Path:          path,
+		CollectionID:  &collectionID,
+		IsPublishable: false,
+		Title:         "Testing",
+		SizeInBytes:   10,
+		Type:          "text/plain",
+		Licence:       "MIT",
+		LicenceUrl:    "www.licence.com/MIT",
+	}
+
+	s.store.RegisterFileUpload(s.ctx, m)
+
+	out, _ := s.store.GetFileMetadata(s.ctx, path)
+
+	s.Equal(collectionID, out.CollectionID)
 }
