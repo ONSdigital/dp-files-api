@@ -20,7 +20,7 @@ type RegisterMetadata struct {
 	CollectionID  *string `json:"collection_id"`
 	Title         string  `json:"title"`
 	SizeInBytes   uint64  `json:"size_in_bytes" validate:"gt=0"`
-	Type          string  `json:"type" validate:"mime-type"`
+	Type          string  `json:"type"`
 	Licence       string  `json:"licence" validate:"required"`
 	LicenceUrl    string  `json:"licence_url" validate:"required"`
 }
@@ -129,7 +129,6 @@ func HandlerRegisterUploadStarted(register RegisterFileUpload) http.HandlerFunc 
 		}
 
 		validate := validator.New()
-		validate.RegisterValidation("mime-type", mimeValidator)
 		validate.RegisterValidation("aws-upload-key", awsUploadKeyValidator)
 		err = validate.Struct(m)
 		if err != nil {
