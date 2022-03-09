@@ -137,7 +137,7 @@ func (c *FilesApiComponent) theFileUploadHasBeenPublishedWith(path string, table
 	m := files.StoredRegisteredMetaData{
 		Path:              path,
 		IsPublishable:     isPublishable,
-		CollectionID:      data.CollectionID,
+		CollectionID:      &data.CollectionID,
 		Title:             data.Title,
 		SizeInBytes:       sizeInBytes,
 		Type:              data.Type,
@@ -174,7 +174,7 @@ func (c *FilesApiComponent) theFileUploadHasBeenCompletedWith(path string, table
 	m := files.StoredRegisteredMetaData{
 		Path:              path,
 		IsPublishable:     isPublishable,
-		CollectionID:      data.CollectionID,
+		CollectionID:      &data.CollectionID,
 		Title:             data.Title,
 		SizeInBytes:       sizeInBytes,
 		Type:              data.Type,
@@ -209,7 +209,7 @@ func (c *FilesApiComponent) theFileUploadHasBeenRegisteredWith(path string, tabl
 	m := files.StoredRegisteredMetaData{
 		Path:          path,
 		IsPublishable: isPublishable,
-		CollectionID:  data.CollectionID,
+		CollectionID:  &data.CollectionID,
 		Title:         data.Title,
 		SizeInBytes:   sizeInBytes,
 		Type:          data.Type,

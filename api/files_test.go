@@ -90,11 +90,6 @@ func TestValidationMetaDataCreation(t *testing.T) {
 			expectedErrorDescription: "IsPublishable required",
 		},
 		{
-			name:                     "Validate that collection_id is required",
-			incomingJson:             `{"path": "some/file.txt", "is_publishable":false,"title":"The latest Meme","size_in_bytes":14794,"type":"image/jpeg","licence":"OGL v3","licence_url":"http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"}`,
-			expectedErrorDescription: "CollectionID required",
-		},
-		{
 			name:                     "Validate that size_in_bytes is positive integer",
 			incomingJson:             `{"path": "some/file.txt", "is_publishable":false,"collection_id":"1234-asdfg-54321-qwerty","title":"The latest Meme", "size_in_bytes": 0, "type":"image/jpeg","licence":"OGL v3","licence_url":"http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"}`,
 			expectedErrorDescription: "SizeInBytes gt",
@@ -278,4 +273,35 @@ func TestDecryptedHandlerHandlesUnexpectedPublishingError(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	response, _ := ioutil.ReadAll(rec.Body)
 	assert.Contains(t, string(response), "InternalError")
+}
+
+func TestCollectionIDOmittedFromBodyDoesNotRaiseError(t *testing.T) {
+	body := `{"path": "some/file.txt", "is_publishable":false,"title":"The latest Meme","size_in_bytes":14794,"type":"image/jpeg","licence":"OGL v3","licence_url":"http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader(body))
+
+	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+		assert.Nil(t, metaData.CollectionID)
+		return nil
+	})
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusCreated, rec.Code)
+}
+
+func TestCollectionIDInBodyDoesNotRaiseError(t *testing.T) {
+	collectionID := "1234"
+	body := fmt.Sprintf(`{"path": "some/file.txt", "collection_id": "%s", "is_publishable":false,"title":"The latest Meme","size_in_bytes":14794,"type":"image/jpeg","licence":"OGL v3","licence_url":"http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"}`, collectionID)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader(body))
+
+	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+		assert.Equal(t, collectionID, *metaData.CollectionID)
+		return nil
+	})
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusCreated, rec.Code)
 }
