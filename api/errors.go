@@ -3,9 +3,10 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/go-playground/validator"
-	"net/http"
 )
 
 type jsonError struct {
@@ -26,6 +27,8 @@ func handleError(w http.ResponseWriter, err error) {
 	switch err {
 	case files.ErrDuplicateFile:
 		writeError(w, buildErrors(err, "DuplicateFileError"), http.StatusBadRequest)
+	case files.ErrCollectionIDAlreadySet:
+		writeError(w, buildErrors(err, "CollectionIDAlreadySet"), http.StatusBadRequest)
 	case files.ErrFileNotRegistered:
 		writeError(w, buildErrors(err, "FileNotRegistered"), http.StatusNotFound)
 	case files.ErrFileNotInCreatedState,

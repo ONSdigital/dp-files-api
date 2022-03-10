@@ -1,7 +1,6 @@
 Feature: Register new file upload
 
   Scenario: Register that an upload has started
-
     When the file upload is registered with payload:
         """
         {
