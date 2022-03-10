@@ -24,11 +24,12 @@ var (
 	ErrFileNotInUploadedState  = errors.New("file state is not in state uploaded")
 	ErrFileNotInPublishedState = errors.New("file state is not in state published")
 	ErrNoFilesInCollection     = errors.New("no files found in collection")
+	ErrCollectionIDAlreadySet  = errors.New("collection ID already set")
 )
 
 const (
-	StateCreated  = "CREATED"
-	StateUploaded = "UPLOADED"
+	StateCreated   = "CREATED"
+	StateUploaded  = "UPLOADED"
 	StatePublished = "PUBLISHED"
 	StateDecrypted = "DECRYPTED"
 )
@@ -149,6 +150,40 @@ func (s *Store) MarkCollectionPublished(ctx context.Context, collectionID string
 
 func (s *Store) MarkFileDecrypted(ctx context.Context, metaData FileEtagChange) error {
 	return s.updateStatus(ctx, metaData.Path, metaData.Etag, StateDecrypted, StatePublished, "decrypted_at")
+}
+
+func (s *Store) UpdateCollectionID(ctx context.Context, path, collectionID string) error {
+	metadata := StoredRegisteredMetaData{}
+	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": path}, &metadata)
+	if err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			log.Error(ctx, "update collection ID: attempted to operate on unregistered file", err, log.Data{"path": path})
+			return ErrFileNotRegistered
+		}
+
+		log.Error(ctx, "failed finding metadata to update collection ID", err, log.Data{"path": path})
+		return err
+	}
+
+	if metadata.CollectionID != nil {
+		err := ErrCollectionIDAlreadySet
+		log.Error(
+			ctx, "update collection ID: collection ID already set",
+			err, log.Data{"path": path, "collection_id": *metadata.CollectionID},
+		)
+		return err
+	}
+
+	s.m.Collection(config.MetadataCollection).Update(
+		ctx,
+		bson.M{"path": path},
+		bson.D{
+			{"$set", bson.D{
+				{"collection_id", collectionID}},
+			},
+		})
+
+	return nil
 }
 
 func createCollectionContainsNotUploadedFilesQuery(collectionID string) bson.M {

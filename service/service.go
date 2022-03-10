@@ -61,6 +61,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 			api.HandleMarkUploadComplete(store.MarkUploadComplete),
 			api.HandleMarkCollectionPublished(store.MarkCollectionPublished),
 			api.HandleMarkFileDecrypted(store.MarkFileDecrypted),
+			api.HandlerUpdateCollectionID(store.UpdateCollectionID),
 		)).Methods(http.MethodPatch)
 	} else {
 		forbiddenHandler := func(w http.ResponseWriter, r *http.Request) {
@@ -99,7 +100,6 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 
 	return svc, nil
 }
-
 
 // Close gracefully shuts the service down in the required order, with timeout
 func (svc *Service) Close(ctx context.Context, timeout time.Duration) error {

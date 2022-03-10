@@ -5,9 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/ONSdigital/log.go/v2/log"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/ONSdigital/log.go/v2/log"
 
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/go-playground/validator"
@@ -17,7 +18,7 @@ import (
 type RegisterMetadata struct {
 	Path          string  `json:"path" validate:"required,aws-upload-key"`
 	IsPublishable *bool   `json:"is_publishable,omitempty" validate:"required"`
-	CollectionID  *string `json:"collection_id"`
+	CollectionID  *string `json:"collection_id,omitempty"`
 	Title         string  `json:"title"`
 	SizeInBytes   uint64  `json:"size_in_bytes" validate:"gt=0"`
 	Type          string  `json:"type"`
@@ -26,7 +27,8 @@ type RegisterMetadata struct {
 }
 
 type StateMetadata struct {
-	State string `json:"state" validate:"required"`
+	State        *string `json:"state,omitempty"`
+	CollectionID *string `json:"collection_id,omitempty"`
 }
 
 type EtagChange struct {
@@ -42,8 +44,9 @@ type MarkUploadComplete func(ctx context.Context, metaData files.FileEtagChange)
 type GetFileMetadata func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error)
 type MarkCollectionPublished func(ctx context.Context, collectionID string) error
 type MarkDecryptionComplete func(ctx context.Context, change files.FileEtagChange) error
+type UpdateCollectionID func(ctx context.Context, path, collectionID string) error
 
-func StateToHandler(uploadComplete http.HandlerFunc, published http.HandlerFunc, decrypted http.HandlerFunc) http.HandlerFunc {
+func StateToHandler(uploadComplete http.HandlerFunc, published http.HandlerFunc, decrypted http.HandlerFunc, collectionUpdate http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		m := StateMetadata{}
@@ -57,15 +60,38 @@ func StateToHandler(uploadComplete http.HandlerFunc, published http.HandlerFunc,
 
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(b))
 
-		if m.State == files.StateUploaded {
+		if m.CollectionID != nil && m.State == nil {
+			collectionUpdate.ServeHTTP(w, req)
+			return
+		}
+
+		if *m.State == files.StateUploaded {
 			uploadComplete.ServeHTTP(w, req)
-		} else if m.State == files.StatePublished {
+		} else if *m.State == files.StatePublished {
 			published.ServeHTTP(w, req)
-		} else if m.State == files.StateDecrypted {
+		} else if *m.State == files.StateDecrypted {
 			decrypted.ServeHTTP(w, req)
 		} else {
-			log.Error(req.Context(), "InvalidStateChange", errors.New("Invalid STATE change"), log.Data{"state": m.State})
+			log.Error(req.Context(), "InvalidStateChange", errors.New("Invalid STATE change"), log.Data{"state": *m.State})
 			writeError(w, buildErrors(errors.New("Invalid STATE change"), "InvalidStateChange"), http.StatusBadRequest)
+		}
+	}
+}
+
+type CollectionChange struct {
+	CollectionID string `json:"collection_id"`
+}
+
+func HandlerUpdateCollectionID(updateCollectionID UpdateCollectionID) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		cc := CollectionChange{}
+		if err := json.NewDecoder(req.Body).Decode(&cc); err != nil {
+			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
+			return
+		}
+
+		if err := updateCollectionID(req.Context(), mux.Vars(req)["path"], cc.CollectionID); err != nil {
+			handleError(w, err)
 		}
 	}
 }

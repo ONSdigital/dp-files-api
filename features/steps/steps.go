@@ -36,6 +36,7 @@ func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the following PUBLISHED message is sent to Kakfa:$`, c.theFollowingPublishedMessageIsSent)
 	ctx.Step(`^Kafka Consumer Group is running$`, c.kafkaConsumerGroupIsRunning)
 	ctx.Step(`^I am in web mode$`, c.iAmInWebMode)
+	ctx.Step(`^I set the collection ID to "([^"]*)" for file "([^"]*)"$`, c.iSetTheCollectionIDToForFile)
 }
 
 func (c *FilesApiComponent) iRegisterFile(payload *godog.DocString) error {
@@ -180,7 +181,6 @@ func (c *FilesApiComponent) theFileUploadHasBeenCompletedWith(path string, table
 	m := files.StoredRegisteredMetaData{
 		Path:              path,
 		IsPublishable:     isPublishable,
-		CollectionID:      &data.CollectionID,
 		Title:             data.Title,
 		SizeInBytes:       sizeInBytes,
 		Type:              data.Type,
@@ -191,6 +191,10 @@ func (c *FilesApiComponent) theFileUploadHasBeenCompletedWith(path string, table
 		LastModified:      lastModified,
 		UploadCompletedAt: &uploadCompletedAt,
 		Etag:              data.Etag,
+	}
+
+	if data.CollectionID != "" {
+		m.CollectionID = &data.CollectionID
 	}
 
 	_, err = c.mongoClient.Database("files").Collection("metadata").InsertOne(context.Background(), &m)
@@ -251,6 +255,11 @@ func (c *FilesApiComponent) theFileUploadIsMarkedAsCompleteWithTheEtag(path, eta
 	"etag": "%s",
 	"state": "%s"
 }`, etag, files.StateUploaded)
+	return c.ApiFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+}
+
+func (c *FilesApiComponent) iSetTheCollectionIDToForFile(collectionID, path string) error {
+	json := fmt.Sprintf(`{"collection_id": "%s"}`, collectionID)
 	return c.ApiFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
 }
 
