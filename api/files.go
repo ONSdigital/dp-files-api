@@ -45,6 +45,7 @@ type GetFileMetadata func(ctx context.Context, path string) (files.StoredRegiste
 type MarkCollectionPublished func(ctx context.Context, collectionID string) error
 type MarkDecryptionComplete func(ctx context.Context, change files.FileEtagChange) error
 type UpdateCollectionID func(ctx context.Context, path, collectionID string) error
+type GetFilesMetadata func(ctx context.Context, collectionID string) ([]files.StoredRegisteredMetaData, error)
 
 func StateToHandler(uploadComplete http.HandlerFunc, published http.HandlerFunc, decrypted http.HandlerFunc, collectionUpdate http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -141,6 +142,49 @@ func HandleGetFileMetadata(getMetadata GetFileMetadata) http.HandlerFunc {
 		json.NewEncoder(w).Encode(metadata)
 
 		w.WriteHeader(http.StatusOK)
+	}
+}
+
+type FilesCollection struct {
+	Count      int64                            `json:"count"`
+	Limit      int64                            `json:"limit"`
+	Offset     int64                            `json:"offset"`
+	TotalCount int64                            `json:"total_count"`
+	Items      []files.StoredRegisteredMetaData `json:"items"`
+}
+
+func HandlerGetFilesMetadata(getFiles GetFilesMetadata) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		collectionID := req.URL.Query().Get("collection_id")
+
+		if collectionID == "" {
+			err := errors.New("missing collection ID")
+			writeError(w, buildErrors(err, "BadRequest"), http.StatusBadRequest)
+			return
+		}
+
+		f, err := getFiles(req.Context(), collectionID)
+
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+
+		count := int64(len(f))
+		fc := FilesCollection{
+			Count:      count,
+			Limit:      count,
+			Offset:     0,
+			TotalCount: count,
+			Items:      f,
+		}
+
+		w.Header().Add("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(fc)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+
 	}
 }
 

@@ -56,6 +56,13 @@ func (s *Store) GetFileMetadata(ctx context.Context, path string) (StoredRegiste
 	return metadata, err
 }
 
+func (s *Store) GetFilesMetadata(ctx context.Context, collectionID string) ([]StoredRegisteredMetaData, error) {
+	files := []StoredRegisteredMetaData{}
+	_, err := s.m.Collection(config.MetadataCollection).Find(ctx, bson.M{"collection_id": collectionID}, &files)
+
+	return files, err
+}
+
 func (s *Store) RegisterFileUpload(ctx context.Context, metaData StoredRegisteredMetaData) error {
 	count, err := s.m.Collection(config.MetadataCollection).Count(ctx, bson.M{"path": metaData.Path})
 	if err != nil {

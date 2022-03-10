@@ -3,6 +3,8 @@ package files_test
 import (
 	"context"
 	"flag"
+	"testing"
+
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/features/steps"
 	"github.com/ONSdigital/dp-files-api/files"
@@ -11,7 +13,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	mongoRaw "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"testing"
 )
 
 var (
@@ -95,5 +96,5 @@ func (s *StoreIntegrationTest) TestOptionalCollectionIDIncluded() {
 
 	out, _ := s.store.GetFileMetadata(s.ctx, path)
 
-	s.Equal(collectionID, out.CollectionID)
+	s.Equal(collectionID, *out.CollectionID)
 }

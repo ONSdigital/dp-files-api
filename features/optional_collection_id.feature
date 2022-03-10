@@ -1,5 +1,4 @@
 Feature: Optional Collection ID
-
   Scenario: The one where the collection ID is not sent with the file meta data
     When the file upload is registered with payload:
         """
