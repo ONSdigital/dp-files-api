@@ -37,6 +37,8 @@ func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^Kafka Consumer Group is running$`, c.kafkaConsumerGroupIsRunning)
 	ctx.Step(`^I am in web mode$`, c.iAmInWebMode)
 	ctx.Step(`^I set the collection ID to "([^"]*)" for file "([^"]*)"$`, c.iSetTheCollectionIDToForFile)
+	ctx.Step(`^I get files in the collection "([^"]*)"$`, c.iGetFilesInTheCollection)
+
 }
 
 func (c *FilesApiComponent) iRegisterFile(payload *godog.DocString) error {
@@ -387,4 +389,8 @@ func (c *FilesApiComponent) iAmInWebMode() error {
 	c.isPublishing = false
 
 	return c.ApiFeature.StepError()
+}
+
+func (c *FilesApiComponent) iGetFilesInTheCollection(collectionID string) error {
+	return c.ApiFeature.IGet(fmt.Sprintf("/files?collection_id=%s", collectionID))
 }

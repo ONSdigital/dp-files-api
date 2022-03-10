@@ -63,6 +63,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 			api.HandleMarkFileDecrypted(store.MarkFileDecrypted),
 			api.HandlerUpdateCollectionID(store.UpdateCollectionID),
 		)).Methods(http.MethodPatch)
+		r.Path("/files").HandlerFunc(api.HandlerGetFilesMetadata(store.GetFilesMetadata)).Methods(http.MethodGet)
 	} else {
 		forbiddenHandler := func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusForbidden)
