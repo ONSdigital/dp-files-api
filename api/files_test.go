@@ -210,21 +210,6 @@ func TestGetFileMetadataHandlesUnexpectedError(t *testing.T) {
 	assert.Contains(t, string(response), "InternalError")
 }
 
-func TestPublishHandlerHandlesInvalidJSONContent(t *testing.T) {
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPatch, "/files/ignore.txt", strings.NewReader("<json>invalid</json>"))
-
-	h := api.HandleMarkCollectionPublished(func(ctx context.Context, collectionID string) error {
-		return nil
-	})
-
-	h.ServeHTTP(rec, req)
-
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
-	assert.Contains(t, string(response), "BadJsonEncoding")
-}
-
 func TestPublishHandlerHandlesUnexpectedPublishingError(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPatch, "/files/ignore.txt", strings.NewReader(`{"collection_id": "asdfghjkl"}`))

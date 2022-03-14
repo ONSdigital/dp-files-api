@@ -26,12 +26,13 @@ func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the file upload "([^"]*)" has been registered with:$`, c.theFileUploadHasBeenRegisteredWith)
 	ctx.Step(`^the file upload "([^"]*)" has been completed with:$`, c.theFileUploadHasBeenCompletedWith)
 	ctx.Step(`^the file upload "([^"]*)" is marked as complete with the etag "([^"]*)"$`, c.theFileUploadIsMarkedAsCompleteWithTheEtag)
+	ctx.Step(`^the file "([^"]*)" is marked as published$`, c.theFileIsMarkedAsPublished)
+	ctx.Step(`^the file "([^"]*)" is marked as decrypted with etag "([^"]*)"$`, c.theFileIsMarkedAsDecrypted)
 	ctx.Step(`^the following document entry should be look like:$`, c.theFollowingDocumentEntryShouldBeLookLike)
 	ctx.Step(`^the file upload "([^"]*)" has not been registered$`, c.theFileUploadHasNotBeenRegistered)
 	ctx.Step(`^the file metadata is requested for the file "([^"]*)"$`, c.theFileMetadataIsRequested)
 	ctx.Step(`^the file "([^"]*)" has not been registered$`, c.theFileHasNotBeenRegistered)
 	ctx.Step(`^I publish the collection "([^"]*)"$`, c.iPublishTheCollection)
-	ctx.Step(`^the file "([^"]*)" is marked as decrypted with etag "([^"]*)"$`, c.theFileIsMarkedAsDecrypted)
 	ctx.Step(`^the file upload "([^"]*)" has been published with:$`, c.theFileUploadHasBeenPublishedWith)
 	ctx.Step(`^the following PUBLISHED message is sent to Kakfa:$`, c.theFollowingPublishedMessageIsSent)
 	ctx.Step(`^Kafka Consumer Group is running$`, c.kafkaConsumerGroupIsRunning)
@@ -252,6 +253,11 @@ func (c *FilesApiComponent) theFileIsMarkedAsDecrypted(path, etag string) error 
 	return c.ApiFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
 }
 
+func (c *FilesApiComponent) theFileIsMarkedAsPublished(path string) error {
+	json := fmt.Sprintf(`{"state": "%s"}`, files.StatePublished)
+	return c.ApiFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+}
+
 func (c *FilesApiComponent) theFileUploadIsMarkedAsCompleteWithTheEtag(path, etag string) error {
 	json := fmt.Sprintf(`{
 	"etag": "%s",
@@ -309,11 +315,8 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 }
 
 func (c *FilesApiComponent) iPublishTheCollection(collectionID string) error {
-	body := fmt.Sprintf(`{
-	"collection_id": "%s",
-	"state": "%s"
-}`, collectionID, files.StatePublished)
-	c.ApiFeature.IPatch("/files/ignore_for_now.jpg", &messages.PickleDocString{MediaType: "application/json", Content: body})
+	body := fmt.Sprintf(`{"state": "%s"}`, files.StatePublished)
+	c.ApiFeature.IPatch(fmt.Sprintf("/collection/%s", collectionID), &messages.PickleDocString{MediaType: "application/json", Content: body})
 
 	return c.ApiFeature.StepError()
 }

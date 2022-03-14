@@ -59,11 +59,12 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path("/files").HandlerFunc(api.HandlerRegisterUploadStarted(store.RegisterFileUpload)).Methods(http.MethodPost)
 		r.Path(filesURI).HandlerFunc(api.StateToHandler(
 			api.HandleMarkUploadComplete(store.MarkUploadComplete),
-			api.HandleMarkCollectionPublished(store.MarkCollectionPublished),
+			api.HandleMarkFilePublished(store.MarkFilePublished),
 			api.HandleMarkFileDecrypted(store.MarkFileDecrypted),
 			api.HandlerUpdateCollectionID(store.UpdateCollectionID),
 		)).Methods(http.MethodPatch)
 		r.Path("/files").HandlerFunc(api.HandlerGetFilesMetadata(store.GetFilesMetadata)).Methods(http.MethodGet)
+		r.Path("/collection/{collectionID}").HandlerFunc(api.HandleMarkCollectionPublished(store.MarkCollectionPublished)).Methods(http.MethodPatch)
 	} else {
 		forbiddenHandler := func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusForbidden)
@@ -71,6 +72,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 
 		r.Path("/files").HandlerFunc(forbiddenHandler).Methods(http.MethodPost)
 		r.Path(filesURI).HandlerFunc(forbiddenHandler).Methods(http.MethodPatch)
+		r.Path("/collection/{collectionID}").HandlerFunc(forbiddenHandler).Methods(http.MethodPatch)
 	}
 
 	r.Path(filesURI).HandlerFunc(api.HandleGetFileMetadata(store.GetFileMetadata)).Methods(http.MethodGet)
