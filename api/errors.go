@@ -33,6 +33,7 @@ func handleError(w http.ResponseWriter, err error) {
 		writeError(w, buildErrors(err, "FileNotRegistered"), http.StatusNotFound)
 	case files.ErrFileNotInCreatedState,
 		files.ErrFileNotInUploadedState,
+		files.ErrCollectionIDNotSet,
 		files.ErrFileNotInPublishedState:
 		writeError(w, buildErrors(err, "FileStateError"), http.StatusConflict)
 	case files.ErrNoFilesInCollection:

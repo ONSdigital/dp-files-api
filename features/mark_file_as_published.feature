@@ -41,8 +41,8 @@ Feature: Mark single file as published
   Scenario: The one where marking the state as published is invalid state move
     Given the file upload "images/meme.jpg" has been completed with:
       | IsPublishable     | true                                                                      |
-      | CollectionID      | 1234-asdfg-54321-qwerty                                                   |
       | Title             | The latest Meme                                                           |
+      | CollectionID      | 1234-asdfg-54321-qwerty                                                   |
       | SizeInBytes       | 14794                                                                     |
       | Type              | image/jpeg                                                                |
       | Licence           | OGL v3                                                                    |
@@ -51,6 +51,22 @@ Feature: Mark single file as published
       | LastModified      | 2021-10-21T15:14:14Z                                                      |
       | UploadCompletedAt | 2021-10-21T15:14:14Z                                                      |
       | State             | PUBLISHED                                                                  |
+      | Etag              | 123456789                                                                 |
+    When the file "images/meme.jpg" is marked as published
+    Then the HTTP status code should be "409"
+
+  Scenario: The one where the collection ID is not set
+    Given the file upload "images/meme.jpg" has been completed with:
+      | IsPublishable     | true                                                                      |
+      | Title             | The latest Meme                                                           |
+      | SizeInBytes       | 14794                                                                     |
+      | Type              | image/jpeg                                                                |
+      | Licence           | OGL v3                                                                    |
+      | LicenceUrl        | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | CreatedAt         | 2021-10-21T15:13:14Z                                                      |
+      | LastModified      | 2021-10-21T15:14:14Z                                                      |
+      | UploadCompletedAt | 2021-10-21T15:14:14Z                                                      |
+      | State             | UPLOADED                                                                  |
       | Etag              | 123456789                                                                 |
     When the file "images/meme.jpg" is marked as published
     Then the HTTP status code should be "409"

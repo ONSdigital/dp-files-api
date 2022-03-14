@@ -25,6 +25,7 @@ var (
 	ErrFileNotInPublishedState = errors.New("file state is not in state published")
 	ErrNoFilesInCollection     = errors.New("no files found in collection")
 	ErrCollectionIDAlreadySet  = errors.New("collection ID already set")
+	ErrCollectionIDNotSet      = errors.New("collection ID not set")
 )
 
 const (
@@ -243,6 +244,12 @@ func (s *Store) MarkFilePublished(ctx context.Context, path string) error {
 		}
 
 		log.Error(ctx, "failed finding m to mark file as published", err, log.Data{"path": path})
+		return err
+	}
+
+	if m.CollectionID == nil {
+		err := ErrCollectionIDNotSet
+		log.Error(ctx, "file had no collection id", err, log.Data{"metadata": m})
 		return err
 	}
 
