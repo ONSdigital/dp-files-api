@@ -146,9 +146,9 @@ func (s *Store) MarkCollectionPublished(ctx context.Context, collectionID string
 		})
 
 		if err != nil {
-			fmt.Printf("PUBLISH ERROR: %s", err.Error())
-		} else {
-			fmt.Println("MESSAGE SENT SUCCESSFULLY!")
+			logdata := log.Data{}
+			logdata["metadata"] = m
+			log.Error(ctx, "sending published message to kafka", err, logdata)
 		}
 	}
 
@@ -229,6 +229,47 @@ func (s *Store) updateStatus(ctx context.Context, path, etag, toState, expectedC
 				{"last_modified", s.c.GetCurrentTime()},
 				{timestampField, s.c.GetCurrentTime()}}},
 		})
+
+	return nil
+}
+
+func (s *Store) MarkFilePublished(ctx context.Context, path string) error {
+	m := StoredRegisteredMetaData{}
+	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": path}, &m)
+	if err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			log.Error(ctx, "mark file as published: attempted to operate on unregistered file", err, log.Data{"path": path})
+			return ErrFileNotRegistered
+		}
+
+		log.Error(ctx, "failed finding m to mark file as published", err, log.Data{"path": path})
+		return err
+	}
+
+	if m.State != StateUploaded {
+		log.Error(ctx, fmt.Sprintf("mark file published: file was not in state %s", StateUploaded),
+			err, log.Data{"path": path, "current_state": m.State})
+		return ErrFileNotInUploadedState
+	}
+	s.m.Collection(config.MetadataCollection).Update(
+		ctx,
+		bson.M{"path": path},
+		bson.D{
+			{"$set", bson.D{
+				{"state", StatePublished},
+				{"last_modified", s.c.GetCurrentTime()},
+				{"published_at", s.c.GetCurrentTime()}}},
+		})
+	err = s.k.Send(avroSchema, &FilePublished{
+		Path:        m.Path,
+		Etag:        m.Etag,
+		Type:        m.Type,
+		SizeInBytes: strconv.FormatUint(m.SizeInBytes, 10),
+	})
+
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

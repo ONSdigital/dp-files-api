@@ -43,6 +43,7 @@ type RegisterFileUpload func(ctx context.Context, metaData files.StoredRegistere
 type MarkUploadComplete func(ctx context.Context, metaData files.FileEtagChange) error
 type GetFileMetadata func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error)
 type MarkCollectionPublished func(ctx context.Context, collectionID string) error
+type MarkFilePublished func(ctx context.Context, path string) error
 type MarkDecryptionComplete func(ctx context.Context, change files.FileEtagChange) error
 type UpdateCollectionID func(ctx context.Context, path, collectionID string) error
 type GetFilesMetadata func(ctx context.Context, collectionID string) ([]files.StoredRegisteredMetaData, error)
@@ -113,15 +114,22 @@ func HandleMarkFileDecrypted(markDecryptionComplete MarkDecryptionComplete) http
 	}
 }
 
+func HandleMarkFilePublished(markFilePublished MarkFilePublished) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		path := mux.Vars(req)["path"]
+
+		if err := markFilePublished(req.Context(), path); err != nil {
+			handleError(w, err)
+		}
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
 func HandleMarkCollectionPublished(markCollectionPublished MarkCollectionPublished) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		p := PublishData{}
-		if err := json.NewDecoder(req.Body).Decode(&p); err != nil {
-			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
-			return
-		}
+		collectionID := mux.Vars(req)["collectionID"]
 
-		if err := markCollectionPublished(req.Context(), p.CollectionID); err != nil {
+		if err := markCollectionPublished(req.Context(), collectionID); err != nil {
 			handleError(w, err)
 		}
 
