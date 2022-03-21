@@ -57,7 +57,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	r.Path("/health").HandlerFunc(hc.Handler)
 	if isPublishing {
 		r.Path("/files").HandlerFunc(api.HandlerRegisterUploadStarted(store.RegisterFileUpload)).Methods(http.MethodPost)
-		r.Path(filesURI).HandlerFunc(api.StateToHandler(
+		r.Path(filesURI).HandlerFunc(api.PatchRequestToHandler(
 			api.HandleMarkUploadComplete(store.MarkUploadComplete),
 			api.HandleMarkFilePublished(store.MarkFilePublished),
 			api.HandleMarkFileDecrypted(store.MarkFileDecrypted),
