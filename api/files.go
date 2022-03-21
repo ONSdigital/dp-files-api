@@ -48,36 +48,51 @@ type MarkDecryptionComplete func(ctx context.Context, change files.FileEtagChang
 type UpdateCollectionID func(ctx context.Context, path, collectionID string) error
 type GetFilesMetadata func(ctx context.Context, collectionID string) ([]files.StoredRegisteredMetaData, error)
 
-func StateToHandler(uploadComplete http.HandlerFunc, published http.HandlerFunc, decrypted http.HandlerFunc, collectionUpdate http.HandlerFunc) http.HandlerFunc {
+func PatchRequestToHandler(uploadCompleteHandler http.HandlerFunc, publishedHandler http.HandlerFunc, decryptedHandler http.HandlerFunc, collectionUpdateHandler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
+		requestBody, _ := ioutil.ReadAll(req.Body)
+		stateMetaData, err := getStateMetadataFromRequest(requestBody)
 
-		m := StateMetadata{}
-		b, _ := ioutil.ReadAll(req.Body)
-
-		state := ioutil.NopCloser(bytes.NewBuffer(b))
-		if err := json.NewDecoder(state).Decode(&m); err != nil {
+		if err != nil {
 			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
 			return
 		}
 
-		req.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+		// Reset request body after ReadAll for subsequent handlers
+		setRequestBody(req, requestBody)
 
-		if m.CollectionID != nil && m.State == nil {
-			collectionUpdate.ServeHTTP(w, req)
+		if stateMetaData.CollectionID != nil && stateMetaData.State == nil {
+			collectionUpdateHandler.ServeHTTP(w, req)
 			return
 		}
 
-		if *m.State == files.StateUploaded {
-			uploadComplete.ServeHTTP(w, req)
-		} else if *m.State == files.StatePublished {
-			published.ServeHTTP(w, req)
-		} else if *m.State == files.StateDecrypted {
-			decrypted.ServeHTTP(w, req)
-		} else {
-			log.Error(req.Context(), "InvalidStateChange", errors.New("Invalid STATE change"), log.Data{"state": *m.State})
-			writeError(w, buildErrors(errors.New("Invalid STATE change"), "InvalidStateChange"), http.StatusBadRequest)
+		switch *stateMetaData.State {
+		case files.StateUploaded:
+			uploadCompleteHandler.ServeHTTP(w, req)
+		case files.StatePublished:
+			publishedHandler.ServeHTTP(w, req)
+		case files.StateDecrypted:
+			decryptedHandler.ServeHTTP(w, req)
+		default:
+			log.Error(req.Context(), "InvalidStateChange", errors.New("invalid STATE change"), log.Data{"state": *stateMetaData.State})
+			writeError(w, buildErrors(errors.New("invalid STATE change"), "InvalidStateChange"), http.StatusBadRequest)
 		}
 	}
+}
+
+func setRequestBody(req *http.Request, requestBody []byte) {
+	req.Body = ioutil.NopCloser(bytes.NewBuffer(requestBody))
+}
+
+func getStateMetadataFromRequest(requestBody []byte) (StateMetadata, error) {
+	stateMetaData := StateMetadata{}
+
+	requestBodyBuffer := bytes.NewBuffer(requestBody)
+
+	state := ioutil.NopCloser(requestBodyBuffer)
+
+	err := json.NewDecoder(state).Decode(&stateMetaData)
+	return stateMetaData, err
 }
 
 type CollectionChange struct {
@@ -161,7 +176,7 @@ type FilesCollection struct {
 	Items      []files.StoredRegisteredMetaData `json:"items"`
 }
 
-func HandlerGetFilesMetadata(getFiles GetFilesMetadata) http.HandlerFunc {
+func HandlerGetFilesMetadata(getFilesMetadata GetFilesMetadata) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		collectionID := req.URL.Query().Get("collection_id")
 
@@ -171,24 +186,14 @@ func HandlerGetFilesMetadata(getFiles GetFilesMetadata) http.HandlerFunc {
 			return
 		}
 
-		f, err := getFiles(req.Context(), collectionID)
-
+		fm, err := getFilesMetadata(req.Context(), collectionID)
 		if err != nil {
 			handleError(w, err)
 			return
 		}
 
-		count := int64(len(f))
-		fc := FilesCollection{
-			Count:      count,
-			Limit:      count,
-			Offset:     0,
-			TotalCount: count,
-			Items:      f,
-		}
-
-		w.Header().Add("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(fc)
+		fc := filesCollectionFromMetadata(fm)
+		err = respondWithFilesCollectionJSON(w, fc)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
@@ -196,25 +201,33 @@ func HandlerGetFilesMetadata(getFiles GetFilesMetadata) http.HandlerFunc {
 	}
 }
 
+func filesCollectionFromMetadata(f []files.StoredRegisteredMetaData) FilesCollection {
+	count := int64(len(f))
+	fc := FilesCollection{
+		Count:      count,
+		Limit:      count,
+		Offset:     0,
+		TotalCount: count,
+		Items:      f,
+	}
+	return fc
+}
+
 func HandlerRegisterUploadStarted(register RegisterFileUpload) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-
-		m := RegisterMetadata{}
-		err := json.NewDecoder(req.Body).Decode(&m)
+		rm, err := getRegisterMetadataFromRequest(req)
 		if err != nil {
 			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
 			return
 		}
 
-		validate := validator.New()
-		validate.RegisterValidation("aws-upload-key", awsUploadKeyValidator)
-		err = validate.Struct(m)
+		err = validateRegisterMetadata(rm)
 		if err != nil {
 			handleError(w, err)
 			return
 		}
 
-		err = register(req.Context(), generateStoredRegisterMetaData(m))
+		err = register(req.Context(), generateStoredRegisterMetaData(rm))
 		if err != nil {
 			handleError(w, err)
 			return
@@ -226,25 +239,49 @@ func HandlerRegisterUploadStarted(register RegisterFileUpload) http.HandlerFunc 
 
 func HandleMarkUploadComplete(markUploaded MarkUploadComplete) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		m := EtagChange{}
-		err := json.NewDecoder(req.Body).Decode(&m)
+		ec, err := getEtagChangeFromRequest(req)
 		if err != nil {
 			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
 			return
 		}
 
-		if err = validator.New().Struct(m); err != nil {
+		if err = validator.New().Struct(ec); err != nil {
 			handleError(w, err)
 			return
 		}
 
-		err = markUploaded(req.Context(), generateStoredUploadMetaData(m, mux.Vars(req)["path"]))
+		err = markUploaded(req.Context(), generateStoredUploadMetaData(ec, mux.Vars(req)["path"]))
 		if err != nil {
 			handleError(w, err)
 		}
 
 		w.WriteHeader(http.StatusOK)
 	}
+}
+
+func respondWithFilesCollectionJSON(w http.ResponseWriter, fc FilesCollection) error {
+	w.Header().Add("Content-Type", "application/json")
+	err := json.NewEncoder(w).Encode(fc)
+	return err
+}
+
+func validateRegisterMetadata(rm RegisterMetadata) error {
+	validate := validator.New()
+	validate.RegisterValidation("aws-upload-key", awsUploadKeyValidator)
+	err := validate.Struct(rm)
+	return err
+}
+
+func getRegisterMetadataFromRequest(req *http.Request) (RegisterMetadata, error) {
+	rm := RegisterMetadata{}
+	err := json.NewDecoder(req.Body).Decode(&rm)
+	return rm, err
+}
+
+func getEtagChangeFromRequest(req *http.Request) (EtagChange, error) {
+	ec := EtagChange{}
+	err := json.NewDecoder(req.Body).Decode(&ec)
+	return ec, err
 }
 
 func generateStoredRegisterMetaData(m RegisterMetadata) files.StoredRegisteredMetaData {
