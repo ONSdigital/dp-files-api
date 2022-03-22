@@ -3,6 +3,7 @@ package api_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -15,6 +16,78 @@ import (
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/stretchr/testify/assert"
 )
+
+var (
+	collectionID   = "123456"
+	stateDecrypted = "DECRYPTED"
+	statePublished = "PUBLISHED"
+	stateUploaded  = "UPLOADED"
+)
+
+func generateTestPatchRequestHandler() http.HandlerFunc {
+	uploadCompleteHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("uploadCompleteHandler")) })
+	publishedHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("publishedHandler")) })
+	decryptedHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("decryptedHandler")) })
+	collectionUpdateHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("collectionUpdateHandler")) })
+
+	return api.PatchRequestToHandler(uploadCompleteHandler, publishedHandler, decryptedHandler, collectionUpdateHandler)
+}
+
+func TestPatchRequestToHandlerReturnsCorrectHandler(t *testing.T) {
+	tests := []struct {
+		StateMetadata api.StateMetadata
+		ExpectedBody  string
+	}{
+		{StateMetadata: api.StateMetadata{CollectionID: &collectionID}, ExpectedBody: "collectionUpdateHandler"},
+		{StateMetadata: api.StateMetadata{State: &stateDecrypted}, ExpectedBody: "decryptedHandler"},
+		{StateMetadata: api.StateMetadata{State: &statePublished}, ExpectedBody: "publishedHandler"},
+		{StateMetadata: api.StateMetadata{State: &stateUploaded}, ExpectedBody: "uploadCompleteHandler"},
+	}
+
+	for _, test := range tests {
+		body, _ := json.Marshal(test.StateMetadata)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("PATCH", "/files/test.txt", bytes.NewBuffer(body))
+
+		handler := generateTestPatchRequestHandler()
+		handler.ServeHTTP(w, req)
+
+		actualBody, _ := ioutil.ReadAll(w.Body)
+
+		assert.Equal(t, test.ExpectedBody, string(actualBody))
+	}
+}
+
+func TestPatchRequestToHandlerPassesBodyToSubsequentHandler(t *testing.T) {
+	tests := []struct {
+		StateMetadata api.StateMetadata
+		ExpectedBody  string
+	}{
+		{StateMetadata: api.StateMetadata{CollectionID: &collectionID}},
+		{StateMetadata: api.StateMetadata{State: &stateDecrypted}},
+		{StateMetadata: api.StateMetadata{State: &statePublished}},
+		{StateMetadata: api.StateMetadata{State: &stateUploaded}},
+	}
+
+	for _, test := range tests {
+		var actualRequestBody []byte
+		expectedRequestBody, _ := json.Marshal(test.StateMetadata)
+
+		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			actualRequestBody, _ = ioutil.ReadAll(r.Body)
+		})
+
+		actualHandler := api.PatchRequestToHandler(testHandler, testHandler, testHandler, testHandler)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("PATCH", "/files/text.txt", bytes.NewBuffer(expectedRequestBody))
+		actualHandler.ServeHTTP(w, req)
+
+		msg := fmt.Sprintf(`Expected "%s" to equal "%s"`, actualRequestBody, expectedRequestBody)
+
+		assert.Equal(t, expectedRequestBody, actualRequestBody, msg)
+	}
+}
 
 func TestFileMetaDataCreationUnsuccessful(t *testing.T) {
 	rec := httptest.NewRecorder()
