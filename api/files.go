@@ -51,6 +51,13 @@ type FilesCollection struct {
 	Items      []files.StoredRegisteredMetaData `json:"items"`
 }
 
+type PatchRequestHandlers struct {
+	UploadComplete   http.HandlerFunc
+	Published        http.HandlerFunc
+	Decrypted        http.HandlerFunc
+	CollectionUpdate http.HandlerFunc
+}
+
 type RegisterFileUpload func(ctx context.Context, metaData files.StoredRegisteredMetaData) error
 type MarkUploadComplete func(ctx context.Context, metaData files.FileEtagChange) error
 type GetFileMetadata func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error)
@@ -60,7 +67,7 @@ type MarkDecryptionComplete func(ctx context.Context, change files.FileEtagChang
 type UpdateCollectionID func(ctx context.Context, path, collectionID string) error
 type GetFilesMetadata func(ctx context.Context, collectionID string) ([]files.StoredRegisteredMetaData, error)
 
-func PatchRequestToHandler(uploadCompleteHandler http.HandlerFunc, publishedHandler http.HandlerFunc, decryptedHandler http.HandlerFunc, collectionUpdateHandler http.HandlerFunc) http.HandlerFunc {
+func PatchRequestToHandler(handlers PatchRequestHandlers) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		stateMetaData, err := getStateMetadataFromRequest(req)
 
@@ -70,20 +77,20 @@ func PatchRequestToHandler(uploadCompleteHandler http.HandlerFunc, publishedHand
 		}
 
 		if stateMetaData.CollectionID != nil && stateMetaData.State == nil {
-			collectionUpdateHandler.ServeHTTP(w, req)
+			handlers.CollectionUpdate.ServeHTTP(w, req)
 			return
 		}
 
 		switch *stateMetaData.State {
 		case files.StateUploaded:
-			uploadCompleteHandler.ServeHTTP(w, req)
+			handlers.UploadComplete.ServeHTTP(w, req)
 		case files.StatePublished:
-			publishedHandler.ServeHTTP(w, req)
+			handlers.Published.ServeHTTP(w, req)
 		case files.StateDecrypted:
-			decryptedHandler.ServeHTTP(w, req)
+			handlers.Decrypted.ServeHTTP(w, req)
 		default:
-			log.Error(req.Context(), "InvalidStateChange", errors.New("invalid STATE change"), log.Data{"state": *stateMetaData.State})
-			writeError(w, buildErrors(errors.New("invalid STATE change"), "InvalidStateChange"), http.StatusBadRequest)
+			log.Error(req.Context(), "InvalidStateChange", errors.New("invalid state change"), log.Data{"state": *stateMetaData.State})
+			writeError(w, buildErrors(errors.New("invalid state change"), "InvalidStateChange"), http.StatusBadRequest)
 		}
 	}
 }
@@ -96,7 +103,6 @@ func getStateMetadataFromRequest(req *http.Request) (StateMetadata, error) {
 	stateMetaData := StateMetadata{}
 	requestBody, err := ioutil.ReadAll(req.Body)
 
-	// Reset request body after ReadAll for subsequent handlers
 	setRequestBody(req, requestBody)
 
 	if err == nil {
