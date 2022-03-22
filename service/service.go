@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-files-api/config"
 	"net/http"
 	"time"
 
@@ -51,7 +52,8 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		return nil, err
 	}
 
-	store := files.NewStore(mongoClient, kafkaProducer, serviceList.GetClock(ctx))
+	collection := mongoClient.Collection(config.MetadataCollection)
+	store := files.NewStore(collection, kafkaProducer, serviceList.GetClock(ctx))
 
 	r := mux.NewRouter().StrictSlash(true)
 	r.Path("/health").HandlerFunc(hc.Handler)

@@ -11,8 +11,6 @@ import (
 
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/config"
-	"github.com/ONSdigital/dp-files-api/mongo"
-
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -36,19 +34,19 @@ const (
 )
 
 type Store struct {
-	m mongo.Client
-	k kafka.IProducer
-	c clock.Clock
+	mongoCollection MongoCollection
+	kafka           kafka.IProducer
+	clock           clock.Clock
 }
 
-func NewStore(m mongo.Client, k kafka.IProducer, c clock.Clock) *Store {
-	return &Store{m, k, c}
+func NewStore(collection MongoCollection, kafkaProducer kafka.IProducer, clk clock.Clock) *Store {
+	return &Store{collection, kafkaProducer, clk}
 }
 
-func (s *Store) GetFileMetadata(ctx context.Context, path string) (StoredRegisteredMetaData, error) {
+func (store *Store) GetFileMetadata(ctx context.Context, path string) (StoredRegisteredMetaData, error) {
 	metadata := StoredRegisteredMetaData{}
 
-	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": path}, &metadata)
+	err := store.mongoCollection.FindOne(ctx, bson.M{"path": path}, &metadata)
 	if err != nil && errors.Is(err, mongodriver.ErrNoDocumentFound) {
 		log.Error(ctx, "file metadata not found", err, log.Data{"path": path})
 		return metadata, ErrFileNotRegistered
@@ -57,15 +55,15 @@ func (s *Store) GetFileMetadata(ctx context.Context, path string) (StoredRegiste
 	return metadata, err
 }
 
-func (s *Store) GetFilesMetadata(ctx context.Context, collectionID string) ([]StoredRegisteredMetaData, error) {
+func (store *Store) GetFilesMetadata(ctx context.Context, collectionID string) ([]StoredRegisteredMetaData, error) {
 	files := []StoredRegisteredMetaData{}
-	_, err := s.m.Collection(config.MetadataCollection).Find(ctx, bson.M{"collection_id": collectionID}, &files)
+	_, err := store.mongoCollection.Find(ctx, bson.M{"collection_id": collectionID}, &files)
 
 	return files, err
 }
 
-func (s *Store) RegisterFileUpload(ctx context.Context, metaData StoredRegisteredMetaData) error {
-	count, err := s.m.Collection(config.MetadataCollection).Count(ctx, bson.M{"path": metaData.Path})
+func (store *Store) RegisterFileUpload(ctx context.Context, metaData StoredRegisteredMetaData) error {
+	count, err := store.mongoCollection.Count(ctx, bson.M{"path": metaData.Path})
 	if err != nil {
 		log.Error(ctx, "mongo driver count error", err, log.Data{"path": metaData.Path})
 		return err
@@ -76,11 +74,11 @@ func (s *Store) RegisterFileUpload(ctx context.Context, metaData StoredRegistere
 		return ErrDuplicateFile
 	}
 
-	metaData.CreatedAt = s.c.GetCurrentTime()
-	metaData.LastModified = s.c.GetCurrentTime()
+	metaData.CreatedAt = store.clock.GetCurrentTime()
+	metaData.LastModified = store.clock.GetCurrentTime()
 	metaData.State = StateCreated
 
-	_, err = s.m.Collection(config.MetadataCollection).Insert(ctx, metaData)
+	_, err = store.mongoCollection.Insert(ctx, metaData)
 	if err != nil {
 		log.Error(ctx, "failed to insert metadata", err, log.Data{"collection": config.MetadataCollection, "metadata": metaData})
 		return err
@@ -90,12 +88,12 @@ func (s *Store) RegisterFileUpload(ctx context.Context, metaData StoredRegistere
 	return nil
 }
 
-func (s *Store) MarkUploadComplete(ctx context.Context, metaData FileEtagChange) error {
-	return s.updateStatus(ctx, metaData.Path, metaData.Etag, StateUploaded, StateCreated, "upload_completed_at")
+func (store *Store) MarkUploadComplete(ctx context.Context, metaData FileEtagChange) error {
+	return store.updateStatus(ctx, metaData.Path, metaData.Etag, StateUploaded, StateCreated, "upload_completed_at")
 }
 
-func (s *Store) MarkCollectionPublished(ctx context.Context, collectionID string) error {
-	count, err := s.m.Collection(config.MetadataCollection).Count(ctx, bson.M{"collection_id": collectionID})
+func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID string) error {
+	count, err := store.mongoCollection.Count(ctx, bson.M{"collection_id": collectionID})
 	if err != nil {
 		log.Error(ctx, "failed to count files collection", err, log.Data{"collection_id": collectionID})
 		return err
@@ -106,8 +104,7 @@ func (s *Store) MarkCollectionPublished(ctx context.Context, collectionID string
 		return ErrNoFilesInCollection
 	}
 
-	count, err = s.m.Collection(config.MetadataCollection).
-		Count(ctx, createCollectionContainsNotUploadedFilesQuery(collectionID))
+	count, err = store.mongoCollection.Count(ctx, createCollectionContainsNotUploadedFilesQuery(collectionID))
 
 	if err != nil {
 		log.Error(ctx, "failed to count unpublishable files", err, log.Data{"collection_id": collectionID})
@@ -120,14 +117,14 @@ func (s *Store) MarkCollectionPublished(ctx context.Context, collectionID string
 		return ErrFileNotInUploadedState
 	}
 
-	_, err = s.m.Collection(config.MetadataCollection).UpdateMany(
+	_, err = store.mongoCollection.UpdateMany(
 		ctx,
 		bson.M{"collection_id": collectionID},
 		bson.D{
 			{"$set", bson.D{
 				{"state", StatePublished},
-				{"last_modified", s.c.GetCurrentTime()},
-				{"published_at", s.c.GetCurrentTime()}}},
+				{"last_modified", store.clock.GetCurrentTime()},
+				{"published_at", store.clock.GetCurrentTime()}}},
 		})
 
 	if err != nil {
@@ -137,9 +134,9 @@ func (s *Store) MarkCollectionPublished(ctx context.Context, collectionID string
 	}
 
 	col := make([]StoredRegisteredMetaData, 0)
-	s.m.Collection(config.MetadataCollection).Find(ctx, bson.M{"collection_id": collectionID}, &col)
+	store.mongoCollection.Find(ctx, bson.M{"collection_id": collectionID}, &col)
 	for _, m := range col {
-		err = s.k.Send(avroSchema, &FilePublished{
+		err = store.kafka.Send(avroSchema, &FilePublished{
 			Path:        m.Path,
 			Etag:        m.Etag,
 			Type:        m.Type,
@@ -156,13 +153,13 @@ func (s *Store) MarkCollectionPublished(ctx context.Context, collectionID string
 	return nil
 }
 
-func (s *Store) MarkFileDecrypted(ctx context.Context, metaData FileEtagChange) error {
-	return s.updateStatus(ctx, metaData.Path, metaData.Etag, StateDecrypted, StatePublished, "decrypted_at")
+func (store *Store) MarkFileDecrypted(ctx context.Context, metaData FileEtagChange) error {
+	return store.updateStatus(ctx, metaData.Path, metaData.Etag, StateDecrypted, StatePublished, "decrypted_at")
 }
 
-func (s *Store) UpdateCollectionID(ctx context.Context, path, collectionID string) error {
+func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID string) error {
 	metadata := StoredRegisteredMetaData{}
-	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": path}, &metadata)
+	err := store.mongoCollection.FindOne(ctx, bson.M{"path": path}, &metadata)
 	if err != nil {
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			log.Error(ctx, "update collection ID: attempted to operate on unregistered file", err, log.Data{"path": path})
@@ -182,7 +179,7 @@ func (s *Store) UpdateCollectionID(ctx context.Context, path, collectionID strin
 		return err
 	}
 
-	s.m.Collection(config.MetadataCollection).Update(
+	store.mongoCollection.Update(
 		ctx,
 		bson.M{"path": path},
 		bson.D{
@@ -201,9 +198,9 @@ func createCollectionContainsNotUploadedFilesQuery(collectionID string) bson.M {
 	}}
 }
 
-func (s *Store) updateStatus(ctx context.Context, path, etag, toState, expectedCurrentState, timestampField string) error {
+func (store *Store) updateStatus(ctx context.Context, path, etag, toState, expectedCurrentState, timestampField string) error {
 	metadata := StoredRegisteredMetaData{}
-	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": path}, &metadata)
+	err := store.mongoCollection.FindOne(ctx, bson.M{"path": path}, &metadata)
 	if err != nil {
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			log.Error(ctx, "mark file as decrypted: attempted to operate on unregistered file", err, log.Data{"path": path})
@@ -220,23 +217,23 @@ func (s *Store) updateStatus(ctx context.Context, path, etag, toState, expectedC
 		return ErrFileNotInPublishedState
 	}
 
-	s.m.Collection(config.MetadataCollection).Update(
+	store.mongoCollection.Update(
 		ctx,
 		bson.M{"path": path},
 		bson.D{
 			{"$set", bson.D{
 				{"etag", etag},
 				{"state", toState},
-				{"last_modified", s.c.GetCurrentTime()},
-				{timestampField, s.c.GetCurrentTime()}}},
+				{"last_modified", store.clock.GetCurrentTime()},
+				{timestampField, store.clock.GetCurrentTime()}}},
 		})
 
 	return nil
 }
 
-func (s *Store) MarkFilePublished(ctx context.Context, path string) error {
+func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 	m := StoredRegisteredMetaData{}
-	err := s.m.Collection(config.MetadataCollection).FindOne(ctx, bson.M{"path": path}, &m)
+	err := store.mongoCollection.FindOne(ctx, bson.M{"path": path}, &m)
 	if err != nil {
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			log.Error(ctx, "mark file as published: attempted to operate on unregistered file", err, log.Data{"path": path})
@@ -258,16 +255,16 @@ func (s *Store) MarkFilePublished(ctx context.Context, path string) error {
 			err, log.Data{"path": path, "current_state": m.State})
 		return ErrFileNotInUploadedState
 	}
-	s.m.Collection(config.MetadataCollection).Update(
+	store.mongoCollection.Update(
 		ctx,
 		bson.M{"path": path},
 		bson.D{
 			{"$set", bson.D{
 				{"state", StatePublished},
-				{"last_modified", s.c.GetCurrentTime()},
-				{"published_at", s.c.GetCurrentTime()}}},
+				{"last_modified", store.clock.GetCurrentTime()},
+				{"published_at", store.clock.GetCurrentTime()}}},
 		})
-	err = s.k.Send(avroSchema, &FilePublished{
+	err = store.kafka.Send(avroSchema, &FilePublished{
 		Path:        m.Path,
 		Etag:        m.Etag,
 		Type:        m.Type,
