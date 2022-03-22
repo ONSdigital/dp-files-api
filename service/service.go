@@ -57,14 +57,17 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	r.Path("/health").HandlerFunc(hc.Handler)
 	if isPublishing {
 		r.Path("/files").HandlerFunc(api.HandlerRegisterUploadStarted(store.RegisterFileUpload)).Methods(http.MethodPost)
-		r.Path(filesURI).HandlerFunc(api.PatchRequestToHandler(
-			api.HandleMarkUploadComplete(store.MarkUploadComplete),
-			api.HandleMarkFilePublished(store.MarkFilePublished),
-			api.HandleMarkFileDecrypted(store.MarkFileDecrypted),
-			api.HandlerUpdateCollectionID(store.UpdateCollectionID),
-		)).Methods(http.MethodPatch)
 		r.Path("/files").HandlerFunc(api.HandlerGetFilesMetadata(store.GetFilesMetadata)).Methods(http.MethodGet)
 		r.Path("/collection/{collectionID}").HandlerFunc(api.HandleMarkCollectionPublished(store.MarkCollectionPublished)).Methods(http.MethodPatch)
+
+		patchRequestHandlers := api.PatchRequestHandlers{
+			UploadComplete:   api.HandleMarkUploadComplete(store.MarkUploadComplete),
+			Published:        api.HandleMarkFilePublished(store.MarkFilePublished),
+			Decrypted:        api.HandleMarkFileDecrypted(store.MarkFileDecrypted),
+			CollectionUpdate: api.HandlerUpdateCollectionID(store.UpdateCollectionID),
+		}
+
+		r.Path(filesURI).HandlerFunc(api.PatchRequestToHandler(patchRequestHandlers)).Methods(http.MethodPatch)
 	} else {
 		forbiddenHandler := func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusForbidden)
