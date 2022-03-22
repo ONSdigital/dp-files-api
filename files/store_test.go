@@ -39,15 +39,11 @@ func TestGetFileMetadataSuccess(t *testing.T) {
 	publishedAt := generateTestTime(4)
 	decryptedAt := generateTestTime(5)
 
-	path := "/data/test.txt"
-	isPublishable := false
-	title := "Test file"
-
 	expectedMetadata := files.StoredRegisteredMetaData{
-		Path:              path,
-		IsPublishable:     isPublishable,
+		Path:              "/data/test.txt",
+		IsPublishable:     false,
 		CollectionID:      &collectionID,
-		Title:             title,
+		Title:             "Test file",
 		SizeInBytes:       10,
 		Type:              "text/plain",
 		Licence:           "MIT",
