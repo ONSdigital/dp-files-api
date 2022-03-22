@@ -19,7 +19,7 @@ type patchRequestMetadataStates struct {
 
 type PatchRequestToHandlerSuite struct {
 	suite.Suite
-	States               []patchRequestMetadataStates
+	TestStates           []patchRequestMetadataStates
 	PatchRequestHandlers api.PatchRequestHandlers
 }
 
@@ -33,15 +33,15 @@ func (suite *PatchRequestToHandlerSuite) SetupTest() {
 	publishedHandlerBody := "publishedHandler"
 	uploadCompleteHandlerBody := "uploadCompleteHandler"
 
-	suite.States = []patchRequestMetadataStates{
+	generatePatchRequestHandler := func(body string) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(body)) }
+	}
+
+	suite.TestStates = []patchRequestMetadataStates{
 		{Metadata: api.StateMetadata{CollectionID: &collectionID}, ExpectedBody: collectionUpdateHandlerBody},
 		{Metadata: api.StateMetadata{State: &stateDecrypted}, ExpectedBody: decryptedHandlerBody},
 		{Metadata: api.StateMetadata{State: &statePublished}, ExpectedBody: publishedHandlerBody},
 		{Metadata: api.StateMetadata{State: &stateUploaded}, ExpectedBody: uploadCompleteHandlerBody},
-	}
-
-	generatePatchRequestHandler := func(body string) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(body)) }
 	}
 
 	suite.PatchRequestHandlers = api.PatchRequestHandlers{
@@ -55,37 +55,38 @@ func (suite *PatchRequestToHandlerSuite) SetupTest() {
 func (suite *PatchRequestToHandlerSuite) TestPatchRequestToHandlerReturnsCorrectHandler() {
 	patchRequestHandler := api.PatchRequestToHandler(suite.PatchRequestHandlers)
 
-	for _, state := range suite.States {
-		body, _ := json.Marshal(state.Metadata)
+	for _, testState := range suite.TestStates {
+		body, _ := json.Marshal(testState.Metadata)
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("PATCH", "/files/test.txt", bytes.NewBuffer(body))
+		req, _ := http.NewRequest(http.MethodPatch, "/files/test.txt", bytes.NewBuffer(body))
 
 		patchRequestHandler.ServeHTTP(w, req)
 
 		actualBody, _ := ioutil.ReadAll(w.Body)
 
-		suite.Equal(state.ExpectedBody, string(actualBody))
+		suite.Equal(testState.ExpectedBody, string(actualBody))
 	}
 }
 
 func (suite *PatchRequestToHandlerSuite) TestPatchRequestToHandlerPassesBodyToSubsequentHandler() {
-	for _, state := range suite.States {
-		var actualRequestBody []byte
+	var actualRequestBody []byte
+
+	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		actualRequestBody, _ = ioutil.ReadAll(r.Body)
+	})
+
+	patchRequestHandlers := api.PatchRequestHandlers{
+		UploadComplete:   testHandler,
+		Published:        testHandler,
+		Decrypted:        testHandler,
+		CollectionUpdate: testHandler,
+	}
+
+	for _, state := range suite.TestStates {
 		expectedRequestBody, _ := json.Marshal(state.Metadata)
 
-		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			actualRequestBody, _ = ioutil.ReadAll(r.Body)
-		})
-
-		patchRequestHandlers := api.PatchRequestHandlers{
-			UploadComplete:   testHandler,
-			Published:        testHandler,
-			Decrypted:        testHandler,
-			CollectionUpdate: testHandler,
-		}
-
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("PATCH", "/files/text.txt", bytes.NewBuffer(expectedRequestBody))
+		req, _ := http.NewRequest(http.MethodPatch, "/files/text.txt", bytes.NewBuffer(expectedRequestBody))
 
 		actualHandler := api.PatchRequestToHandler(patchRequestHandlers)
 		actualHandler.ServeHTTP(w, req)
