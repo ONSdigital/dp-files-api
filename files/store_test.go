@@ -2,99 +2,78 @@ package files_test
 
 import (
 	"context"
-	"flag"
-	"testing"
-
-	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/features/steps"
 	"github.com/ONSdigital/dp-files-api/files"
-	mongo "github.com/ONSdigital/dp-files-api/mongo"
+	"github.com/ONSdigital/dp-files-api/files/mock"
 	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
-	"github.com/stretchr/testify/suite"
-	mongoRaw "go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
+	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/bson"
+	"testing"
+	"time"
 )
 
-var (
-	componentFlag = flag.Bool("component", false, "perform component tests")
-	loggingFlag   = flag.Bool("logging", false, "print logging")
-)
-
-const (
-	path = "testing.txt"
-)
-
-type StoreIntegrationTest struct {
-	suite.Suite
-
-	cfg   *config.Config
-	mc    *mongo.Mongo
-	ctx   context.Context
-	store *files.Store
-}
-
-func (s *StoreIntegrationTest) SetupTest() {
-	s.cfg, _ = config.Get()
-	s.mc, _ = mongo.New(s.cfg.MongoConfig)
-	s.ctx = context.Background()
-
-	client, _ := mongoRaw.Connect(
-		s.ctx,
-		options.Client().ApplyURI("mongodb://root:password@mongo:27017"),
-	)
-	client.Database("files").Collection("metadata").Drop(s.ctx)
-
-	s.store = files.NewStore(s.mc, &kafkatest.IProducerMock{}, steps.TestClock{})
-}
-
-func TestStoreIntegration(t *testing.T) {
-	if !*componentFlag {
-		t.Skip("This test can only run in a docker environment")
+func TestGetFileMetadataError(t *testing.T) {
+	collection := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
 	}
 
-	suite.Run(t, new(StoreIntegrationTest))
+	store := files.NewStore(&collection, &kafkatest.IProducerMock{}, steps.TestClock{})
+	ctx := context.Background()
+	_, err := store.GetFileMetadata(ctx, "/data/test.txt")
+
+	assert.Equal(t, files.ErrFileNotRegistered, err)
 }
 
-func (s *StoreIntegrationTest) TestOptionalFieldsExcluded() {
-
-	m := files.StoredRegisteredMetaData{
-		Path:          path,
-		IsPublishable: false,
-		Title:         "Testing",
-		SizeInBytes:   10,
-		Type:          "text/plain",
-		Licence:       "MIT",
-		LicenceUrl:    "www.licence.com/MIT",
-	}
-
-	s.store.RegisterFileUpload(s.ctx, m)
-
-	out, _ := s.store.GetFileMetadata(s.ctx, path)
-
-	s.Nil(out.UploadCompletedAt)
-	s.Nil(out.PublishedAt)
-	s.Nil(out.DecryptedAt)
-	s.Nil(out.CollectionID)
+func generateTestTime(addedSeconds time.Duration) time.Time {
+	return time.Now().Add(time.Second * addedSeconds).Round(time.Second).UTC()
 }
 
-func (s *StoreIntegrationTest) TestOptionalCollectionIDIncluded() {
+func TestGetFileMetadataSuccess(t *testing.T) {
+	collectionID := "123456"
+	createdAt := generateTestTime(1)
+	lastModified := generateTestTime(2)
+	uploadCompletedAt := generateTestTime(3)
+	publishedAt := generateTestTime(4)
+	decryptedAt := generateTestTime(5)
 
-	collectionID := "1234"
+	path := "/data/test.txt"
+	isPublishable := false
+	title := "Test file"
 
-	m := files.StoredRegisteredMetaData{
-		Path:          path,
-		CollectionID:  &collectionID,
-		IsPublishable: false,
-		Title:         "Testing",
-		SizeInBytes:   10,
-		Type:          "text/plain",
-		Licence:       "MIT",
-		LicenceUrl:    "www.licence.com/MIT",
+	expectedMetadata := files.StoredRegisteredMetaData{
+		Path:              path,
+		IsPublishable:     isPublishable,
+		CollectionID:      &collectionID,
+		Title:             title,
+		SizeInBytes:       10,
+		Type:              "text/plain",
+		Licence:           "MIT",
+		LicenceUrl:        "https://opensource.org/licenses/MIT",
+		CreatedAt:         createdAt,
+		LastModified:      lastModified,
+		UploadCompletedAt: &uploadCompletedAt,
+		PublishedAt:       &publishedAt,
+		DecryptedAt:       &decryptedAt,
+		State:             files.StateDecrypted,
+		Etag:              "1234567",
 	}
 
-	s.store.RegisterFileUpload(s.ctx, m)
+	metadataBytes, _ := bson.Marshal(expectedMetadata)
 
-	out, _ := s.store.GetFileMetadata(s.ctx, path)
+	collection := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+			bson.Unmarshal(metadataBytes, result)
+			return nil
+		},
+	}
 
-	s.Equal(collectionID, *out.CollectionID)
+	store := files.NewStore(&collection, &kafkatest.IProducerMock{}, steps.TestClock{})
+	ctx := context.Background()
+	actualMetadata, _ := store.GetFileMetadata(ctx, "/data/test.txt")
+
+	assert.Exactly(t, expectedMetadata, actualMetadata)
+
 }
