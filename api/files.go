@@ -39,6 +39,18 @@ type PublishData struct {
 	CollectionID string `json:"collection_id"`
 }
 
+type CollectionChange struct {
+	CollectionID string `json:"collection_id"`
+}
+
+type FilesCollection struct {
+	Count      int64                            `json:"count"`
+	Limit      int64                            `json:"limit"`
+	Offset     int64                            `json:"offset"`
+	TotalCount int64                            `json:"total_count"`
+	Items      []files.StoredRegisteredMetaData `json:"items"`
+}
+
 type RegisterFileUpload func(ctx context.Context, metaData files.StoredRegisteredMetaData) error
 type MarkUploadComplete func(ctx context.Context, metaData files.FileEtagChange) error
 type GetFileMetadata func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error)
@@ -50,16 +62,12 @@ type GetFilesMetadata func(ctx context.Context, collectionID string) ([]files.St
 
 func PatchRequestToHandler(uploadCompleteHandler http.HandlerFunc, publishedHandler http.HandlerFunc, decryptedHandler http.HandlerFunc, collectionUpdateHandler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		requestBody, _ := ioutil.ReadAll(req.Body)
-		stateMetaData, err := getStateMetadataFromRequest(requestBody)
+		stateMetaData, err := getStateMetadataFromRequest(req)
 
 		if err != nil {
 			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
 			return
 		}
-
-		// Reset request body after ReadAll for subsequent handlers
-		setRequestBody(req, requestBody)
 
 		if stateMetaData.CollectionID != nil && stateMetaData.State == nil {
 			collectionUpdateHandler.ServeHTTP(w, req)
@@ -84,19 +92,20 @@ func setRequestBody(req *http.Request, requestBody []byte) {
 	req.Body = ioutil.NopCloser(bytes.NewBuffer(requestBody))
 }
 
-func getStateMetadataFromRequest(requestBody []byte) (StateMetadata, error) {
+func getStateMetadataFromRequest(req *http.Request) (StateMetadata, error) {
 	stateMetaData := StateMetadata{}
+	requestBody, err := ioutil.ReadAll(req.Body)
 
-	requestBodyBuffer := bytes.NewBuffer(requestBody)
+	// Reset request body after ReadAll for subsequent handlers
+	setRequestBody(req, requestBody)
 
-	state := ioutil.NopCloser(requestBodyBuffer)
+	if err == nil {
+		requestBodyBuffer := bytes.NewBuffer(requestBody)
+		state := ioutil.NopCloser(requestBodyBuffer)
+		err = json.NewDecoder(state).Decode(&stateMetaData)
+	}
 
-	err := json.NewDecoder(state).Decode(&stateMetaData)
 	return stateMetaData, err
-}
-
-type CollectionChange struct {
-	CollectionID string `json:"collection_id"`
 }
 
 func HandlerUpdateCollectionID(updateCollectionID UpdateCollectionID) http.HandlerFunc {
@@ -166,14 +175,6 @@ func HandleGetFileMetadata(getMetadata GetFileMetadata) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusOK)
 	}
-}
-
-type FilesCollection struct {
-	Count      int64                            `json:"count"`
-	Limit      int64                            `json:"limit"`
-	Offset     int64                            `json:"offset"`
-	TotalCount int64                            `json:"total_count"`
-	Items      []files.StoredRegisteredMetaData `json:"items"`
 }
 
 func HandlerGetFilesMetadata(getFilesMetadata GetFilesMetadata) http.HandlerFunc {
