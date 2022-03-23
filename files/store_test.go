@@ -172,7 +172,6 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
 		currentState string
 		expectedErr  error
 	}{
-		//{files.StateUploaded, files.ErrFileNotInCreatedState},
 		{files.StateUploaded, files.ErrFileNotInPublishedState},
 		{files.StatePublished, files.ErrFileNotInPublishedState},
 		{files.StateDecrypted, files.ErrFileNotInPublishedState},
@@ -201,7 +200,6 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
 		suite.Error(err)
 		suite.ErrorIs(err, test.expectedErr, "the actual err was %v", err)
 	}
-
 }
 
 func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenFileNotExists() {
@@ -225,7 +223,60 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenFileNotExists() {
 
 	suite.Error(err)
 	suite.ErrorIs(err, files.ErrFileNotRegistered, "the metadata looked for was %v", metadata)
+}
 
+func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenUpdateReturnsError() {
+	metadata := suite.generateMetadata(suite.collectionID)
+
+	metadata.State = files.StateCreated
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+			bson.Unmarshal(metadataBytes, result)
+			return nil
+		},
+		UpdateFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+			return &mongodriver.CollectionUpdateResult{}, errors.New("an error occurred")
+		},
+	}
+
+	store := files.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+
+	etagReference := files.FileEtagChange{
+		Path: metadata.Path,
+		Etag: metadata.Etag,
+	}
+	err := store.MarkUploadComplete(suite.context, etagReference)
+
+	suite.Error(err)
+}
+
+func (suite *StoreSuite) TestMarkUploadCompleteSucceeds() {
+	metadata := suite.generateMetadata(suite.collectionID)
+
+	metadata.State = files.StateCreated
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+			bson.Unmarshal(metadataBytes, result)
+			return nil
+		},
+		UpdateFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+			return &mongodriver.CollectionUpdateResult{}, nil
+		},
+	}
+
+	store := files.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+
+	etagReference := files.FileEtagChange{
+		Path: metadata.Path,
+		Etag: metadata.Etag,
+	}
+	err := store.MarkUploadComplete(suite.context, etagReference)
+
+	suite.NoError(err)
 }
 
 func (suite *StoreSuite) assertImmutableFieldsUnchanged(metadata, actualMetadata files.StoredRegisteredMetaData) {
