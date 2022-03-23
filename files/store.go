@@ -56,7 +56,7 @@ func (store *Store) GetFileMetadata(ctx context.Context, path string) (StoredReg
 }
 
 func (store *Store) GetFilesMetadata(ctx context.Context, collectionID string) ([]StoredRegisteredMetaData, error) {
-	files := []StoredRegisteredMetaData{}
+	files := make([]StoredRegisteredMetaData, 0)
 	_, err := store.mongoCollection.Find(ctx, bson.M{"collection_id": collectionID}, &files)
 
 	return files, err

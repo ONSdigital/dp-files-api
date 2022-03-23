@@ -16,25 +16,26 @@ import (
 
 type StoreSuite struct {
 	suite.Suite
+	collectionID string
+	context      context.Context
+}
+
+func (suite *StoreSuite) SetupTest() {
+	suite.collectionID = "123456"
+	suite.context = context.Background()
 }
 
 func (suite *StoreSuite) TestGetFileMetadataError() {
-	collection := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			return mongodriver.ErrNoDocumentFound
-		},
-	}
+	collection := suite.generateCollectionMockFindOneWithError()
 
 	store := files.NewStore(&collection, &kafkatest.IProducerMock{}, steps.TestClock{})
-	ctx := context.Background()
-	_, err := store.GetFileMetadata(ctx, "/data/test.txt")
+	_, err := store.GetFileMetadata(suite.context, "/data/test.txt")
 
 	suite.Equal(files.ErrFileNotRegistered, err)
 }
 
 func (suite *StoreSuite) TestGetFileMetadataSuccess() {
-	collectionID := "123456"
-	expectedMetadata := suite.generateMetadata(collectionID)
+	expectedMetadata := suite.generateMetadata(suite.collectionID)
 
 	metadataBytes, _ := bson.Marshal(expectedMetadata)
 
@@ -46,45 +47,48 @@ func (suite *StoreSuite) TestGetFileMetadataSuccess() {
 	}
 
 	store := files.NewStore(&collection, &kafkatest.IProducerMock{}, steps.TestClock{})
-	ctx := context.Background()
-	actualMetadata, _ := store.GetFileMetadata(ctx, "/data/test.txt")
+	actualMetadata, _ := store.GetFileMetadata(suite.context, "/data/test.txt")
 
 	suite.Exactly(expectedMetadata, actualMetadata)
 }
 
 func (suite *StoreSuite) TestGetFilesMetadataSuccessSingleResult() {
-	collectionID := "123456"
-	metadata := suite.generateMetadata(collectionID)
-	metadataBytes, _ := bson.Marshal(metadata)
+	metadata := suite.generateMetadata(suite.collectionID)
+	metadataBSONBytes, _ := bson.Marshal(metadata)
 
-	collection := suite.generateCollectionWithSingleResultMock(metadataBytes)
+	collection := suite.generateCollectionMockFindWithSingleResult(metadataBSONBytes)
 
 	store := files.NewStore(&collection, &kafkatest.IProducerMock{}, steps.TestClock{})
-	ctx := context.Background()
 
 	expectedMetadata := []files.StoredRegisteredMetaData{metadata}
-	actualMetadata, _ := store.GetFilesMetadata(ctx, "123456")
+	actualMetadata, _ := store.GetFilesMetadata(suite.context, suite.collectionID)
 
 	suite.Exactly(expectedMetadata, actualMetadata)
 }
 
 func (suite *StoreSuite) TestGetFilesMetadataNoResult() {
-	collectionID := "123456"
-	metadata := suite.generateMetadata(collectionID)
-	metadataBytes, _ := bson.Marshal(metadata)
+	metadata := suite.generateMetadata(suite.collectionID)
+	metadataBSONBytes, _ := bson.Marshal(metadata)
 
-	collection := suite.generateCollectionWithSingleResultMock(metadataBytes)
+	collection := suite.generateCollectionMockFindWithSingleResult(metadataBSONBytes)
 
 	store := files.NewStore(&collection, &kafkatest.IProducerMock{}, steps.TestClock{})
-	ctx := context.Background()
 
-	expectedMetadata := []files.StoredRegisteredMetaData{}
-	actualMetadata, _ := store.GetFilesMetadata(ctx, "INVALID_COLLECTION_ID")
+	expectedMetadata := make([]files.StoredRegisteredMetaData, 0)
+	actualMetadata, _ := store.GetFilesMetadata(suite.context, "INVALID_COLLECTION_ID")
 
 	suite.Exactly(expectedMetadata, actualMetadata)
 }
 
-func (suite *StoreSuite) generateCollectionWithSingleResultMock(metadataBytes []byte) mock.MongoCollectionMock {
+func (suite *StoreSuite) generateCollectionMockFindOneWithError() mock.MongoCollectionMock {
+	return mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+	}
+}
+
+func (suite *StoreSuite) generateCollectionMockFindWithSingleResult(metadataBytes []byte) mock.MongoCollectionMock {
 	return mock.MongoCollectionMock{
 		FindFunc: func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
 			result := files.StoredRegisteredMetaData{}
@@ -92,8 +96,7 @@ func (suite *StoreSuite) generateCollectionWithSingleResultMock(metadataBytes []
 
 			resultPointer := results.(*[]files.StoredRegisteredMetaData)
 
-			bsonFilter := bson.M{"collection_id": result.CollectionID}
-			if filter.(primitive.M)["collection_id"] == *(bsonFilter["collection_id"].(*string)) {
+			if filter.(primitive.M)["collection_id"] == *result.CollectionID {
 				*resultPointer = []files.StoredRegisteredMetaData{result}
 			}
 
