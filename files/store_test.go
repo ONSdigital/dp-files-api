@@ -80,6 +80,66 @@ func (suite *StoreSuite) TestGetFilesMetadataNoResult() {
 	suite.Exactly(expectedMetadata, actualMetadata)
 }
 
+func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
+	metadata := suite.generateMetadata(suite.collectionID)
+
+	AlwaysFindsExistingCollection := mock.MongoCollectionMock{
+		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
+			return 1, nil
+		},
+	}
+
+	store := files.NewStore(&AlwaysFindsExistingCollection, &kafkatest.IProducerMock{}, steps.TestClock{})
+
+	err := store.RegisterFileUpload(suite.context, metadata)
+
+	suite.ErrorIs(err, files.ErrDuplicateFile)
+}
+
+func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathDoesntExist() {
+	metadata := suite.generateMetadata(suite.collectionID)
+	metadata.State = ""
+
+	testClock := steps.TestClock{}
+
+	collectionCountReturnsZero := mock.MongoCollectionMock{
+		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
+			return 0, nil
+		},
+		InsertFunc: func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
+			actualMetadata := document.(files.StoredRegisteredMetaData)
+
+			testCurrentTime := testClock.GetCurrentTime()
+
+			suite.Equal(files.StateCreated, actualMetadata.State)
+			suite.Equal(testCurrentTime, actualMetadata.CreatedAt)
+			suite.Equal(testCurrentTime, actualMetadata.LastModified)
+
+			suite.assertImmutableFieldsUnchanged(metadata, actualMetadata)
+
+			return nil, nil
+		},
+	}
+
+	store := files.NewStore(&collectionCountReturnsZero, &kafkatest.IProducerMock{}, testClock)
+
+	err := store.RegisterFileUpload(suite.context, metadata)
+
+	suite.NoError(err)
+}
+
+func (suite *StoreSuite) assertImmutableFieldsUnchanged(metadata, actualMetadata files.StoredRegisteredMetaData) {
+	suite.Equal(metadata.Path, actualMetadata.Path)
+	suite.Equal(metadata.IsPublishable, actualMetadata.IsPublishable)
+	suite.Equal(metadata.CollectionID, actualMetadata.CollectionID)
+	suite.Equal(metadata.Title, actualMetadata.Title)
+	suite.Equal(metadata.SizeInBytes, actualMetadata.SizeInBytes)
+	suite.Equal(metadata.Type, actualMetadata.Type)
+	suite.Equal(metadata.Licence, actualMetadata.Licence)
+	suite.Equal(metadata.LicenceUrl, actualMetadata.LicenceUrl)
+	suite.Equal(metadata.Etag, actualMetadata.Etag)
+}
+
 func (suite *StoreSuite) generateCollectionMockFindOneWithError() mock.MongoCollectionMock {
 	return mock.MongoCollectionMock{
 		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
