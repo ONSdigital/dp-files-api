@@ -2,6 +2,7 @@ package files_test
 
 import (
 	"context"
+	"errors"
 	"github.com/ONSdigital/dp-files-api/features/steps"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/files/mock"
@@ -16,19 +17,23 @@ import (
 
 type StoreSuite struct {
 	suite.Suite
-	collectionID string
-	context      context.Context
+	collectionID  string
+	context       context.Context
+	clock         steps.TestClock
+	kafkaProducer kafkatest.IProducerMock
 }
 
 func (suite *StoreSuite) SetupTest() {
 	suite.collectionID = "123456"
 	suite.context = context.Background()
+	suite.clock = steps.TestClock{}
+	suite.kafkaProducer = kafkatest.IProducerMock{}
 }
 
 func (suite *StoreSuite) TestGetFileMetadataError() {
 	collection := suite.generateCollectionMockFindOneWithError()
 
-	store := files.NewStore(&collection, &kafkatest.IProducerMock{}, steps.TestClock{})
+	store := files.NewStore(&collection, &suite.kafkaProducer, suite.clock)
 	_, err := store.GetFileMetadata(suite.context, "test.txt")
 
 	suite.Equal(files.ErrFileNotRegistered, err)
@@ -46,7 +51,7 @@ func (suite *StoreSuite) TestGetFileMetadataSuccess() {
 		},
 	}
 
-	store := files.NewStore(&collection, &kafkatest.IProducerMock{}, steps.TestClock{})
+	store := files.NewStore(&collection, &suite.kafkaProducer, suite.clock)
 	actualMetadata, _ := store.GetFileMetadata(suite.context, "test.txt")
 
 	suite.Exactly(expectedMetadata, actualMetadata)
@@ -58,7 +63,7 @@ func (suite *StoreSuite) TestGetFilesMetadataSuccessSingleResult() {
 
 	collection := suite.generateCollectionMockFindWithSingleResult(metadataBSONBytes)
 
-	store := files.NewStore(&collection, &kafkatest.IProducerMock{}, steps.TestClock{})
+	store := files.NewStore(&collection, &suite.kafkaProducer, suite.clock)
 
 	expectedMetadata := []files.StoredRegisteredMetaData{metadata}
 	actualMetadata, _ := store.GetFilesMetadata(suite.context, suite.collectionID)
@@ -72,12 +77,28 @@ func (suite *StoreSuite) TestGetFilesMetadataNoResult() {
 
 	collection := suite.generateCollectionMockFindWithSingleResult(metadataBSONBytes)
 
-	store := files.NewStore(&collection, &kafkatest.IProducerMock{}, steps.TestClock{})
+	store := files.NewStore(&collection, &suite.kafkaProducer, suite.clock)
 
 	expectedMetadata := make([]files.StoredRegisteredMetaData, 0)
 	actualMetadata, _ := store.GetFilesMetadata(suite.context, "INVALID_COLLECTION_ID")
 
 	suite.Exactly(expectedMetadata, actualMetadata)
+}
+
+func (suite *StoreSuite) TestRegisterFileUploadCountReturnsError() {
+	metadata := suite.generateMetadata(suite.collectionID)
+
+	AlwaysFindsExistingCollection := mock.MongoCollectionMock{
+		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
+			return 0, errors.New("error occurred")
+		},
+	}
+
+	store := files.NewStore(&AlwaysFindsExistingCollection, &suite.kafkaProducer, suite.clock)
+
+	err := store.RegisterFileUpload(suite.context, metadata)
+
+	suite.Error(err)
 }
 
 func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
@@ -89,7 +110,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 		},
 	}
 
-	store := files.NewStore(&AlwaysFindsExistingCollection, &kafkatest.IProducerMock{}, steps.TestClock{})
+	store := files.NewStore(&AlwaysFindsExistingCollection, &suite.kafkaProducer, suite.clock)
 
 	err := store.RegisterFileUpload(suite.context, metadata)
 
@@ -100,8 +121,6 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathDoesntExist() {
 	metadata := suite.generateMetadata(suite.collectionID)
 	metadata.State = ""
 
-	testClock := steps.TestClock{}
-
 	collectionCountReturnsZero := mock.MongoCollectionMock{
 		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
 			return 0, nil
@@ -109,7 +128,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathDoesntExist() {
 		InsertFunc: func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
 			actualMetadata := document.(files.StoredRegisteredMetaData)
 
-			testCurrentTime := testClock.GetCurrentTime()
+			testCurrentTime := suite.clock.GetCurrentTime()
 
 			suite.Equal(files.StateCreated, actualMetadata.State)
 			suite.Equal(testCurrentTime, actualMetadata.CreatedAt)
@@ -121,11 +140,29 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathDoesntExist() {
 		},
 	}
 
-	store := files.NewStore(&collectionCountReturnsZero, &kafkatest.IProducerMock{}, testClock)
+	store := files.NewStore(&collectionCountReturnsZero, &suite.kafkaProducer, suite.clock)
 
 	err := store.RegisterFileUpload(suite.context, metadata)
 
 	suite.NoError(err)
+}
+
+func (suite *StoreSuite) TestRegisterFileUploadInsertReturnsError() {
+	metadata := suite.generateMetadata(suite.collectionID)
+	collectionCountReturnsZero := mock.MongoCollectionMock{
+		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
+			return 0, nil
+		},
+		InsertFunc: func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
+			return nil, errors.New("error occurred")
+		},
+	}
+
+	store := files.NewStore(&collectionCountReturnsZero, &suite.kafkaProducer, suite.clock)
+
+	err := store.RegisterFileUpload(suite.context, metadata)
+
+	suite.Error(err)
 }
 
 func (suite *StoreSuite) assertImmutableFieldsUnchanged(metadata, actualMetadata files.StoredRegisteredMetaData) {
