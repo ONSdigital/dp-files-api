@@ -257,7 +257,7 @@ func (store *Store) updateStatus(ctx context.Context, path, etag, toState, expec
 		return ErrFileNotInPublishedState
 	}
 
-	store.mongoCollection.Update(
+	_, err = store.mongoCollection.Update(
 		ctx,
 		bson.M{"path": path},
 		bson.D{
@@ -268,7 +268,7 @@ func (store *Store) updateStatus(ctx context.Context, path, etag, toState, expec
 				{timestampField, store.clock.GetCurrentTime()}}},
 		})
 
-	return nil
+	return err
 }
 
 func createCollectionContainsNotUploadedFilesQuery(collectionID string) bson.M {
