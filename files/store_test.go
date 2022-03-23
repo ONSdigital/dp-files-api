@@ -29,7 +29,7 @@ func (suite *StoreSuite) TestGetFileMetadataError() {
 	collection := suite.generateCollectionMockFindOneWithError()
 
 	store := files.NewStore(&collection, &kafkatest.IProducerMock{}, steps.TestClock{})
-	_, err := store.GetFileMetadata(suite.context, "/data/test.txt")
+	_, err := store.GetFileMetadata(suite.context, "test.txt")
 
 	suite.Equal(files.ErrFileNotRegistered, err)
 }
@@ -47,7 +47,7 @@ func (suite *StoreSuite) TestGetFileMetadataSuccess() {
 	}
 
 	store := files.NewStore(&collection, &kafkatest.IProducerMock{}, steps.TestClock{})
-	actualMetadata, _ := store.GetFileMetadata(suite.context, "/data/test.txt")
+	actualMetadata, _ := store.GetFileMetadata(suite.context, "test.txt")
 
 	suite.Exactly(expectedMetadata, actualMetadata)
 }
@@ -177,7 +177,7 @@ func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegis
 	decryptedAt := suite.generateTestTime(5)
 
 	return files.StoredRegisteredMetaData{
-		Path:              "/data/test.txt",
+		Path:              "test.txt",
 		IsPublishable:     false,
 		CollectionID:      &collectionID,
 		Title:             "Test file",
