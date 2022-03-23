@@ -191,46 +191,6 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 	return nil
 }
 
-func createCollectionContainsNotUploadedFilesQuery(collectionID string) bson.M {
-	return bson.M{"$and": []bson.M{
-		{"collection_id": collectionID},
-		{"state": bson.M{"$ne": StateUploaded}},
-	}}
-}
-
-func (store *Store) updateStatus(ctx context.Context, path, etag, toState, expectedCurrentState, timestampField string) error {
-	metadata := StoredRegisteredMetaData{}
-	err := store.mongoCollection.FindOne(ctx, bson.M{"path": path}, &metadata)
-	if err != nil {
-		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
-			log.Error(ctx, "mark file as decrypted: attempted to operate on unregistered file", err, log.Data{"path": path})
-			return ErrFileNotRegistered
-		}
-
-		log.Error(ctx, "failed finding metadata to mark file as decrypted", err, log.Data{"path": path})
-		return err
-	}
-
-	if metadata.State != expectedCurrentState {
-		log.Error(ctx, fmt.Sprintf("mark file decrypted: file was not in state %s", StateCreated),
-			err, log.Data{"path": path, "current_state": metadata.State})
-		return ErrFileNotInPublishedState
-	}
-
-	store.mongoCollection.Update(
-		ctx,
-		bson.M{"path": path},
-		bson.D{
-			{"$set", bson.D{
-				{"etag", etag},
-				{"state", toState},
-				{"last_modified", store.clock.GetCurrentTime()},
-				{timestampField, store.clock.GetCurrentTime()}}},
-		})
-
-	return nil
-}
-
 func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 	m := StoredRegisteredMetaData{}
 	err := store.mongoCollection.FindOne(ctx, bson.M{"path": path}, &m)
@@ -276,4 +236,44 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 	}
 
 	return nil
+}
+
+func (store *Store) updateStatus(ctx context.Context, path, etag, toState, expectedCurrentState, timestampField string) error {
+	metadata := StoredRegisteredMetaData{}
+	err := store.mongoCollection.FindOne(ctx, bson.M{"path": path}, &metadata)
+	if err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			log.Error(ctx, "mark file as decrypted: attempted to operate on unregistered file", err, log.Data{"path": path})
+			return ErrFileNotRegistered
+		}
+
+		log.Error(ctx, "failed finding metadata to mark file as decrypted", err, log.Data{"path": path})
+		return err
+	}
+
+	if metadata.State != expectedCurrentState {
+		log.Error(ctx, fmt.Sprintf("mark file decrypted: file was not in state %s", StateCreated),
+			err, log.Data{"path": path, "current_state": metadata.State})
+		return ErrFileNotInPublishedState
+	}
+
+	store.mongoCollection.Update(
+		ctx,
+		bson.M{"path": path},
+		bson.D{
+			{"$set", bson.D{
+				{"etag", etag},
+				{"state", toState},
+				{"last_modified", store.clock.GetCurrentTime()},
+				{timestampField, store.clock.GetCurrentTime()}}},
+		})
+
+	return nil
+}
+
+func createCollectionContainsNotUploadedFilesQuery(collectionID string) bson.M {
+	return bson.M{"$and": []bson.M{
+		{"collection_id": collectionID},
+		{"state": bson.M{"$ne": StateUploaded}},
+	}}
 }
