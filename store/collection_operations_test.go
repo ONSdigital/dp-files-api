@@ -1,23 +1,17 @@
 package store_test
 
 import (
-	"context"
 	"errors"
-	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/store"
 	"github.com/ONSdigital/dp-files-api/store/mock"
-	"github.com/ONSdigital/dp-kafka/v3/avro"
 	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (suite *StoreSuite) TestUpdateCollectionIDFindReturnsErrNoDocumentFound() {
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			return mongodriver.ErrNoDocumentFound
-		},
+		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -32,9 +26,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDFindReturnsUnspecifiedError() {
 	expectedError := errors.New("an error occurred")
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			return expectedError
-		},
+		FindOneFunc: CollectionFindOneReturnsError(expectedError),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -50,10 +42,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDCollectionIDAlreadySet() {
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			bson.Unmarshal(metadataBytes, result)
-			return nil
-		},
+		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -72,13 +61,8 @@ func (suite *StoreSuite) TestUpdateCollectionIDUpdateReturnsError() {
 	expectedError := errors.New("an error occurred")
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			bson.Unmarshal(metadataBytes, result)
-			return nil
-		},
-		UpdateFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-			return nil, expectedError
-		},
+		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
+		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -94,17 +78,12 @@ func (suite *StoreSuite) TestUpdateCollectionIDUpdateSuccess() {
 	metadata.CollectionID = nil
 	metadataBytes, _ := bson.Marshal(metadata)
 
-	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			bson.Unmarshal(metadataBytes, result)
-			return nil
-		},
-		UpdateFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-			return nil, nil
-		},
+	collectionContainsOneUploadedFileWithNoCollectionID := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
+		UpdateFunc:  CollectionUpdateReturnsNilAndNil(),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionContainsOneUploadedFileWithNoCollectionID, &suite.kafkaProducer, suite.clock)
 
 	err := subject.UpdateCollectionID(suite.context, suite.path, suite.collectionID)
 
@@ -112,12 +91,10 @@ func (suite *StoreSuite) TestUpdateCollectionIDUpdateSuccess() {
 }
 
 func (suite *StoreSuite) TestMarkCollectionPublishedCountReturnsError() {
-	ExpectedError := errors.New("an error occurred during files count")
+	expectedError := errors.New("an error occurred during files count")
 
 	collectionCountReturnsError := mock.MongoCollectionMock{
-		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
-			return 0, ExpectedError
-		},
+		CountFunc: CollectionCountReturnsValueAndError(0, expectedError),
 	}
 
 	subject := store.NewStore(&collectionCountReturnsError, &suite.kafkaProducer, suite.clock)
@@ -125,14 +102,12 @@ func (suite *StoreSuite) TestMarkCollectionPublishedCountReturnsError() {
 	err := subject.MarkCollectionPublished(suite.context, suite.collectionID)
 
 	suite.Error(err)
-	suite.ErrorIs(err, ExpectedError)
+	suite.ErrorIs(err, expectedError)
 }
 
 func (suite *StoreSuite) TestMarkCollectionPublishedCountReturnsZero() {
 	collectionCountReturnsError := mock.MongoCollectionMock{
-		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
-			return 0, nil
-		},
+		CountFunc: CollectionCountReturnsValueAndNil(0),
 	}
 
 	subject := store.NewStore(&collectionCountReturnsError, &suite.kafkaProducer, suite.clock)
@@ -145,9 +120,7 @@ func (suite *StoreSuite) TestMarkCollectionPublishedCountReturnsZero() {
 
 func (suite *StoreSuite) TestMarkCollectionPublishedWhenFileExistsInStateOtherThanUploaded() {
 	collectionCountReturnsError := mock.MongoCollectionMock{
-		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
-			return 1, nil
-		},
+		CountFunc: CollectionCountReturnsValueAndNil(1),
 	}
 
 	subject := store.NewStore(&collectionCountReturnsError, &suite.kafkaProducer, suite.clock)
@@ -161,21 +134,8 @@ func (suite *StoreSuite) TestMarkCollectionPublishedWhenFileExistsInStateOtherTh
 func (suite *StoreSuite) TestMarkCollectionPublishedPersistenceFailure() {
 	expectedError := errors.New("an error occurred")
 	collection := mock.MongoCollectionMock{
-		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
-			bsonFilter := filter.(primitive.M)
-
-			// Note: refactoring will also change this test
-			if bsonFilter["$and"] == nil {
-				// Count of all files in collection
-				return 1, nil
-			}
-
-			// Second count of files not in uploaded state
-			return 0, nil
-		},
-		UpdateManyFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-			return &mongodriver.CollectionUpdateResult{}, expectedError
-		},
+		CountFunc:      CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout(),
+		UpdateManyFunc: CollectionUpdateManyReturnsNilAndError(expectedError),
 	}
 
 	subject := store.NewStore(&collection, &suite.kafkaProducer, suite.clock)
@@ -190,24 +150,9 @@ func (suite *StoreSuite) TestMarkCollectionPublishedFindUpdatedErrored() {
 	expectedError := errors.New("an error occurred")
 
 	collection := mock.MongoCollectionMock{
-		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
-			bsonFilter := filter.(primitive.M)
-
-			// Note: refactoring will also change this test
-			if bsonFilter["$and"] == nil {
-				// Count of all files in collection
-				return 1, nil
-			}
-
-			// Second count of files not in uploaded state
-			return 0, nil
-		},
-		UpdateManyFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-			return nil, nil
-		},
-		FindFunc: func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
-			return 0, expectedError
-		},
+		CountFunc:      CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout(),
+		UpdateManyFunc: CollectionUpdateManyReturnsNilAndNil(),
+		FindFunc:       CollectionFindReturnsValueAndError(0, expectedError),
 	}
 
 	subject := store.NewStore(&collection, &suite.kafkaProducer, suite.clock)
@@ -223,44 +168,20 @@ func (suite *StoreSuite) TestMarkCollectionPublishedPersistenceSuccess() {
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	collection := mock.MongoCollectionMock{
-		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
-			bsonFilter := filter.(primitive.M)
-
-			// Note: refactoring will also change this test
-			if bsonFilter["$and"] == nil {
-				// Count of all files in collection
-				return 1, nil
-			}
-
-			// Second count of files not in uploaded state
-			return 0, nil
-		},
-		UpdateManyFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-			return nil, nil
-		},
-		FindFunc: func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
-			result := files.StoredRegisteredMetaData{}
-			bson.Unmarshal(metadataBytes, &result)
-
-			resultPointer := results.(*[]files.StoredRegisteredMetaData)
-			*resultPointer = []files.StoredRegisteredMetaData{result}
-
-			return 1, nil
-		},
+		CountFunc:      CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout(),
+		UpdateManyFunc: CollectionUpdateManyReturnsNilAndNil(),
+		FindFunc:       CollectionFindSetsResultsReturnsValueAndNil(metadataBytes, 1),
 	}
 
 	kafkaMock := kafkatest.IProducerMock{
-		SendFunc: func(schema *avro.Schema, event interface{}) error {
-			return nil
-		},
+		SendFunc: KafkaSendReturnsNil(),
 	}
 
 	subject := store.NewStore(&collection, &kafkaMock, suite.clock)
 
 	err := subject.MarkCollectionPublished(suite.context, suite.collectionID)
 
-	numberOfTimesKafkaCalled := len(kafkaMock.SendCalls())
-	suite.Equal(1, numberOfTimesKafkaCalled)
+	suite.Equal(1, len(kafkaMock.SendCalls()))
 	suite.NoError(err)
 }
 
@@ -268,44 +189,22 @@ func (suite *StoreSuite) TestMarkCollectionPublishedKafkaErrorDoesNotFailOperati
 	metadata := suite.generateMetadata(suite.collectionID)
 	metadataBytes, _ := bson.Marshal(metadata)
 
+	kafkaError := errors.New("an error occurred with Kafka")
+
 	collection := mock.MongoCollectionMock{
-		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
-			bsonFilter := filter.(primitive.M)
-
-			// Note: refactoring will also change this test
-			if bsonFilter["$and"] == nil {
-				// Count of all files in collection
-				return 1, nil
-			}
-
-			// Second count of files not in uploaded state
-			return 0, nil
-		},
-		UpdateManyFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-			return nil, nil
-		},
-		FindFunc: func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
-			result := files.StoredRegisteredMetaData{}
-			bson.Unmarshal(metadataBytes, &result)
-
-			resultPointer := results.(*[]files.StoredRegisteredMetaData)
-			*resultPointer = []files.StoredRegisteredMetaData{result}
-
-			return 1, nil
-		},
+		CountFunc:      CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout(),
+		UpdateManyFunc: CollectionUpdateManyReturnsNilAndNil(),
+		FindFunc:       CollectionFindSetsResultsReturnsValueAndNil(metadataBytes, 1),
 	}
 
 	kafkaMock := kafkatest.IProducerMock{
-		SendFunc: func(schema *avro.Schema, event interface{}) error {
-			return errors.New("an error occurred with Kafka")
-		},
+		SendFunc: KafkaSendReturnsError(kafkaError),
 	}
 
 	subject := store.NewStore(&collection, &kafkaMock, suite.clock)
 
 	err := subject.MarkCollectionPublished(suite.context, suite.collectionID)
 
-	numberOfTimesKafkaCalled := len(kafkaMock.SendCalls())
-	suite.Equal(1, numberOfTimesKafkaCalled)
+	suite.Equal(1, len(kafkaMock.SendCalls()))
 	suite.NoError(err)
 }

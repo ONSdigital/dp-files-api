@@ -6,6 +6,7 @@ import (
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/store"
 	"github.com/ONSdigital/dp-files-api/store/mock"
+	"github.com/ONSdigital/dp-kafka/v3/avro"
 	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/stretchr/testify/suite"
@@ -22,6 +23,114 @@ type StoreSuite struct {
 	context       context.Context
 	clock         steps.TestClock
 	kafkaProducer kafkatest.IProducerMock
+}
+
+type CollectionCountFunc func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error)
+type CollectionFindFunc func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error)
+type CollectionFindOneFunc func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error
+type CollectionUpdateFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
+type CollectionUpdateManyFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
+type CollectionInsertFunc func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error)
+type KafkaSendFunc func(schema *avro.Schema, event interface{}) error
+
+func CollectionFindOneSetsResultReturnsNil(metadataBytes []byte) CollectionFindOneFunc {
+	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+		bson.Unmarshal(metadataBytes, result)
+		return nil
+	}
+}
+
+func CollectionFindReturnsValueAndError(value int, expectedError error) CollectionFindFunc {
+	return func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
+		return value, expectedError
+	}
+}
+
+func CollectionFindOneReturnsError(expectedError error) CollectionFindOneFunc {
+	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+		return expectedError
+	}
+}
+
+func CollectionUpdateReturnsNilAndNil() CollectionUpdateFunc {
+	return func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+		return nil, nil
+	}
+}
+
+func CollectionUpdateReturnsNilAndError(expectedError error) CollectionUpdateFunc {
+	return func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+		return nil, expectedError
+	}
+}
+
+func CollectionCountReturnsValueAndError(value int, expectedError error) CollectionCountFunc {
+	return func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
+		return value, expectedError
+	}
+}
+
+func CollectionCountReturnsValueAndNil(value int) CollectionCountFunc {
+	return func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
+		return value, nil
+	}
+}
+
+func CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout() CollectionCountFunc {
+	return func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
+		bsonFilter := filter.(primitive.M)
+
+		// Note: refactoring will also change this test
+		if bsonFilter["$and"] == nil {
+			// Count of all files in collection
+			return 1, nil
+		}
+
+		// Second count of files not in uploaded state
+		return 0, nil
+	}
+}
+
+func CollectionUpdateManyReturnsNilAndError(expectedError error) CollectionUpdateManyFunc {
+	return func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+		return nil, expectedError
+	}
+}
+
+func CollectionUpdateManyReturnsNilAndNil() CollectionUpdateManyFunc {
+	return func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+		return nil, nil
+	}
+}
+
+func CollectionFindSetsResultsReturnsValueAndNil(metadataBytes []byte, value int) CollectionFindFunc {
+	return func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
+		result := files.StoredRegisteredMetaData{}
+		bson.Unmarshal(metadataBytes, &result)
+
+		resultPointer := results.(*[]files.StoredRegisteredMetaData)
+		*resultPointer = []files.StoredRegisteredMetaData{result}
+
+		return value, nil
+	}
+}
+
+func CollectionInsertReturnsNilAndError(expectedError error) CollectionInsertFunc {
+	return func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
+		return nil, expectedError
+	}
+}
+
+func KafkaSendReturnsError(expectedError error) KafkaSendFunc {
+	return func(schema *avro.Schema, event interface{}) error {
+		return expectedError
+	}
+}
+
+func KafkaSendReturnsNil() KafkaSendFunc {
+	return func(schema *avro.Schema, event interface{}) error {
+		return nil
+	}
 }
 
 func (suite *StoreSuite) SetupTest() {

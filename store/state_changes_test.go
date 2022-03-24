@@ -6,7 +6,6 @@ import (
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/store"
 	"github.com/ONSdigital/dp-files-api/store/mock"
-	"github.com/ONSdigital/dp-kafka/v3/avro"
 	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
@@ -15,10 +14,10 @@ import (
 func (suite *StoreSuite) TestRegisterFileUploadCountReturnsError() {
 	metadata := suite.generateMetadata(suite.collectionID)
 
+	expectedError := errors.New("error occurred")
+
 	AlwaysFindsExistingCollection := mock.MongoCollectionMock{
-		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
-			return 0, errors.New("error occurred")
-		},
+		CountFunc: CollectionCountReturnsValueAndError(0, expectedError),
 	}
 
 	store := store.NewStore(&AlwaysFindsExistingCollection, &suite.kafkaProducer, suite.clock)
@@ -32,9 +31,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 	metadata := suite.generateMetadata(suite.collectionID)
 
 	AlwaysFindsExistingCollection := mock.MongoCollectionMock{
-		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
-			return 1, nil
-		},
+		CountFunc: CollectionCountReturnsValueAndNil(1),
 	}
 
 	subject := store.NewStore(&AlwaysFindsExistingCollection, &suite.kafkaProducer, suite.clock)
@@ -49,9 +46,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathDoesntExist() {
 	metadata.State = ""
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{
-		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
-			return 0, nil
-		},
+		CountFunc: CollectionCountReturnsValueAndNil(0),
 		InsertFunc: func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
 			actualMetadata := document.(files.StoredRegisteredMetaData)
 
@@ -76,13 +71,11 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathDoesntExist() {
 
 func (suite *StoreSuite) TestRegisterFileUploadInsertReturnsError() {
 	metadata := suite.generateMetadata(suite.collectionID)
+	expectedError := errors.New("error occurred")
+
 	collectionCountReturnsZero := mock.MongoCollectionMock{
-		CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
-			return 0, nil
-		},
-		InsertFunc: func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
-			return nil, errors.New("error occurred")
-		},
+		CountFunc:  CollectionCountReturnsValueAndNil(0),
+		InsertFunc: CollectionInsertReturnsNilAndError(expectedError),
 	}
 
 	subject := store.NewStore(&collectionCountReturnsZero, &suite.kafkaProducer, suite.clock)
@@ -90,6 +83,7 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertReturnsError() {
 	err := subject.RegisterFileUpload(suite.context, metadata)
 
 	suite.Error(err)
+	suite.ErrorIs(err, expectedError)
 }
 
 func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
@@ -110,10 +104,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
 		metadataBytes, _ := bson.Marshal(metadata)
 
 		collectionWithUploadedFile := mock.MongoCollectionMock{
-			FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-				bson.Unmarshal(metadataBytes, result)
-				return nil
-			},
+			FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
 		}
 
 		subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -135,9 +126,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenFileNotExists() {
 	metadata.State = store.StateCreated
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			return mongodriver.ErrNoDocumentFound
-		},
+		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -157,15 +146,11 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenUpdateReturnsError() {
 
 	metadata.State = store.StateCreated
 	metadataBytes, _ := bson.Marshal(metadata)
+	expectedError := errors.New("an error occurred")
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			bson.Unmarshal(metadataBytes, result)
-			return nil
-		},
-		UpdateFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-			return &mongodriver.CollectionUpdateResult{}, errors.New("an error occurred")
-		},
+		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
+		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -177,6 +162,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenUpdateReturnsError() {
 	err := subject.MarkUploadComplete(suite.context, etagReference)
 
 	suite.Error(err)
+	suite.ErrorIs(err, expectedError)
 }
 
 func (suite *StoreSuite) TestMarkUploadCompleteSucceeds() {
@@ -186,13 +172,8 @@ func (suite *StoreSuite) TestMarkUploadCompleteSucceeds() {
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			bson.Unmarshal(metadataBytes, result)
-			return nil
-		},
-		UpdateFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-			return &mongodriver.CollectionUpdateResult{}, nil
-		},
+		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
+		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -224,10 +205,7 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenNotInCreatedState() {
 		metadataBytes, _ := bson.Marshal(metadata)
 
 		collectionWithUploadedFile := mock.MongoCollectionMock{
-			FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-				bson.Unmarshal(metadataBytes, result)
-				return nil
-			},
+			FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
 		}
 
 		subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -249,9 +227,7 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenFileNotExists() {
 	metadata.State = store.StatePublished
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			return mongodriver.ErrNoDocumentFound
-		},
+		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -272,14 +248,11 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenUpdateReturnsError() {
 	metadata.State = store.StatePublished
 	metadataBytes, _ := bson.Marshal(metadata)
 
+	expectedError := errors.New("an error occurred")
+
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			bson.Unmarshal(metadataBytes, result)
-			return nil
-		},
-		UpdateFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-			return &mongodriver.CollectionUpdateResult{}, errors.New("an error occurred")
-		},
+		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
+		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -300,13 +273,8 @@ func (suite *StoreSuite) TestMarkFileDecryptedSucceeds() {
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			bson.Unmarshal(metadataBytes, result)
-			return nil
-		},
-		UpdateFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-			return &mongodriver.CollectionUpdateResult{}, nil
-		},
+		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
+		UpdateFunc:  CollectionUpdateReturnsNilAndNil(),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -322,9 +290,7 @@ func (suite *StoreSuite) TestMarkFileDecryptedSucceeds() {
 
 func (suite *StoreSuite) TestMarkFilePublishedFindReturnsErrNoDocumentFound() {
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			return mongodriver.ErrNoDocumentFound
-		},
+		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -339,9 +305,7 @@ func (suite *StoreSuite) TestMarkFilePublishedFindReturnsUnspecifiedError() {
 	expectedError := errors.New("an error occurred")
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			return expectedError
-		},
+		FindOneFunc: CollectionFindOneReturnsError(expectedError),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -358,10 +322,7 @@ func (suite *StoreSuite) TestMarkFilePublishedCollectionIDNil() {
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			bson.Unmarshal(metadataBytes, result)
-			return nil
-		},
+		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -385,10 +346,7 @@ func (suite *StoreSuite) TestMarkFilePublishedStateUploaded() {
 		metadataBytes, _ := bson.Marshal(metadata)
 
 		collectionWithUploadedFile := mock.MongoCollectionMock{
-			FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-				bson.Unmarshal(metadataBytes, result)
-				return nil
-			},
+			FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
 		}
 
 		subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -408,13 +366,8 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateReturnsError() {
 	expectedError := errors.New("an error occurred")
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			bson.Unmarshal(metadataBytes, result)
-			return nil
-		},
-		UpdateFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-			return nil, expectedError
-		},
+		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
+		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
@@ -432,28 +385,19 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaReturnsError() {
 	expectedError := errors.New("an error occurred")
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			bson.Unmarshal(metadataBytes, result)
-			return nil
-		},
-		UpdateFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-			return nil, nil
-		},
+		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
+		UpdateFunc:  CollectionUpdateReturnsNilAndNil(),
 	}
 
 	kafkaMock := kafkatest.IProducerMock{
-		SendFunc: func(schema *avro.Schema, event interface{}) error {
-			return expectedError
-		},
+		SendFunc: KafkaSendReturnsError(expectedError),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &kafkaMock, suite.clock)
 
 	err := subject.MarkFilePublished(suite.context, suite.path)
 
-	numberOfTimesKafkaSendCalled := len(kafkaMock.SendCalls())
-
-	suite.Equal(1, numberOfTimesKafkaSendCalled)
+	suite.Equal(1, len(kafkaMock.SendCalls()))
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
 }
@@ -464,27 +408,18 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaDoesNotReturnError() {
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			bson.Unmarshal(metadataBytes, result)
-			return nil
-		},
-		UpdateFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-			return nil, nil
-		},
+		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
+		UpdateFunc:  CollectionUpdateReturnsNilAndNil(),
 	}
 
 	kafkaMock := kafkatest.IProducerMock{
-		SendFunc: func(schema *avro.Schema, event interface{}) error {
-			return nil
-		},
+		SendFunc: KafkaSendReturnsNil(),
 	}
 
 	subject := store.NewStore(&collectionWithUploadedFile, &kafkaMock, suite.clock)
 
 	err := subject.MarkFilePublished(suite.context, suite.path)
 
-	numberOfTimesKafkaSendCalled := len(kafkaMock.SendCalls())
-
-	suite.Equal(1, numberOfTimesKafkaSendCalled)
+	suite.Equal(1, len(kafkaMock.SendCalls()))
 	suite.NoError(err)
 }
