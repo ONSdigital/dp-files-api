@@ -16,7 +16,7 @@ func (suite *StoreSuite) TestGetFileMetadataError() {
 		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
 
-	subject := store.NewStore(&collection, &suite.defaultkafkaProducer, suite.defaultClock)
+	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock)
 	_, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -31,10 +31,10 @@ func (suite *StoreSuite) TestGetFileMetadataSuccess() {
 	metadataBytes, _ := bson.Marshal(expectedMetadata)
 
 	collection := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 	}
 
-	subject := store.NewStore(&collection, &suite.defaultkafkaProducer, suite.defaultClock)
+	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock)
 	actualMetadata, _ := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	suite.Exactly(expectedMetadata, actualMetadata)
@@ -48,7 +48,7 @@ func (suite *StoreSuite) TestGetFilesMetadataSuccessSingleResult() {
 		FindFunc: CollectionFindSetsResultAndReturns1IfCollectionIDMatchesFilter(metadataBytes),
 	}
 
-	subject := store.NewStore(&collection, &suite.defaultkafkaProducer, suite.defaultClock)
+	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock)
 
 	expectedMetadata := []files.StoredRegisteredMetaData{metadata}
 	actualMetadata, _ := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID)
@@ -64,7 +64,7 @@ func (suite *StoreSuite) TestGetFilesMetadataNoResult() {
 		FindFunc: CollectionFindSetsResultAndReturns1IfCollectionIDMatchesFilter(metadataBytes),
 	}
 
-	subject := store.NewStore(&collection, &suite.defaultkafkaProducer, suite.defaultClock)
+	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock)
 
 	expectedMetadata := make([]files.StoredRegisteredMetaData, 0)
 	actualMetadata, _ := subject.GetFilesMetadata(suite.defaultContext, "INVALID_COLLECTION_ID")

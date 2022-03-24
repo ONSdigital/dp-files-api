@@ -62,7 +62,7 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 			return ErrFileNotRegistered
 		}
 
-		log.Error(ctx, "failed finding m to mark file as published", err, log.Data{"path": path})
+		log.Error(ctx, "failed finding metadata to mark file as published", err, log.Data{"path": path})
 		return err
 	}
 
