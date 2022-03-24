@@ -9,6 +9,9 @@ import (
 )
 
 func (suite *StoreSuite) TestGetFileMetadataError() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
 	collection := mock.MongoCollectionMock{
 		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
@@ -16,6 +19,9 @@ func (suite *StoreSuite) TestGetFileMetadataError() {
 	subject := store.NewStore(&collection, &suite.defaultkafkaProducer, suite.defaultClock)
 	_, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("file metadata not found", logEvent)
 	suite.Equal(store.ErrFileNotRegistered, err)
 }
 
