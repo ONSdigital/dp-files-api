@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/ONSdigital/dp-files-api/features/steps"
 	"github.com/ONSdigital/dp-files-api/files"
-	"github.com/ONSdigital/dp-files-api/mongo/mock"
 	"github.com/ONSdigital/dp-files-api/store"
 	"github.com/ONSdigital/dp-kafka/v3/avro"
 	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
@@ -115,6 +114,21 @@ func CollectionFindSetsResultsReturnsValueAndNil(metadataBytes []byte, value int
 	}
 }
 
+func CollectionFindSetsResultAndReturns1IfCollectionIDMatchesFilter(metadataBytes []byte) CollectionFindFunc {
+	return func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
+		result := files.StoredRegisteredMetaData{}
+		bson.Unmarshal(metadataBytes, &result)
+
+		resultPointer := results.(*[]files.StoredRegisteredMetaData)
+
+		if filter.(primitive.M)["collection_id"] == *result.CollectionID {
+			*resultPointer = []files.StoredRegisteredMetaData{result}
+		}
+
+		return 1, nil
+	}
+}
+
 func CollectionInsertReturnsNilAndError(expectedError error) CollectionInsertFunc {
 	return func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
 		return nil, expectedError
@@ -151,31 +165,6 @@ func (suite *StoreSuite) assertImmutableFieldsUnchanged(metadata, actualMetadata
 	suite.Equal(metadata.Licence, actualMetadata.Licence)
 	suite.Equal(metadata.LicenceUrl, actualMetadata.LicenceUrl)
 	suite.Equal(metadata.Etag, actualMetadata.Etag)
-}
-
-func (suite *StoreSuite) generateCollectionMockFindOneWithError() mock.MongoCollectionMock {
-	return mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			return mongodriver.ErrNoDocumentFound
-		},
-	}
-}
-
-func (suite *StoreSuite) generateCollectionMockFindWithSingleResult(metadataBytes []byte) mock.MongoCollectionMock {
-	return mock.MongoCollectionMock{
-		FindFunc: func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
-			result := files.StoredRegisteredMetaData{}
-			bson.Unmarshal(metadataBytes, &result)
-
-			resultPointer := results.(*[]files.StoredRegisteredMetaData)
-
-			if filter.(primitive.M)["collection_id"] == *result.CollectionID {
-				*resultPointer = []files.StoredRegisteredMetaData{result}
-			}
-
-			return 1, nil
-		},
-	}
 }
 
 func (suite *StoreSuite) generateTestTime(addedSeconds time.Duration) time.Time {
