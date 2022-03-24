@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/ONSdigital/dp-files-api/store"
 	"github.com/ONSdigital/log.go/v2/log"
 	"io/ioutil"
 	"net/http"
@@ -32,11 +32,11 @@ func PatchRequestToHandler(handlers PatchRequestHandlers) http.HandlerFunc {
 		}
 
 		switch *stateMetaData.State {
-		case files.StateUploaded:
+		case store.StateUploaded:
 			handlers.UploadComplete.ServeHTTP(w, req)
-		case files.StatePublished:
+		case store.StatePublished:
 			handlers.Published.ServeHTTP(w, req)
-		case files.StateDecrypted:
+		case store.StateDecrypted:
 			handlers.Decrypted.ServeHTTP(w, req)
 		default:
 			log.Error(req.Context(), "InvalidStateChange", errors.New("invalid state change"), log.Data{"state": *stateMetaData.State})

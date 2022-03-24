@@ -1,6 +1,8 @@
-package files
+package store
 
-import "go.mongodb.org/mongo-driver/bson"
+import (
+	"go.mongodb.org/mongo-driver/bson"
+)
 
 func createCollectionContainsNotUploadedFilesQuery(collectionID string) bson.M {
 	return bson.M{"$and": []bson.M{

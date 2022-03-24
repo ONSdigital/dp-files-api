@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ONSdigital/dp-files-api/store"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -301,7 +302,7 @@ func TestCollectionIDUpdateForUnregisteredFile(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader(`{"collection_id": "123456789"}`))
 
-	h := api.HandlerUpdateCollectionID(func(ctx context.Context, path, collectionID string) error { return files.ErrFileNotRegistered })
+	h := api.HandlerUpdateCollectionID(func(ctx context.Context, path, collectionID string) error { return store.ErrFileNotRegistered })
 
 	h.ServeHTTP(rec, req)
 

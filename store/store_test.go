@@ -1,10 +1,11 @@
-package files_test
+package store_test
 
 import (
 	"context"
 	"github.com/ONSdigital/dp-files-api/features/steps"
 	"github.com/ONSdigital/dp-files-api/files"
-	"github.com/ONSdigital/dp-files-api/files/mock"
+	"github.com/ONSdigital/dp-files-api/store"
+	"github.com/ONSdigital/dp-files-api/store/mock"
 	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/stretchr/testify/suite"
@@ -93,7 +94,7 @@ func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegis
 		UploadCompletedAt: &uploadCompletedAt,
 		PublishedAt:       &publishedAt,
 		DecryptedAt:       &decryptedAt,
-		State:             files.StateDecrypted,
+		State:             store.StateDecrypted,
 		Etag:              "1234567",
 	}
 }
