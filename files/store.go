@@ -134,7 +134,12 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 	}
 
 	col := make([]StoredRegisteredMetaData, 0)
-	store.mongoCollection.Find(ctx, bson.M{"collection_id": collectionID}, &col)
+	_, err = store.mongoCollection.Find(ctx, bson.M{"collection_id": collectionID}, &col)
+
+	if err != nil {
+		return err
+	}
+
 	for _, m := range col {
 		err = store.kafka.Send(avroSchema, &FilePublished{
 			Path:        m.Path,
@@ -179,7 +184,7 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 		return err
 	}
 
-	store.mongoCollection.Update(
+	_, err = store.mongoCollection.Update(
 		ctx,
 		bson.M{"path": path},
 		bson.D{
@@ -188,7 +193,7 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 			},
 		})
 
-	return nil
+	return err
 }
 
 func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
@@ -215,7 +220,7 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 			err, log.Data{"path": path, "current_state": m.State})
 		return ErrFileNotInUploadedState
 	}
-	store.mongoCollection.Update(
+	_, err = store.mongoCollection.Update(
 		ctx,
 		bson.M{"path": path},
 		bson.D{
@@ -224,6 +229,11 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 				{"last_modified", store.clock.GetCurrentTime()},
 				{"published_at", store.clock.GetCurrentTime()}}},
 		})
+
+	if err != nil {
+		return err
+	}
+
 	err = store.kafka.Send(avroSchema, &FilePublished{
 		Path:        m.Path,
 		Etag:        m.Etag,
