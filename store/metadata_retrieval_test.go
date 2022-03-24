@@ -2,8 +2,8 @@ package store_test
 
 import (
 	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/ONSdigital/dp-files-api/mongo/mock"
 	"github.com/ONSdigital/dp-files-api/store"
-	"github.com/ONSdigital/dp-files-api/store/mock"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
