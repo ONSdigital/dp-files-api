@@ -14,6 +14,7 @@ import (
 	"github.com/ONSdigital/dp-files-api/service/mock"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	kafka "github.com/ONSdigital/dp-kafka/v3"
+	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
@@ -25,13 +26,16 @@ import (
 var svc service.Service
 
 func TestClose(t *testing.T) {
-
 	Convey("Having a correctly initialised service in publishing mode", t, func() {
 		hc := &hcMock.CheckerMock{
 			AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
 			StartFunc:    func(context.Context) {},
 		}
-		m := &mongoMock.ClientMock{}
+		m := &mongoMock.ClientMock{
+			CollectionFunc: func(s string) *mongodriver.Collection {
+				return &mongodriver.Collection{}
+			},
+		}
 		hs := &mockFiles.HTTPServerMock{ListenAndServeFunc: func() error { return nil }}
 
 		km := &mock.OurProducerMock{}
@@ -93,7 +97,11 @@ func TestClose(t *testing.T) {
 			AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
 			StartFunc:    func(context.Context) {},
 		}
-		m := &mongoMock.ClientMock{}
+		m := &mongoMock.ClientMock{
+			CollectionFunc: func(s string) *mongodriver.Collection {
+				return &mongodriver.Collection{}
+			},
+		}
 		hs := &mockFiles.HTTPServerMock{ListenAndServeFunc: func() error { return nil }}
 
 		km := &mock.OurProducerMock{}

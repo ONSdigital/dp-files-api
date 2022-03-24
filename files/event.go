@@ -2,7 +2,7 @@ package files
 
 import "github.com/ONSdigital/dp-kafka/v3/avro"
 
-var avroSchema = &avro.Schema{
+var AvroSchema = &avro.Schema{
 	Definition: `{
 			"type": "record",
 			"name": "file-published",

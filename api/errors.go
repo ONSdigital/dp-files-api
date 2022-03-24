@@ -3,9 +3,9 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ONSdigital/dp-files-api/store"
 	"net/http"
 
-	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/go-playground/validator"
 )
 
@@ -25,18 +25,18 @@ func handleError(w http.ResponseWriter, err error) {
 	}
 
 	switch err {
-	case files.ErrDuplicateFile:
+	case store.ErrDuplicateFile:
 		writeError(w, buildErrors(err, "DuplicateFileError"), http.StatusBadRequest)
-	case files.ErrCollectionIDAlreadySet:
+	case store.ErrCollectionIDAlreadySet:
 		writeError(w, buildErrors(err, "CollectionIDAlreadySet"), http.StatusBadRequest)
-	case files.ErrFileNotRegistered:
+	case store.ErrFileNotRegistered:
 		writeError(w, buildErrors(err, "FileNotRegistered"), http.StatusNotFound)
-	case files.ErrFileNotInCreatedState,
-		files.ErrFileNotInUploadedState,
-		files.ErrCollectionIDNotSet,
-		files.ErrFileNotInPublishedState:
+	case store.ErrFileNotInCreatedState,
+		store.ErrFileNotInUploadedState,
+		store.ErrCollectionIDNotSet,
+		store.ErrFileNotInPublishedState:
 		writeError(w, buildErrors(err, "FileStateError"), http.StatusConflict)
-	case files.ErrNoFilesInCollection:
+	case store.ErrNoFilesInCollection:
 		writeError(w, buildErrors(err, "EmptyCollection"), http.StatusNotFound)
 	default:
 		writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)

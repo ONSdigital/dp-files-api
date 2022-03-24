@@ -1,14 +1,10 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"net/http"
-
-	"github.com/ONSdigital/log.go/v2/log"
 
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/go-playground/validator"
@@ -39,6 +35,18 @@ type PublishData struct {
 	CollectionID string `json:"collection_id"`
 }
 
+type CollectionChange struct {
+	CollectionID string `json:"collection_id"`
+}
+
+type FilesCollection struct {
+	Count      int64                            `json:"count"`
+	Limit      int64                            `json:"limit"`
+	Offset     int64                            `json:"offset"`
+	TotalCount int64                            `json:"total_count"`
+	Items      []files.StoredRegisteredMetaData `json:"items"`
+}
+
 type RegisterFileUpload func(ctx context.Context, metaData files.StoredRegisteredMetaData) error
 type MarkUploadComplete func(ctx context.Context, metaData files.FileEtagChange) error
 type GetFileMetadata func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error)
@@ -47,42 +55,6 @@ type MarkFilePublished func(ctx context.Context, path string) error
 type MarkDecryptionComplete func(ctx context.Context, change files.FileEtagChange) error
 type UpdateCollectionID func(ctx context.Context, path, collectionID string) error
 type GetFilesMetadata func(ctx context.Context, collectionID string) ([]files.StoredRegisteredMetaData, error)
-
-func StateToHandler(uploadComplete http.HandlerFunc, published http.HandlerFunc, decrypted http.HandlerFunc, collectionUpdate http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-
-		m := StateMetadata{}
-		b, _ := ioutil.ReadAll(req.Body)
-
-		state := ioutil.NopCloser(bytes.NewBuffer(b))
-		if err := json.NewDecoder(state).Decode(&m); err != nil {
-			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
-			return
-		}
-
-		req.Body = ioutil.NopCloser(bytes.NewBuffer(b))
-
-		if m.CollectionID != nil && m.State == nil {
-			collectionUpdate.ServeHTTP(w, req)
-			return
-		}
-
-		if *m.State == files.StateUploaded {
-			uploadComplete.ServeHTTP(w, req)
-		} else if *m.State == files.StatePublished {
-			published.ServeHTTP(w, req)
-		} else if *m.State == files.StateDecrypted {
-			decrypted.ServeHTTP(w, req)
-		} else {
-			log.Error(req.Context(), "InvalidStateChange", errors.New("Invalid STATE change"), log.Data{"state": *m.State})
-			writeError(w, buildErrors(errors.New("Invalid STATE change"), "InvalidStateChange"), http.StatusBadRequest)
-		}
-	}
-}
-
-type CollectionChange struct {
-	CollectionID string `json:"collection_id"`
-}
 
 func HandlerUpdateCollectionID(updateCollectionID UpdateCollectionID) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -153,15 +125,7 @@ func HandleGetFileMetadata(getMetadata GetFileMetadata) http.HandlerFunc {
 	}
 }
 
-type FilesCollection struct {
-	Count      int64                            `json:"count"`
-	Limit      int64                            `json:"limit"`
-	Offset     int64                            `json:"offset"`
-	TotalCount int64                            `json:"total_count"`
-	Items      []files.StoredRegisteredMetaData `json:"items"`
-}
-
-func HandlerGetFilesMetadata(getFiles GetFilesMetadata) http.HandlerFunc {
+func HandlerGetFilesMetadata(getFilesMetadata GetFilesMetadata) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		collectionID := req.URL.Query().Get("collection_id")
 
@@ -171,24 +135,14 @@ func HandlerGetFilesMetadata(getFiles GetFilesMetadata) http.HandlerFunc {
 			return
 		}
 
-		f, err := getFiles(req.Context(), collectionID)
-
+		fm, err := getFilesMetadata(req.Context(), collectionID)
 		if err != nil {
 			handleError(w, err)
 			return
 		}
 
-		count := int64(len(f))
-		fc := FilesCollection{
-			Count:      count,
-			Limit:      count,
-			Offset:     0,
-			TotalCount: count,
-			Items:      f,
-		}
-
-		w.Header().Add("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(fc)
+		fc := filesCollectionFromMetadata(fm)
+		err = respondWithFilesCollectionJSON(w, fc)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
@@ -198,23 +152,19 @@ func HandlerGetFilesMetadata(getFiles GetFilesMetadata) http.HandlerFunc {
 
 func HandlerRegisterUploadStarted(register RegisterFileUpload) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-
-		m := RegisterMetadata{}
-		err := json.NewDecoder(req.Body).Decode(&m)
+		rm, err := getRegisterMetadataFromRequest(req)
 		if err != nil {
 			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
 			return
 		}
 
-		validate := validator.New()
-		validate.RegisterValidation("aws-upload-key", awsUploadKeyValidator)
-		err = validate.Struct(m)
+		err = validateRegisterMetadata(rm)
 		if err != nil {
 			handleError(w, err)
 			return
 		}
 
-		err = register(req.Context(), generateStoredRegisterMetaData(m))
+		err = register(req.Context(), generateStoredRegisterMetaData(rm))
 		if err != nil {
 			handleError(w, err)
 			return
@@ -226,25 +176,61 @@ func HandlerRegisterUploadStarted(register RegisterFileUpload) http.HandlerFunc 
 
 func HandleMarkUploadComplete(markUploaded MarkUploadComplete) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		m := EtagChange{}
-		err := json.NewDecoder(req.Body).Decode(&m)
+		ec, err := getEtagChangeFromRequest(req)
 		if err != nil {
 			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
 			return
 		}
 
-		if err = validator.New().Struct(m); err != nil {
+		if err = validator.New().Struct(ec); err != nil {
 			handleError(w, err)
 			return
 		}
 
-		err = markUploaded(req.Context(), generateStoredUploadMetaData(m, mux.Vars(req)["path"]))
+		err = markUploaded(req.Context(), generateStoredUploadMetaData(ec, mux.Vars(req)["path"]))
 		if err != nil {
 			handleError(w, err)
 		}
 
 		w.WriteHeader(http.StatusOK)
 	}
+}
+
+func filesCollectionFromMetadata(f []files.StoredRegisteredMetaData) FilesCollection {
+	count := int64(len(f))
+	fc := FilesCollection{
+		Count:      count,
+		Limit:      count,
+		Offset:     0,
+		TotalCount: count,
+		Items:      f,
+	}
+	return fc
+}
+
+func respondWithFilesCollectionJSON(w http.ResponseWriter, fc FilesCollection) error {
+	w.Header().Add("Content-Type", "application/json")
+	err := json.NewEncoder(w).Encode(fc)
+	return err
+}
+
+func validateRegisterMetadata(rm RegisterMetadata) error {
+	validate := validator.New()
+	validate.RegisterValidation("aws-upload-key", awsUploadKeyValidator)
+	err := validate.Struct(rm)
+	return err
+}
+
+func getRegisterMetadataFromRequest(req *http.Request) (RegisterMetadata, error) {
+	rm := RegisterMetadata{}
+	err := json.NewDecoder(req.Body).Decode(&rm)
+	return rm, err
+}
+
+func getEtagChangeFromRequest(req *http.Request) (EtagChange, error) {
+	ec := EtagChange{}
+	err := json.NewDecoder(req.Body).Decode(&ec)
+	return ec, err
 }
 
 func generateStoredRegisterMetaData(m RegisterMetadata) files.StoredRegisteredMetaData {
