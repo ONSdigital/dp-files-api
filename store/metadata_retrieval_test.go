@@ -4,11 +4,14 @@ import (
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/mongo/mock"
 	"github.com/ONSdigital/dp-files-api/store"
+	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (suite *StoreSuite) TestGetFileMetadataError() {
-	collection := suite.generateCollectionMockFindOneWithError()
+	collection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
+	}
 
 	subject := store.NewStore(&collection, &suite.kafkaProducer, suite.clock)
 	_, err := subject.GetFileMetadata(suite.context, suite.path)
@@ -33,9 +36,11 @@ func (suite *StoreSuite) TestGetFileMetadataSuccess() {
 
 func (suite *StoreSuite) TestGetFilesMetadataSuccessSingleResult() {
 	metadata := suite.generateMetadata(suite.collectionID)
-	metadataBSONBytes, _ := bson.Marshal(metadata)
+	metadataBytes, _ := bson.Marshal(metadata)
 
-	collection := suite.generateCollectionMockFindWithSingleResult(metadataBSONBytes)
+	collection := mock.MongoCollectionMock{
+		FindFunc: CollectionFindSetsResultAndReturns1IfCollectionIDMatchesFilter(metadataBytes),
+	}
 
 	subject := store.NewStore(&collection, &suite.kafkaProducer, suite.clock)
 
@@ -47,9 +52,11 @@ func (suite *StoreSuite) TestGetFilesMetadataSuccessSingleResult() {
 
 func (suite *StoreSuite) TestGetFilesMetadataNoResult() {
 	metadata := suite.generateMetadata(suite.collectionID)
-	metadataBSONBytes, _ := bson.Marshal(metadata)
+	metadataBytes, _ := bson.Marshal(metadata)
 
-	collection := suite.generateCollectionMockFindWithSingleResult(metadataBSONBytes)
+	collection := mock.MongoCollectionMock{
+		FindFunc: CollectionFindSetsResultAndReturns1IfCollectionIDMatchesFilter(metadataBytes),
+	}
 
 	subject := store.NewStore(&collection, &suite.kafkaProducer, suite.clock)
 
