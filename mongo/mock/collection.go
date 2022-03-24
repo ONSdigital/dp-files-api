@@ -5,7 +5,7 @@ package mock
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-files-api/store"
+	"github.com/ONSdigital/dp-files-api/mongo"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	lock "github.com/square/mongo-lock"
 	"sync"
@@ -13,7 +13,7 @@ import (
 
 // Ensure, that MongoCollectionMock does implement files.MongoCollection.
 // If this is not the case, regenerate this file with moq.
-var _ store.MongoCollection = &MongoCollectionMock{}
+var _ mongo.MongoCollection = &MongoCollectionMock{}
 
 // MongoCollectionMock is a mock implementation of files.MongoCollection.
 //
