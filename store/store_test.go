@@ -23,12 +23,12 @@ import (
 
 type StoreSuite struct {
 	suite.Suite
+	logInterceptor       LogInterceptor
 	defaultCollectionID  string
 	path                 string
 	defaultContext       context.Context
 	defaultClock         steps.TestClock
-	defaultkafkaProducer kafkatest.IProducerMock
-	logInterceptor       LogInterceptor
+	defaultKafkaProducer kafkatest.IProducerMock
 }
 
 type CollectionCountFunc func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error)
@@ -39,7 +39,7 @@ type CollectionUpdateManyFunc func(ctx context.Context, selector interface{}, up
 type CollectionInsertFunc func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error)
 type KafkaSendFunc func(schema *avro.Schema, event interface{}) error
 
-func CollectionFindOneSetsResultReturnsNil(metadataBytes []byte) CollectionFindOneFunc {
+func CollectionFindOneSetsResultAndReturnsNil(metadataBytes []byte) CollectionFindOneFunc {
 	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
 		bson.Unmarshal(metadataBytes, result)
 		return nil
@@ -140,6 +140,12 @@ func CollectionInsertReturnsNilAndError(expectedError error) CollectionInsertFun
 	}
 }
 
+func CollectionInsertReturnsNilAndNil() CollectionInsertFunc {
+	return func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
+		return nil, nil
+	}
+}
+
 func KafkaSendReturnsError(expectedError error) KafkaSendFunc {
 	return func(schema *avro.Schema, event interface{}) error {
 		return expectedError
@@ -152,43 +158,20 @@ func KafkaSendReturnsNil() KafkaSendFunc {
 	}
 }
 
-type LogInterceptor struct {
-	logBuffer                     *bytes.Buffer
-	defaultLogDestination         io.Writer
-	defaultFallbackLogDestination io.Writer
-}
-
-func (l *LogInterceptor) Start() {
-	log.SetDestination(l.logBuffer, l.logBuffer)
-}
-func (l *LogInterceptor) Stop() {
-	l.logBuffer.Reset()
-	log.SetDestination(l.defaultLogDestination, l.defaultFallbackLogDestination)
-}
-
-func (l *LogInterceptor) GetLogEvent() string {
-	logResult, _ := ioutil.ReadAll(l.logBuffer)
-	logOut := make(map[string]interface{})
-	json.Unmarshal(logResult, &logOut)
-
-	return logOut["event"].(string)
-}
-
-func NewLogInterceptor() LogInterceptor {
-	return LogInterceptor{
-		logBuffer:                     &bytes.Buffer{},
-		defaultLogDestination:         os.Stdout,
-		defaultFallbackLogDestination: os.Stderr,
-	}
-}
-
 func (suite *StoreSuite) SetupTest() {
 	suite.defaultCollectionID = "123456"
 	suite.path = "test.txt"
 	suite.defaultContext = context.Background()
 	suite.defaultClock = steps.TestClock{}
-	suite.defaultkafkaProducer = kafkatest.IProducerMock{}
+	suite.defaultKafkaProducer = kafkatest.IProducerMock{}
 	suite.logInterceptor = NewLogInterceptor()
+}
+
+func (suite *StoreSuite) etagReference(metadata files.StoredRegisteredMetaData) files.FileEtagChange {
+	return files.FileEtagChange{
+		Path: metadata.Path,
+		Etag: metadata.Etag,
+	}
 }
 
 func (suite *StoreSuite) assertImmutableFieldsUnchanged(metadata, actualMetadata files.StoredRegisteredMetaData) {
@@ -235,4 +218,34 @@ func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegis
 
 func TestStoreSuite(t *testing.T) {
 	suite.Run(t, new(StoreSuite))
+}
+
+type LogInterceptor struct {
+	logBuffer                     *bytes.Buffer
+	defaultLogDestination         io.Writer
+	defaultFallbackLogDestination io.Writer
+}
+
+func (l *LogInterceptor) Start() {
+	log.SetDestination(l.logBuffer, l.logBuffer)
+}
+func (l *LogInterceptor) Stop() {
+	l.logBuffer.Reset()
+	log.SetDestination(l.defaultLogDestination, l.defaultFallbackLogDestination)
+}
+
+func (l *LogInterceptor) GetLogEvent() string {
+	logResult, _ := ioutil.ReadAll(l.logBuffer)
+	logOut := make(map[string]interface{})
+	json.Unmarshal(logResult, &logOut)
+
+	return logOut["event"].(string)
+}
+
+func NewLogInterceptor() LogInterceptor {
+	return LogInterceptor{
+		logBuffer:                     &bytes.Buffer{},
+		defaultLogDestination:         os.Stdout,
+		defaultFallbackLogDestination: os.Stderr,
+	}
 }
