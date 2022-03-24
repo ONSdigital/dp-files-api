@@ -1,0 +1,28 @@
+package files
+
+import (
+	"context"
+	"errors"
+	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
+	"github.com/ONSdigital/log.go/v2/log"
+	"go.mongodb.org/mongo-driver/bson"
+)
+
+func (store *Store) GetFileMetadata(ctx context.Context, path string) (StoredRegisteredMetaData, error) {
+	metadata := StoredRegisteredMetaData{}
+
+	err := store.mongoCollection.FindOne(ctx, bson.M{"path": path}, &metadata)
+	if err != nil && errors.Is(err, mongodriver.ErrNoDocumentFound) {
+		log.Error(ctx, "file metadata not found", err, log.Data{"path": path})
+		return metadata, ErrFileNotRegistered
+	}
+
+	return metadata, err
+}
+
+func (store *Store) GetFilesMetadata(ctx context.Context, collectionID string) ([]StoredRegisteredMetaData, error) {
+	files := make([]StoredRegisteredMetaData, 0)
+	_, err := store.mongoCollection.Find(ctx, bson.M{"collection_id": collectionID}, &files)
+
+	return files, err
+}
