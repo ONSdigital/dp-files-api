@@ -79,13 +79,11 @@ func CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout() Collect
 	return func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
 		bsonFilter := filter.(primitive.M)
 
-		// Note: refactoring will also change this test
 		if bsonFilter["$and"] == nil {
 			// Count of all files in collection
 			return 1, nil
 		}
 
-		// Second count of files not in uploaded state
 		return 0, nil
 	}
 }
