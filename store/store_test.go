@@ -1,27 +1,34 @@
 package store_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"github.com/ONSdigital/dp-files-api/features/steps"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/store"
 	"github.com/ONSdigital/dp-kafka/v3/avro"
 	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"io"
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 )
 
 type StoreSuite struct {
 	suite.Suite
-	collectionID  string
-	path          string
-	context       context.Context
-	clock         steps.TestClock
-	kafkaProducer kafkatest.IProducerMock
+	defaultCollectionID  string
+	path                 string
+	defaultContext       context.Context
+	defaultClock         steps.TestClock
+	defaultkafkaProducer kafkatest.IProducerMock
+	logInterceptor       LogInterceptor
 }
 
 type CollectionCountFunc func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error)
@@ -145,12 +152,43 @@ func KafkaSendReturnsNil() KafkaSendFunc {
 	}
 }
 
+type LogInterceptor struct {
+	logBuffer                     *bytes.Buffer
+	defaultLogDestination         io.Writer
+	defaultFallbackLogDestination io.Writer
+}
+
+func (l *LogInterceptor) Start() {
+	log.SetDestination(l.logBuffer, l.logBuffer)
+}
+func (l *LogInterceptor) Stop() {
+	l.logBuffer.Reset()
+	log.SetDestination(l.defaultLogDestination, l.defaultFallbackLogDestination)
+}
+
+func (l *LogInterceptor) GetLogEvent() string {
+	logResult, _ := ioutil.ReadAll(l.logBuffer)
+	logOut := make(map[string]interface{})
+	json.Unmarshal(logResult, &logOut)
+
+	return logOut["event"].(string)
+}
+
+func NewLogInterceptor() LogInterceptor {
+	return LogInterceptor{
+		logBuffer:                     &bytes.Buffer{},
+		defaultLogDestination:         os.Stdout,
+		defaultFallbackLogDestination: os.Stderr,
+	}
+}
+
 func (suite *StoreSuite) SetupTest() {
-	suite.collectionID = "123456"
+	suite.defaultCollectionID = "123456"
 	suite.path = "test.txt"
-	suite.context = context.Background()
-	suite.clock = steps.TestClock{}
-	suite.kafkaProducer = kafkatest.IProducerMock{}
+	suite.defaultContext = context.Background()
+	suite.defaultClock = steps.TestClock{}
+	suite.defaultkafkaProducer = kafkatest.IProducerMock{}
+	suite.logInterceptor = NewLogInterceptor()
 }
 
 func (suite *StoreSuite) assertImmutableFieldsUnchanged(metadata, actualMetadata files.StoredRegisteredMetaData) {

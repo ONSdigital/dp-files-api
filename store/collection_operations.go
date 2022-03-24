@@ -19,7 +19,6 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 			log.Error(ctx, "update collection ID: attempted to operate on unregistered file", err, log.Data{"path": path})
 			return ErrFileNotRegistered
 		}
-
 		log.Error(ctx, "failed finding metadata to update collection ID", err, log.Data{"path": path})
 		return err
 	}

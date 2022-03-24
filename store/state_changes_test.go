@@ -12,7 +12,7 @@ import (
 )
 
 func (suite *StoreSuite) TestRegisterFileUploadCountReturnsError() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	expectedError := errors.New("error occurred")
 
@@ -20,29 +20,29 @@ func (suite *StoreSuite) TestRegisterFileUploadCountReturnsError() {
 		CountFunc: CollectionCountReturnsValueAndError(0, expectedError),
 	}
 
-	store := store.NewStore(&AlwaysFindsExistingCollection, &suite.kafkaProducer, suite.clock)
+	store := store.NewStore(&AlwaysFindsExistingCollection, &suite.defaultkafkaProducer, suite.defaultClock)
 
-	err := store.RegisterFileUpload(suite.context, metadata)
+	err := store.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.Error(err)
 }
 
 func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	AlwaysFindsExistingCollection := mock.MongoCollectionMock{
 		CountFunc: CollectionCountReturnsValueAndNil(1),
 	}
 
-	subject := store.NewStore(&AlwaysFindsExistingCollection, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&AlwaysFindsExistingCollection, &suite.defaultkafkaProducer, suite.defaultClock)
 
-	err := subject.RegisterFileUpload(suite.context, metadata)
+	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.ErrorIs(err, store.ErrDuplicateFile)
 }
 
 func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathDoesntExist() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 	metadata.State = ""
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{
@@ -50,7 +50,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathDoesntExist() {
 		InsertFunc: func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
 			actualMetadata := document.(files.StoredRegisteredMetaData)
 
-			testCurrentTime := suite.clock.GetCurrentTime()
+			testCurrentTime := suite.defaultClock.GetCurrentTime()
 
 			suite.Equal(store.StateCreated, actualMetadata.State)
 			suite.Equal(testCurrentTime, actualMetadata.CreatedAt)
@@ -62,15 +62,15 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathDoesntExist() {
 		},
 	}
 
-	subject := store.NewStore(&collectionCountReturnsZero, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionCountReturnsZero, &suite.defaultkafkaProducer, suite.defaultClock)
 
-	err := subject.RegisterFileUpload(suite.context, metadata)
+	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.NoError(err)
 }
 
 func (suite *StoreSuite) TestRegisterFileUploadInsertReturnsError() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 	expectedError := errors.New("error occurred")
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{
@@ -78,16 +78,16 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertReturnsError() {
 		InsertFunc: CollectionInsertReturnsNilAndError(expectedError),
 	}
 
-	subject := store.NewStore(&collectionCountReturnsZero, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionCountReturnsZero, &suite.defaultkafkaProducer, suite.defaultClock)
 
-	err := subject.RegisterFileUpload(suite.context, metadata)
+	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
 }
 
 func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	tests := []struct {
 		currentState string
@@ -107,13 +107,13 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
 			FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
 		}
 
-		subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+		subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultkafkaProducer, suite.defaultClock)
 
 		etagReference := files.FileEtagChange{
 			Path: metadata.Path,
 			Etag: metadata.Etag,
 		}
-		err := subject.MarkUploadComplete(suite.context, etagReference)
+		err := subject.MarkUploadComplete(suite.defaultContext, etagReference)
 
 		suite.Error(err)
 		suite.ErrorIs(err, test.expectedErr, "the actual err was %v", err)
@@ -121,7 +121,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
 }
 
 func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenFileNotExists() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StateCreated
 
@@ -129,20 +129,20 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenFileNotExists() {
 		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultkafkaProducer, suite.defaultClock)
 
 	etagReference := files.FileEtagChange{
 		Path: metadata.Path,
 		Etag: metadata.Etag,
 	}
-	err := subject.MarkUploadComplete(suite.context, etagReference)
+	err := subject.MarkUploadComplete(suite.defaultContext, etagReference)
 
 	suite.Error(err)
 	suite.ErrorIs(err, store.ErrFileNotRegistered, "the metadata looked for was %v", metadata)
 }
 
 func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenUpdateReturnsError() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StateCreated
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -153,20 +153,20 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenUpdateReturnsError() {
 		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultkafkaProducer, suite.defaultClock)
 
 	etagReference := files.FileEtagChange{
 		Path: metadata.Path,
 		Etag: metadata.Etag,
 	}
-	err := subject.MarkUploadComplete(suite.context, etagReference)
+	err := subject.MarkUploadComplete(suite.defaultContext, etagReference)
 
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
 }
 
 func (suite *StoreSuite) TestMarkUploadCompleteSucceeds() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StateCreated
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -176,19 +176,19 @@ func (suite *StoreSuite) TestMarkUploadCompleteSucceeds() {
 		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultkafkaProducer, suite.defaultClock)
 
 	etagReference := files.FileEtagChange{
 		Path: metadata.Path,
 		Etag: metadata.Etag,
 	}
-	err := subject.MarkUploadComplete(suite.context, etagReference)
+	err := subject.MarkUploadComplete(suite.defaultContext, etagReference)
 
 	suite.NoError(err)
 }
 
 func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenNotInCreatedState() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	tests := []struct {
 		currentState string
@@ -208,13 +208,13 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenNotInCreatedState() {
 			FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
 		}
 
-		subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+		subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultkafkaProducer, suite.defaultClock)
 
 		etagReference := files.FileEtagChange{
 			Path: metadata.Path,
 			Etag: metadata.Etag,
 		}
-		err := subject.MarkFileDecrypted(suite.context, etagReference)
+		err := subject.MarkFileDecrypted(suite.defaultContext, etagReference)
 
 		suite.Error(err)
 		suite.ErrorIs(err, test.expectedErr, "the actual err was %v", err)
@@ -222,7 +222,7 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenNotInCreatedState() {
 }
 
 func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenFileNotExists() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StatePublished
 
@@ -230,20 +230,20 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenFileNotExists() {
 		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultkafkaProducer, suite.defaultClock)
 
 	etagReference := files.FileEtagChange{
 		Path: metadata.Path,
 		Etag: metadata.Etag,
 	}
-	err := subject.MarkFileDecrypted(suite.context, etagReference)
+	err := subject.MarkFileDecrypted(suite.defaultContext, etagReference)
 
 	suite.Error(err)
 	suite.ErrorIs(err, store.ErrFileNotRegistered, "the metadata looked for was %v", metadata)
 }
 
 func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenUpdateReturnsError() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StatePublished
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -255,19 +255,19 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenUpdateReturnsError() {
 		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultkafkaProducer, suite.defaultClock)
 
 	etagReference := files.FileEtagChange{
 		Path: metadata.Path,
 		Etag: metadata.Etag,
 	}
-	err := subject.MarkFileDecrypted(suite.context, etagReference)
+	err := subject.MarkFileDecrypted(suite.defaultContext, etagReference)
 
 	suite.Error(err)
 }
 
 func (suite *StoreSuite) TestMarkFileDecryptedSucceeds() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StatePublished
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -277,13 +277,13 @@ func (suite *StoreSuite) TestMarkFileDecryptedSucceeds() {
 		UpdateFunc:  CollectionUpdateReturnsNilAndNil(),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultkafkaProducer, suite.defaultClock)
 
 	etagReference := files.FileEtagChange{
 		Path: metadata.Path,
 		Etag: metadata.Etag,
 	}
-	err := subject.MarkFileDecrypted(suite.context, etagReference)
+	err := subject.MarkFileDecrypted(suite.defaultContext, etagReference)
 
 	suite.NoError(err)
 }
@@ -293,9 +293,9 @@ func (suite *StoreSuite) TestMarkFilePublishedFindReturnsErrNoDocumentFound() {
 		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultkafkaProducer, suite.defaultClock)
 
-	err := subject.MarkFilePublished(suite.context, suite.path)
+	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	suite.Error(err)
 	suite.ErrorIs(err, store.ErrFileNotRegistered)
@@ -308,9 +308,9 @@ func (suite *StoreSuite) TestMarkFilePublishedFindReturnsUnspecifiedError() {
 		FindOneFunc: CollectionFindOneReturnsError(expectedError),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultkafkaProducer, suite.defaultClock)
 
-	err := subject.MarkFilePublished(suite.context, suite.path)
+	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
@@ -325,9 +325,9 @@ func (suite *StoreSuite) TestMarkFilePublishedCollectionIDNil() {
 		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultkafkaProducer, suite.defaultClock)
 
-	err := subject.MarkFilePublished(suite.context, suite.path)
+	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	suite.Error(err)
 	suite.ErrorIs(err, store.ErrCollectionIDNotSet)
@@ -341,7 +341,7 @@ func (suite *StoreSuite) TestMarkFilePublishedStateUploaded() {
 	}
 
 	for _, state := range notUploadedStates {
-		metadata := suite.generateMetadata(suite.collectionID)
+		metadata := suite.generateMetadata(suite.defaultCollectionID)
 		metadata.State = state
 		metadataBytes, _ := bson.Marshal(metadata)
 
@@ -349,9 +349,9 @@ func (suite *StoreSuite) TestMarkFilePublishedStateUploaded() {
 			FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
 		}
 
-		subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+		subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultkafkaProducer, suite.defaultClock)
 
-		err := subject.MarkFilePublished(suite.context, suite.path)
+		err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 		suite.Error(err)
 		suite.ErrorIs(err, store.ErrFileNotInUploadedState, "%s is not %s", state, store.StateUploaded)
@@ -359,7 +359,7 @@ func (suite *StoreSuite) TestMarkFilePublishedStateUploaded() {
 }
 
 func (suite *StoreSuite) TestMarkFilePublishedUpdateReturnsError() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 	metadata.State = store.StateUploaded
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -370,16 +370,16 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateReturnsError() {
 		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultkafkaProducer, suite.defaultClock)
 
-	err := subject.MarkFilePublished(suite.context, suite.path)
+	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
 }
 
 func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaReturnsError() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 	metadata.State = store.StateUploaded
 	metadataBytes, _ := bson.Marshal(metadata)
 	expectedError := errors.New("an error occurred")
@@ -393,9 +393,9 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaReturnsError() {
 		SendFunc: KafkaSendReturnsError(expectedError),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &kafkaMock, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &kafkaMock, suite.defaultClock)
 
-	err := subject.MarkFilePublished(suite.context, suite.path)
+	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	suite.Equal(1, len(kafkaMock.SendCalls()))
 	suite.Error(err)
@@ -403,7 +403,7 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaReturnsError() {
 }
 
 func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaDoesNotReturnError() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 	metadata.State = store.StateUploaded
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -416,9 +416,9 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaDoesNotReturnError() {
 		SendFunc: KafkaSendReturnsNil(),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &kafkaMock, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &kafkaMock, suite.defaultClock)
 
-	err := subject.MarkFilePublished(suite.context, suite.path)
+	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	suite.Equal(1, len(kafkaMock.SendCalls()))
 	suite.NoError(err)

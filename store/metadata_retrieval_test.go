@@ -13,14 +13,14 @@ func (suite *StoreSuite) TestGetFileMetadataError() {
 		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
 
-	subject := store.NewStore(&collection, &suite.kafkaProducer, suite.clock)
-	_, err := subject.GetFileMetadata(suite.context, suite.path)
+	subject := store.NewStore(&collection, &suite.defaultkafkaProducer, suite.defaultClock)
+	_, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	suite.Equal(store.ErrFileNotRegistered, err)
 }
 
 func (suite *StoreSuite) TestGetFileMetadataSuccess() {
-	expectedMetadata := suite.generateMetadata(suite.collectionID)
+	expectedMetadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	metadataBytes, _ := bson.Marshal(expectedMetadata)
 
@@ -28,40 +28,40 @@ func (suite *StoreSuite) TestGetFileMetadataSuccess() {
 		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
 	}
 
-	subject := store.NewStore(&collection, &suite.kafkaProducer, suite.clock)
-	actualMetadata, _ := subject.GetFileMetadata(suite.context, suite.path)
+	subject := store.NewStore(&collection, &suite.defaultkafkaProducer, suite.defaultClock)
+	actualMetadata, _ := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	suite.Exactly(expectedMetadata, actualMetadata)
 }
 
 func (suite *StoreSuite) TestGetFilesMetadataSuccessSingleResult() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	collection := mock.MongoCollectionMock{
 		FindFunc: CollectionFindSetsResultAndReturns1IfCollectionIDMatchesFilter(metadataBytes),
 	}
 
-	subject := store.NewStore(&collection, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collection, &suite.defaultkafkaProducer, suite.defaultClock)
 
 	expectedMetadata := []files.StoredRegisteredMetaData{metadata}
-	actualMetadata, _ := subject.GetFilesMetadata(suite.context, suite.collectionID)
+	actualMetadata, _ := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID)
 
 	suite.Exactly(expectedMetadata, actualMetadata)
 }
 
 func (suite *StoreSuite) TestGetFilesMetadataNoResult() {
-	metadata := suite.generateMetadata(suite.collectionID)
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	collection := mock.MongoCollectionMock{
 		FindFunc: CollectionFindSetsResultAndReturns1IfCollectionIDMatchesFilter(metadataBytes),
 	}
 
-	subject := store.NewStore(&collection, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collection, &suite.defaultkafkaProducer, suite.defaultClock)
 
 	expectedMetadata := make([]files.StoredRegisteredMetaData, 0)
-	actualMetadata, _ := subject.GetFilesMetadata(suite.context, "INVALID_COLLECTION_ID")
+	actualMetadata, _ := subject.GetFilesMetadata(suite.defaultContext, "INVALID_COLLECTION_ID")
 
 	suite.Exactly(expectedMetadata, actualMetadata)
 }
