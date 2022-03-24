@@ -1,11 +1,9 @@
 package store_test
 
 import (
-	"context"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/store"
 	"github.com/ONSdigital/dp-files-api/store/mock"
-	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -24,10 +22,7 @@ func (suite *StoreSuite) TestGetFileMetadataSuccess() {
 	metadataBytes, _ := bson.Marshal(expectedMetadata)
 
 	collection := mock.MongoCollectionMock{
-		FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-			bson.Unmarshal(metadataBytes, result)
-			return nil
-		},
+		FindOneFunc: CollectionFindOneSetsResultReturnsNil(metadataBytes),
 	}
 
 	subject := store.NewStore(&collection, &suite.kafkaProducer, suite.clock)
