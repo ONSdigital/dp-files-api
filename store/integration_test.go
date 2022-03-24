@@ -1,8 +1,9 @@
-package files_test
+package store_test
 
 import (
 	"context"
 	"flag"
+	"github.com/ONSdigital/dp-files-api/store"
 	"testing"
 
 	"github.com/ONSdigital/dp-files-api/config"
@@ -30,7 +31,7 @@ type StoreIntegrationTest struct {
 	cfg   *config.Config
 	mc    *mongo.Mongo
 	ctx   context.Context
-	store *files.Store
+	store *store.Store
 }
 
 func (s *StoreIntegrationTest) SetupTest() {
@@ -44,7 +45,7 @@ func (s *StoreIntegrationTest) SetupTest() {
 	)
 	client.Database("files").Collection("metadata").Drop(s.ctx)
 
-	s.store = files.NewStore(s.mc.Collection(config.MetadataCollection), &kafkatest.IProducerMock{}, steps.TestClock{})
+	s.store = store.NewStore(s.mc.Collection(config.MetadataCollection), &kafkatest.IProducerMock{}, steps.TestClock{})
 }
 
 func TestStoreIntegration(t *testing.T) {

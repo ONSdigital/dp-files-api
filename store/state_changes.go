@@ -1,10 +1,11 @@
-package files
+package store
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"github.com/ONSdigital/dp-files-api/config"
+	"github.com/ONSdigital/dp-files-api/files"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/ONSdigital/log.go/v2/log"
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,7 +19,7 @@ const (
 	StateDecrypted = "DECRYPTED"
 )
 
-func (store *Store) RegisterFileUpload(ctx context.Context, metaData StoredRegisteredMetaData) error {
+func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 	count, err := store.mongoCollection.Count(ctx, bson.M{"path": metaData.Path})
 	if err != nil {
 		log.Error(ctx, "mongo driver count error", err, log.Data{"path": metaData.Path})
@@ -44,16 +45,16 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData StoredRegis
 	return nil
 }
 
-func (store *Store) MarkUploadComplete(ctx context.Context, metaData FileEtagChange) error {
+func (store *Store) MarkUploadComplete(ctx context.Context, metaData files.FileEtagChange) error {
 	return store.updateStatus(ctx, metaData.Path, metaData.Etag, StateUploaded, StateCreated, "upload_completed_at")
 }
 
-func (store *Store) MarkFileDecrypted(ctx context.Context, metaData FileEtagChange) error {
+func (store *Store) MarkFileDecrypted(ctx context.Context, metaData files.FileEtagChange) error {
 	return store.updateStatus(ctx, metaData.Path, metaData.Etag, StateDecrypted, StatePublished, "decrypted_at")
 }
 
 func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
-	m := StoredRegisteredMetaData{}
+	m := files.StoredRegisteredMetaData{}
 	err := store.mongoCollection.FindOne(ctx, bson.M{"path": path}, &m)
 	if err != nil {
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
@@ -90,7 +91,7 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 		return err
 	}
 
-	err = store.kafka.Send(avroSchema, &FilePublished{
+	err = store.kafka.Send(files.AvroSchema, &files.FilePublished{
 		Path:        m.Path,
 		Etag:        m.Etag,
 		Type:        m.Type,
@@ -105,7 +106,7 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 }
 
 func (store *Store) updateStatus(ctx context.Context, path, etag, toState, expectedCurrentState, timestampField string) error {
-	metadata := StoredRegisteredMetaData{}
+	metadata := files.StoredRegisteredMetaData{}
 	err := store.mongoCollection.FindOne(ctx, bson.M{"path": path}, &metadata)
 	if err != nil {
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {

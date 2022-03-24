@@ -3,6 +3,7 @@ package steps
 import (
 	"context"
 	"fmt"
+	"github.com/ONSdigital/dp-files-api/store"
 	"strconv"
 	"time"
 
@@ -249,12 +250,12 @@ func (c *FilesApiComponent) theFileUploadHasNotBeenRegistered(path string) error
 }
 
 func (c *FilesApiComponent) theFileIsMarkedAsDecrypted(path, etag string) error {
-	json := fmt.Sprintf(`{"etag": "%s", "state": "%s"}`, etag, files.StateDecrypted)
+	json := fmt.Sprintf(`{"etag": "%s", "state": "%s"}`, etag, store.StateDecrypted)
 	return c.ApiFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
 }
 
 func (c *FilesApiComponent) theFileIsMarkedAsPublished(path string) error {
-	json := fmt.Sprintf(`{"state": "%s"}`, files.StatePublished)
+	json := fmt.Sprintf(`{"state": "%s"}`, store.StatePublished)
 	return c.ApiFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
 }
 
@@ -262,7 +263,7 @@ func (c *FilesApiComponent) theFileUploadIsMarkedAsCompleteWithTheEtag(path, eta
 	json := fmt.Sprintf(`{
 	"etag": "%s",
 	"state": "%s"
-}`, etag, files.StateUploaded)
+}`, etag, store.StateUploaded)
 	return c.ApiFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
 }
 
@@ -315,7 +316,7 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 }
 
 func (c *FilesApiComponent) iPublishTheCollection(collectionID string) error {
-	body := fmt.Sprintf(`{"state": "%s"}`, files.StatePublished)
+	body := fmt.Sprintf(`{"state": "%s"}`, store.StatePublished)
 	c.ApiFeature.IPatch(fmt.Sprintf("/collection/%s", collectionID), &messages.PickleDocString{MediaType: "application/json", Content: body})
 
 	return c.ApiFeature.StepError()

@@ -1,10 +1,11 @@
-package files_test
+package store_test
 
 import (
 	"context"
 	"errors"
 	"github.com/ONSdigital/dp-files-api/files"
-	"github.com/ONSdigital/dp-files-api/files/mock"
+	"github.com/ONSdigital/dp-files-api/store"
+	"github.com/ONSdigital/dp-files-api/store/mock"
 	"github.com/ONSdigital/dp-kafka/v3/avro"
 	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
@@ -19,12 +20,12 @@ func (suite *StoreSuite) TestUpdateCollectionIDFindReturnsErrNoDocumentFound() {
 		},
 	}
 
-	store := files.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
 
-	err := store.UpdateCollectionID(suite.context, suite.path, suite.collectionID)
+	err := subject.UpdateCollectionID(suite.context, suite.path, suite.collectionID)
 
 	suite.Error(err)
-	suite.ErrorIs(err, files.ErrFileNotRegistered)
+	suite.ErrorIs(err, store.ErrFileNotRegistered)
 }
 
 func (suite *StoreSuite) TestUpdateCollectionIDFindReturnsUnspecifiedError() {
@@ -36,9 +37,9 @@ func (suite *StoreSuite) TestUpdateCollectionIDFindReturnsUnspecifiedError() {
 		},
 	}
 
-	store := files.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
 
-	err := store.UpdateCollectionID(suite.context, "", suite.collectionID)
+	err := subject.UpdateCollectionID(suite.context, "", suite.collectionID)
 
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
@@ -55,12 +56,12 @@ func (suite *StoreSuite) TestUpdateCollectionIDCollectionIDAlreadySet() {
 		},
 	}
 
-	store := files.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
 
-	err := store.UpdateCollectionID(suite.context, suite.path, suite.collectionID)
+	err := subject.UpdateCollectionID(suite.context, suite.path, suite.collectionID)
 
 	suite.Error(err)
-	suite.ErrorIs(err, files.ErrCollectionIDAlreadySet)
+	suite.ErrorIs(err, store.ErrCollectionIDAlreadySet)
 }
 
 func (suite *StoreSuite) TestUpdateCollectionIDUpdateReturnsError() {
@@ -80,9 +81,9 @@ func (suite *StoreSuite) TestUpdateCollectionIDUpdateReturnsError() {
 		},
 	}
 
-	store := files.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
 
-	err := store.UpdateCollectionID(suite.context, suite.path, suite.collectionID)
+	err := subject.UpdateCollectionID(suite.context, suite.path, suite.collectionID)
 
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
@@ -103,9 +104,9 @@ func (suite *StoreSuite) TestUpdateCollectionIDUpdateSuccess() {
 		},
 	}
 
-	store := files.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.kafkaProducer, suite.clock)
 
-	err := store.UpdateCollectionID(suite.context, suite.path, suite.collectionID)
+	err := subject.UpdateCollectionID(suite.context, suite.path, suite.collectionID)
 
 	suite.NoError(err)
 }
@@ -119,9 +120,9 @@ func (suite *StoreSuite) TestMarkCollectionPublishedCountReturnsError() {
 		},
 	}
 
-	store := files.NewStore(&collectionCountReturnsError, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionCountReturnsError, &suite.kafkaProducer, suite.clock)
 
-	err := store.MarkCollectionPublished(suite.context, suite.collectionID)
+	err := subject.MarkCollectionPublished(suite.context, suite.collectionID)
 
 	suite.Error(err)
 	suite.ErrorIs(err, ExpectedError)
@@ -134,12 +135,12 @@ func (suite *StoreSuite) TestMarkCollectionPublishedCountReturnsZero() {
 		},
 	}
 
-	store := files.NewStore(&collectionCountReturnsError, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionCountReturnsError, &suite.kafkaProducer, suite.clock)
 
-	err := store.MarkCollectionPublished(suite.context, suite.collectionID)
+	err := subject.MarkCollectionPublished(suite.context, suite.collectionID)
 
 	suite.Error(err)
-	suite.ErrorIs(err, files.ErrNoFilesInCollection)
+	suite.ErrorIs(err, store.ErrNoFilesInCollection)
 }
 
 func (suite *StoreSuite) TestMarkCollectionPublishedWhenFileExistsInStateOtherThanUploaded() {
@@ -149,12 +150,12 @@ func (suite *StoreSuite) TestMarkCollectionPublishedWhenFileExistsInStateOtherTh
 		},
 	}
 
-	store := files.NewStore(&collectionCountReturnsError, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collectionCountReturnsError, &suite.kafkaProducer, suite.clock)
 
-	err := store.MarkCollectionPublished(suite.context, suite.collectionID)
+	err := subject.MarkCollectionPublished(suite.context, suite.collectionID)
 
 	suite.Error(err)
-	suite.ErrorIs(err, files.ErrFileNotInUploadedState)
+	suite.ErrorIs(err, store.ErrFileNotInUploadedState)
 }
 
 func (suite *StoreSuite) TestMarkCollectionPublishedPersistenceFailure() {
@@ -177,9 +178,9 @@ func (suite *StoreSuite) TestMarkCollectionPublishedPersistenceFailure() {
 		},
 	}
 
-	store := files.NewStore(&collection, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collection, &suite.kafkaProducer, suite.clock)
 
-	err := store.MarkCollectionPublished(suite.context, suite.collectionID)
+	err := subject.MarkCollectionPublished(suite.context, suite.collectionID)
 
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
@@ -209,9 +210,9 @@ func (suite *StoreSuite) TestMarkCollectionPublishedFindUpdatedErrored() {
 		},
 	}
 
-	store := files.NewStore(&collection, &suite.kafkaProducer, suite.clock)
+	subject := store.NewStore(&collection, &suite.kafkaProducer, suite.clock)
 
-	err := store.MarkCollectionPublished(suite.context, suite.collectionID)
+	err := subject.MarkCollectionPublished(suite.context, suite.collectionID)
 
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
@@ -254,9 +255,9 @@ func (suite *StoreSuite) TestMarkCollectionPublishedPersistenceSuccess() {
 		},
 	}
 
-	store := files.NewStore(&collection, &kafkaMock, suite.clock)
+	subject := store.NewStore(&collection, &kafkaMock, suite.clock)
 
-	err := store.MarkCollectionPublished(suite.context, suite.collectionID)
+	err := subject.MarkCollectionPublished(suite.context, suite.collectionID)
 
 	numberOfTimesKafkaCalled := len(kafkaMock.SendCalls())
 	suite.Equal(1, numberOfTimesKafkaCalled)
@@ -300,9 +301,9 @@ func (suite *StoreSuite) TestMarkCollectionPublishedKafkaErrorDoesNotFailOperati
 		},
 	}
 
-	store := files.NewStore(&collection, &kafkaMock, suite.clock)
+	subject := store.NewStore(&collection, &kafkaMock, suite.clock)
 
-	err := store.MarkCollectionPublished(suite.context, suite.collectionID)
+	err := subject.MarkCollectionPublished(suite.context, suite.collectionID)
 
 	numberOfTimesKafkaCalled := len(kafkaMock.SendCalls())
 	suite.Equal(1, numberOfTimesKafkaCalled)
