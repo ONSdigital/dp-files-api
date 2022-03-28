@@ -3,8 +3,9 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ONSdigital/dp-files-api/store"
 	"net/http"
+
+	"github.com/ONSdigital/dp-files-api/store"
 
 	"github.com/go-playground/validator"
 )
@@ -38,6 +39,8 @@ func handleError(w http.ResponseWriter, err error) {
 		writeError(w, buildErrors(err, "FileStateError"), http.StatusConflict)
 	case store.ErrNoFilesInCollection:
 		writeError(w, buildErrors(err, "EmptyCollection"), http.StatusNotFound)
+	case store.ErrFileIsNotPublishable:
+		writeError(w, buildErrors(err, "FileNotPublishable"), http.StatusForbidden)
 	default:
 		writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)
 	}

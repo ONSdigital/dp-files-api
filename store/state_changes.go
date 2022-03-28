@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/ONSdigital/log.go/v2/log"
 	"go.mongodb.org/mongo-driver/bson"
-	"strconv"
 )
 
 const (
@@ -74,9 +75,16 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 
 	if m.State != StateUploaded {
 		log.Error(ctx, fmt.Sprintf("mark file published: file was not in state %s", StateUploaded),
-			err, log.Data{"path": path, "current_state": m.State})
+			ErrFileNotInUploadedState, log.Data{"path": path, "current_state": m.State})
 		return ErrFileNotInUploadedState
 	}
+
+	if m.IsPublishable != true {
+		log.Error(ctx, "mark file published: file not set as publishable",
+			ErrFileIsNotPublishable, log.Data{"path": path, "is_publishable": m.IsPublishable})
+		return ErrFileIsNotPublishable
+	}
+
 	_, err = store.mongoCollection.Update(
 		ctx,
 		bson.M{"path": path},
