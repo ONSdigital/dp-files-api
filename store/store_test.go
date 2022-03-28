@@ -4,6 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
+	"io/ioutil"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/ONSdigital/dp-files-api/features/steps"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/store"
@@ -14,11 +20,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"io"
-	"io/ioutil"
-	"os"
-	"testing"
-	"time"
 )
 
 type StoreSuite struct {
@@ -199,7 +200,7 @@ func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegis
 
 	return files.StoredRegisteredMetaData{
 		Path:              suite.path,
-		IsPublishable:     false,
+		IsPublishable:     true,
 		CollectionID:      &collectionID,
 		Title:             "Test file",
 		SizeInBytes:       10,

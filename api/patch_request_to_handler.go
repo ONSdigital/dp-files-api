@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/ONSdigital/dp-files-api/store"
-	"github.com/ONSdigital/log.go/v2/log"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/ONSdigital/dp-files-api/store"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 type PatchRequestHandlers struct {
@@ -15,6 +16,11 @@ type PatchRequestHandlers struct {
 	Published        http.HandlerFunc
 	Decrypted        http.HandlerFunc
 	CollectionUpdate http.HandlerFunc
+}
+
+type StateMetadata struct {
+	State        *string `json:"state,omitempty"`
+	CollectionID *string `json:"collection_id,omitempty"`
 }
 
 func PatchRequestToHandler(handlers PatchRequestHandlers) http.HandlerFunc {
