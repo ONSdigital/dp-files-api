@@ -3,9 +3,10 @@ package steps
 import (
 	"context"
 	"fmt"
-	"github.com/ONSdigital/dp-files-api/store"
 	"strconv"
 	"time"
+
+	"github.com/ONSdigital/dp-files-api/store"
 
 	"github.com/ONSdigital/dp-files-api/config"
 	kafka "github.com/ONSdigital/dp-kafka/v3"
@@ -223,7 +224,6 @@ func (c *FilesApiComponent) theFileUploadHasBeenRegisteredWith(path string, tabl
 	m := files.StoredRegisteredMetaData{
 		Path:          path,
 		IsPublishable: isPublishable,
-		CollectionID:  &data.CollectionID,
 		Title:         data.Title,
 		SizeInBytes:   sizeInBytes,
 		Type:          data.Type,
@@ -232,6 +232,10 @@ func (c *FilesApiComponent) theFileUploadHasBeenRegisteredWith(path string, tabl
 		State:         data.State,
 		CreatedAt:     createdAt,
 		LastModified:  lastModified,
+	}
+
+	if data.CollectionID != "" {
+		m.CollectionID = &data.CollectionID
 	}
 
 	_, err = c.mongoClient.Database("files").Collection("metadata").InsertOne(context.Background(), &m)
