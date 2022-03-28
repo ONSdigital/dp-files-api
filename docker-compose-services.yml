@@ -22,8 +22,8 @@ services:
       KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: 'true'
     healthcheck:
       test: [ "CMD-SHELL", "kafka-topics.sh --list  --bootstrap-server kafka:9092" ]
-      interval: 30s
-      timeout: 25s
+      interval: 55s
+      timeout: 50s
       retries: 10
 
   mongo:
