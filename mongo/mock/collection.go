@@ -11,15 +11,15 @@ import (
 	"sync"
 )
 
-// Ensure, that MongoCollectionMock does implement files.MongoCollection.
+// Ensure, that MongoCollectionMock does implement mongo.MongoCollection.
 // If this is not the case, regenerate this file with moq.
 var _ mongo.MongoCollection = &MongoCollectionMock{}
 
-// MongoCollectionMock is a mock implementation of files.MongoCollection.
+// MongoCollectionMock is a mock implementation of mongo.MongoCollection.
 //
 // 	func TestSomethingThatUsesMongoCollection(t *testing.T) {
 //
-// 		// make and configure a mocked files.MongoCollection
+// 		// make and configure a mocked mongo.MongoCollection
 // 		mockedMongoCollection := &MongoCollectionMock{
 // 			AggregateFunc: func(ctx context.Context, pipeline interface{}, results interface{}) error {
 // 				panic("mock out the Aggregate method")
@@ -66,9 +66,6 @@ var _ mongo.MongoCollection = &MongoCollectionMock{}
 // 			UpdateManyFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
 // 				panic("mock out the UpdateMany method")
 // 			},
-// 			UpdateRecordFunc: func(ctx context.Context, selector interface{}, update interface{}, upsert bool) (*mongodriver.CollectionUpdateResult, error) {
-// 				panic("mock out the UpdateRecord method")
-// 			},
 // 			UpsertFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
 // 				panic("mock out the Upsert method")
 // 			},
@@ -77,7 +74,7 @@ var _ mongo.MongoCollection = &MongoCollectionMock{}
 // 			},
 // 		}
 //
-// 		// use mockedMongoCollection in code that requires files.MongoCollection
+// 		// use mockedMongoCollection in code that requires mongo.MongoCollection
 // 		// and then make assertions.
 //
 // 	}
@@ -126,9 +123,6 @@ type MongoCollectionMock struct {
 
 	// UpdateManyFunc mocks the UpdateMany method.
 	UpdateManyFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
-
-	// UpdateRecordFunc mocks the UpdateRecord method.
-	UpdateRecordFunc func(ctx context.Context, selector interface{}, update interface{}, upsert bool) (*mongodriver.CollectionUpdateResult, error)
 
 	// UpsertFunc mocks the Upsert method.
 	UpsertFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
@@ -255,17 +249,6 @@ type MongoCollectionMock struct {
 			// Update is the update argument value.
 			Update interface{}
 		}
-		// UpdateRecord holds details about calls to the UpdateRecord method.
-		UpdateRecord []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// Selector is the selector argument value.
-			Selector interface{}
-			// Update is the update argument value.
-			Update interface{}
-			// Upsert is the upsert argument value.
-			Upsert bool
-		}
 		// Upsert holds details about calls to the Upsert method.
 		Upsert []struct {
 			// Ctx is the ctx argument value.
@@ -300,7 +283,6 @@ type MongoCollectionMock struct {
 	lockUpdate        sync.RWMutex
 	lockUpdateById    sync.RWMutex
 	lockUpdateMany    sync.RWMutex
-	lockUpdateRecord  sync.RWMutex
 	lockUpsert        sync.RWMutex
 	lockUpsertById    sync.RWMutex
 }
@@ -849,49 +831,6 @@ func (mock *MongoCollectionMock) UpdateManyCalls() []struct {
 	mock.lockUpdateMany.RLock()
 	calls = mock.calls.UpdateMany
 	mock.lockUpdateMany.RUnlock()
-	return calls
-}
-
-// UpdateRecord calls UpdateRecordFunc.
-func (mock *MongoCollectionMock) UpdateRecord(ctx context.Context, selector interface{}, update interface{}, upsert bool) (*mongodriver.CollectionUpdateResult, error) {
-	if mock.UpdateRecordFunc == nil {
-		panic("MongoCollectionMock.UpdateRecordFunc: method is nil but MongoCollection.UpdateRecord was just called")
-	}
-	callInfo := struct {
-		Ctx      context.Context
-		Selector interface{}
-		Update   interface{}
-		Upsert   bool
-	}{
-		Ctx:      ctx,
-		Selector: selector,
-		Update:   update,
-		Upsert:   upsert,
-	}
-	mock.lockUpdateRecord.Lock()
-	mock.calls.UpdateRecord = append(mock.calls.UpdateRecord, callInfo)
-	mock.lockUpdateRecord.Unlock()
-	return mock.UpdateRecordFunc(ctx, selector, update, upsert)
-}
-
-// UpdateRecordCalls gets all the calls that were made to UpdateRecord.
-// Check the length with:
-//     len(mockedMongoCollection.UpdateRecordCalls())
-func (mock *MongoCollectionMock) UpdateRecordCalls() []struct {
-	Ctx      context.Context
-	Selector interface{}
-	Update   interface{}
-	Upsert   bool
-} {
-	var calls []struct {
-		Ctx      context.Context
-		Selector interface{}
-		Update   interface{}
-		Upsert   bool
-	}
-	mock.lockUpdateRecord.RLock()
-	calls = mock.calls.UpdateRecord
-	mock.lockUpdateRecord.RUnlock()
 	return calls
 }
 

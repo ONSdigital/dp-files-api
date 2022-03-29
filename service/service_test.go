@@ -3,6 +3,8 @@ package service_test
 import (
 	"context"
 	"errors"
+	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
+	authMock "github.com/ONSdigital/dp-authorisation/v2/authorisation/mock"
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/files"
 	mockFiles "github.com/ONSdigital/dp-files-api/files/mock"
@@ -15,8 +17,8 @@ import (
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	kafka "github.com/ONSdigital/dp-kafka/v3"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
-	"net/http"
 	"testing"
 	"time"
 
@@ -40,26 +42,30 @@ func TestClose(t *testing.T) {
 
 		km := &mock.OurProducerMock{}
 
+		am := &authMock.MiddlewareMock{}
+
 		serviceList := &mock.ServiceContainerMock{
-			GetMongoDBFunc:       func(ctx context.Context) (mongo.Client, error) { return m, nil },
-			GetClockFunc:         func(ctx context.Context) clock.Clock { return nil },
-			GetHTTPServerFunc:    func(router http.Handler) files.HTTPServer { return hs },
-			GetHealthCheckFunc:   func() (health.Checker, error) { return hc, nil },
-			GetKafkaProducerFunc: func(ctx context.Context) (kafka.IProducer, error) { return km, nil },
+			GetMongoDBFunc:        func() mongo.Client { return m },
+			GetClockFunc:          func() clock.Clock { return nil },
+			GetHTTPServerFunc:     func() files.HTTPServer { return hs },
+			GetHealthCheckFunc:    func() health.Checker { return hc },
+			GetKafkaProducerFunc:  func() kafka.IProducer { return km },
+			GetAuthMiddlewareFunc: func() auth.Middleware { return am },
 		}
 		svcErrors := make(chan error, 1)
 
 		ctx := context.Background()
-		svc, _ := service.Run(ctx, serviceList, svcErrors, true)
+		svc, _ := service.Run(ctx, serviceList, svcErrors, true, &mux.Router{})
 
 		Convey("Closing the service results in all the dependencies being closed in the expected order", func() {
 			serviceList.ShutdownFunc = func(ctx context.Context) error { return nil }
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 2)
+			assert.Len(t, registerHealthChecks, 3)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
-			assert.Equal(t, registerHealthChecks[1].Name, "Kafka Producer")
+			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
+			assert.Equal(t, registerHealthChecks[2].Name, "Kafka Producer")
 			assert.NoError(t, svc.Close(ctx, 2*time.Second))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})
@@ -69,9 +75,10 @@ func TestClose(t *testing.T) {
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 2)
+			assert.Len(t, registerHealthChecks, 3)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
-			assert.Equal(t, registerHealthChecks[1].Name, "Kafka Producer")
+			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
+			assert.Equal(t, registerHealthChecks[2].Name, "Kafka Producer")
 			assert.Error(t, svc.Close(ctx, 2*time.Second))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})
@@ -84,9 +91,10 @@ func TestClose(t *testing.T) {
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 2)
+			assert.Len(t, registerHealthChecks, 3)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
-			assert.Equal(t, registerHealthChecks[1].Name, "Kafka Producer")
+			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
+			assert.Equal(t, registerHealthChecks[2].Name, "Kafka Producer")
 			assert.Error(t, svc.Close(ctx, 100*time.Millisecond))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})
@@ -106,25 +114,29 @@ func TestClose(t *testing.T) {
 
 		km := &mock.OurProducerMock{}
 
+		am := &authMock.MiddlewareMock{}
+
 		serviceList := &mock.ServiceContainerMock{
-			GetMongoDBFunc:       func(ctx context.Context) (mongo.Client, error) { return m, nil },
-			GetClockFunc:         func(ctx context.Context) clock.Clock { return nil },
-			GetHTTPServerFunc:    func(router http.Handler) files.HTTPServer { return hs },
-			GetHealthCheckFunc:   func() (health.Checker, error) { return hc, nil },
-			GetKafkaProducerFunc: func(ctx context.Context) (kafka.IProducer, error) { return km, nil },
+			GetMongoDBFunc:        func() mongo.Client { return m },
+			GetClockFunc:          func() clock.Clock { return nil },
+			GetHTTPServerFunc:     func() files.HTTPServer { return hs },
+			GetHealthCheckFunc:    func() health.Checker { return hc },
+			GetKafkaProducerFunc:  func() kafka.IProducer { return km },
+			GetAuthMiddlewareFunc: func() auth.Middleware { return am },
 		}
 		svcErrors := make(chan error, 1)
 
 		ctx := context.Background()
-		svc, _ := service.Run(ctx, serviceList, svcErrors, false)
+		svc, _ := service.Run(ctx, serviceList, svcErrors, false, &mux.Router{})
 
 		Convey("Closing the service results in all the dependencies being closed in the expected order", func() {
 			serviceList.ShutdownFunc = func(ctx context.Context) error { return nil }
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 1)
+			assert.Len(t, registerHealthChecks, 2)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
+			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
 			assert.NoError(t, svc.Close(ctx, 2*time.Second))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})
@@ -134,8 +146,9 @@ func TestClose(t *testing.T) {
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 1)
+			assert.Len(t, registerHealthChecks, 2)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
+			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
 			assert.Error(t, svc.Close(ctx, 2*time.Second))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})
@@ -148,8 +161,9 @@ func TestClose(t *testing.T) {
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 1)
+			assert.Len(t, registerHealthChecks, 2)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
+			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
 			assert.Error(t, svc.Close(ctx, 100*time.Millisecond))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})

@@ -3,93 +3,150 @@ package service
 import (
 	"context"
 	"errors"
-	"net/http"
+	"github.com/ONSdigital/dp-files-api/clock"
+	"github.com/ONSdigital/dp-healthcheck/healthcheck"
+	dphttp "github.com/ONSdigital/dp-net/v2/http"
+	"github.com/ONSdigital/log.go/v2/log"
+	"github.com/gorilla/mux"
 
+	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
+
+	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/health"
-	kafka "github.com/ONSdigital/dp-kafka/v3"
-	"github.com/ONSdigital/log.go/v2/log"
-
-	"github.com/ONSdigital/dp-files-api/clock"
-	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/mongo"
-
-	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	dphttp "github.com/ONSdigital/dp-net/http"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
 )
 
 // ExternalServiceList holds the initialiser and initialisation state of external services.
 type ExternalServiceList struct {
-	config        *config.Config
-	buildTime     string
-	gitCommit     string
-	version       string
-	mongo         mongo.Client
-	httpServer    files.HTTPServer
-	healthChecker health.Checker
+	cfg            *config.Config
+	buildTime      string
+	gitCommit      string
+	version        string
+	mongo          mongo.Client
+	httpServer     files.HTTPServer
+	healthChecker  health.Checker
+	authMiddleware auth.Middleware
+	kafkaProducer  kafka.IProducer
+	router         *mux.Router
 }
 
-// NewServiceList creates a new service list with the provided initialiser
-func NewServiceList(cfg *config.Config, buildTime, gitCommit, version string) *ExternalServiceList {
-	return &ExternalServiceList{
-		config:    cfg,
+// NewServiceList creates a new service list of dependent services with the provided initialiser
+func NewServiceList(cfg *config.Config, buildTime, gitCommit, version string, router *mux.Router) (*ExternalServiceList, error) {
+	e := &ExternalServiceList{
+		cfg:       cfg,
 		buildTime: buildTime,
 		gitCommit: gitCommit,
 		version:   version,
+		router:    router,
 	}
+
+	return e, e.setup()
 }
 
-// GetHTTPServer creates an http server
-func (e *ExternalServiceList) GetHTTPServer(router http.Handler) files.HTTPServer {
-	s := dphttp.NewServer(e.config.BindAddr, router)
-	s.HandleOSSignals = false
-	return s
-}
-
-// GetHealthCheck creates a healthcheck with versionInfo and sets teh HealthCheck flag to true
-func (e *ExternalServiceList) GetHealthCheck() (health.Checker, error) {
-	versionInfo, err := healthcheck.NewVersionInfo(e.buildTime, e.gitCommit, e.version)
-	if err != nil {
-		return nil, err
+func (e *ExternalServiceList) setup() error {
+	if err := e.createHealthcheck(); err != nil {
+		return err
 	}
-	hc := healthcheck.New(versionInfo, e.config.HealthCheckCriticalTimeout, e.config.HealthCheckInterval)
-	return &hc, nil
+
+	if err := e.createMongo(); err != nil {
+		return err
+	}
+
+	e.createHttpServer()
+	if err := e.fooKafkaProducer(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (e *ExternalServiceList) GetMongoDB(ctx context.Context) (mongo.Client, error) {
-	return mongo.New(e.config.MongoConfig)
-}
-
-func (e *ExternalServiceList) GetClock(ctx context.Context) clock.Clock {
-	return clock.SystemClock{}
-}
-
-// GetKafkaProducer returns a kafka producer with the provided config
-func (e *ExternalServiceList) GetKafkaProducer(ctx context.Context) (kafka.IProducer, error) {
+func (e *ExternalServiceList) fooKafkaProducer() error {
 	pConfig := &kafka.ProducerConfig{
-		BrokerAddrs:       e.config.KafkaConfig.Addr,
-		Topic:             e.config.KafkaConfig.StaticFilePublishedTopic,
-		MinBrokersHealthy: &e.config.KafkaConfig.ProducerMinBrokersHealthy,
-		KafkaVersion:      &e.config.KafkaConfig.Version,
-		MaxMessageBytes:   &e.config.KafkaConfig.MaxBytes,
+		BrokerAddrs:       e.cfg.KafkaConfig.Addr,
+		Topic:             e.cfg.KafkaConfig.StaticFilePublishedTopic,
+		MinBrokersHealthy: &e.cfg.KafkaConfig.ProducerMinBrokersHealthy,
+		KafkaVersion:      &e.cfg.KafkaConfig.Version,
+		MaxMessageBytes:   &e.cfg.KafkaConfig.MaxBytes,
 	}
 
-	if e.config.KafkaConfig.SecProtocol != "" {
+	if e.cfg.KafkaConfig.SecProtocol != "" {
 		pConfig.SecurityConfig = kafka.GetSecurityConfig(
-			e.config.KafkaConfig.SecCACerts,
-			e.config.KafkaConfig.SecClientCert,
-			e.config.KafkaConfig.SecClientKey,
-			e.config.KafkaConfig.SecSkipVerify,
+			e.cfg.KafkaConfig.SecCACerts,
+			e.cfg.KafkaConfig.SecClientCert,
+			e.cfg.KafkaConfig.SecClientKey,
+			e.cfg.KafkaConfig.SecSkipVerify,
 		)
 	}
-	p, err := kafka.NewProducer(ctx, pConfig)
 
-	if !e.config.IsPublishing {
+	ctx := context.Background()
+
+	p, err := kafka.NewProducer(ctx, pConfig)
+	if err != nil {
+		return err
+	}
+
+	if !e.cfg.IsPublishing {
 		// In Web mode we do not want to produce kafka messages
 		p.Close(ctx)
 	}
+	e.kafkaProducer = p
 
-	return p, err
+	return nil
+}
+
+//
+func (e *ExternalServiceList) createHttpServer() {
+	s := dphttp.NewServer(e.cfg.BindAddr, e.router)
+	s.HandleOSSignals = false
+	e.httpServer = s
+}
+
+//
+func (e *ExternalServiceList) createMongo() error {
+	var err error
+	e.mongo, err = mongo.New(e.cfg.MongoConfig)
+	return err
+}
+
+//
+func (e *ExternalServiceList) createHealthcheck() error {
+	versionInfo, err := healthcheck.NewVersionInfo(e.buildTime, e.gitCommit, e.version)
+	if err != nil {
+		return err
+	}
+	hc := healthcheck.New(versionInfo, e.cfg.HealthCheckCriticalTimeout, e.cfg.HealthCheckInterval)
+	e.healthChecker = &hc
+	return nil
+}
+
+//
+//// GetHTTPServer creates an http server
+func (e *ExternalServiceList) GetHTTPServer() files.HTTPServer {
+	return e.httpServer
+}
+
+// GetHealthCheck creates a healthcheck with versionInfo and sets teh HealthCheck flag to true
+func (e *ExternalServiceList) GetHealthCheck() health.Checker {
+	return e.healthChecker
+}
+
+func (e *ExternalServiceList) GetMongoDB() mongo.Client {
+	return e.mongo
+}
+
+func (e *ExternalServiceList) GetClock() clock.Clock {
+	return clock.SystemClock{}
+}
+
+// GetKafkaProducer returns a kafka producer with the provided cf
+func (e *ExternalServiceList) GetKafkaProducer() kafka.IProducer {
+	return e.kafkaProducer
+}
+
+func (e *ExternalServiceList) GetAuthMiddleware() auth.Middleware {
+	return e.authMiddleware
 }
 
 func (e *ExternalServiceList) Shutdown(ctx context.Context) error {
@@ -108,8 +165,14 @@ func (e *ExternalServiceList) Shutdown(ctx context.Context) error {
 		log.Error(ctx, "failed to shutdown HTTP server", err)
 	}
 
+	err = e.authMiddleware.Close(ctx)
+	if err != nil {
+		shutdownErr = true
+		log.Error(ctx, "failed to shutdown Authorization Middleware", err)
+	}
+
 	if shutdownErr {
-		return errors.New("failures occured durring shutdown")
+		return errors.New("failures occurred during shutdown")
 	}
 
 	return nil

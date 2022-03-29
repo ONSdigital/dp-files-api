@@ -5,13 +5,13 @@ package mock
 
 import (
 	"context"
+	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/health"
 	"github.com/ONSdigital/dp-files-api/mongo"
 	"github.com/ONSdigital/dp-files-api/service"
 	kafka "github.com/ONSdigital/dp-kafka/v3"
-	"net/http"
 	"sync"
 )
 
@@ -25,19 +25,22 @@ var _ service.ServiceContainer = &ServiceContainerMock{}
 //
 // 		// make and configure a mocked service.ServiceContainer
 // 		mockedServiceContainer := &ServiceContainerMock{
-// 			GetClockFunc: func(ctx context.Context) clock.Clock {
+// 			GetAuthMiddlewareFunc: func() auth.Middleware {
+// 				panic("mock out the GetAuthMiddleware method")
+// 			},
+// 			GetClockFunc: func() clock.Clock {
 // 				panic("mock out the GetClock method")
 // 			},
-// 			GetHTTPServerFunc: func(router http.Handler) files.HTTPServer {
+// 			GetHTTPServerFunc: func() files.HTTPServer {
 // 				panic("mock out the GetHTTPServer method")
 // 			},
-// 			GetHealthCheckFunc: func() (health.Checker, error) {
+// 			GetHealthCheckFunc: func() health.Checker {
 // 				panic("mock out the GetHealthCheck method")
 // 			},
-// 			GetKafkaProducerFunc: func(ctx context.Context) (kafka.IProducer, error) {
+// 			GetKafkaProducerFunc: func() kafka.IProducer {
 // 				panic("mock out the GetKafkaProducer method")
 // 			},
-// 			GetMongoDBFunc: func(ctx context.Context) (mongo.Client, error) {
+// 			GetMongoDBFunc: func() mongo.Client {
 // 				panic("mock out the GetMongoDB method")
 // 			},
 // 			ShutdownFunc: func(ctx context.Context) error {
@@ -50,48 +53,46 @@ var _ service.ServiceContainer = &ServiceContainerMock{}
 //
 // 	}
 type ServiceContainerMock struct {
+	// GetAuthMiddlewareFunc mocks the GetAuthMiddleware method.
+	GetAuthMiddlewareFunc func() auth.Middleware
+
 	// GetClockFunc mocks the GetClock method.
-	GetClockFunc func(ctx context.Context) clock.Clock
+	GetClockFunc func() clock.Clock
 
 	// GetHTTPServerFunc mocks the GetHTTPServer method.
-	GetHTTPServerFunc func(router http.Handler) files.HTTPServer
+	GetHTTPServerFunc func() files.HTTPServer
 
 	// GetHealthCheckFunc mocks the GetHealthCheck method.
-	GetHealthCheckFunc func() (health.Checker, error)
+	GetHealthCheckFunc func() health.Checker
 
 	// GetKafkaProducerFunc mocks the GetKafkaProducer method.
-	GetKafkaProducerFunc func(ctx context.Context) (kafka.IProducer, error)
+	GetKafkaProducerFunc func() kafka.IProducer
 
 	// GetMongoDBFunc mocks the GetMongoDB method.
-	GetMongoDBFunc func(ctx context.Context) (mongo.Client, error)
+	GetMongoDBFunc func() mongo.Client
 
 	// ShutdownFunc mocks the Shutdown method.
 	ShutdownFunc func(ctx context.Context) error
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// GetAuthMiddleware holds details about calls to the GetAuthMiddleware method.
+		GetAuthMiddleware []struct {
+		}
 		// GetClock holds details about calls to the GetClock method.
 		GetClock []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
 		}
 		// GetHTTPServer holds details about calls to the GetHTTPServer method.
 		GetHTTPServer []struct {
-			// Router is the router argument value.
-			Router http.Handler
 		}
 		// GetHealthCheck holds details about calls to the GetHealthCheck method.
 		GetHealthCheck []struct {
 		}
 		// GetKafkaProducer holds details about calls to the GetKafkaProducer method.
 		GetKafkaProducer []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
 		}
 		// GetMongoDB holds details about calls to the GetMongoDB method.
 		GetMongoDB []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
 		}
 		// Shutdown holds details about calls to the Shutdown method.
 		Shutdown []struct {
@@ -99,38 +100,60 @@ type ServiceContainerMock struct {
 			Ctx context.Context
 		}
 	}
-	lockGetClock         sync.RWMutex
-	lockGetHTTPServer    sync.RWMutex
-	lockGetHealthCheck   sync.RWMutex
-	lockGetKafkaProducer sync.RWMutex
-	lockGetMongoDB       sync.RWMutex
-	lockShutdown         sync.RWMutex
+	lockGetAuthMiddleware sync.RWMutex
+	lockGetClock          sync.RWMutex
+	lockGetHTTPServer     sync.RWMutex
+	lockGetHealthCheck    sync.RWMutex
+	lockGetKafkaProducer  sync.RWMutex
+	lockGetMongoDB        sync.RWMutex
+	lockShutdown          sync.RWMutex
+}
+
+// GetAuthMiddleware calls GetAuthMiddlewareFunc.
+func (mock *ServiceContainerMock) GetAuthMiddleware() auth.Middleware {
+	if mock.GetAuthMiddlewareFunc == nil {
+		panic("ServiceContainerMock.GetAuthMiddlewareFunc: method is nil but ServiceContainer.GetAuthMiddleware was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockGetAuthMiddleware.Lock()
+	mock.calls.GetAuthMiddleware = append(mock.calls.GetAuthMiddleware, callInfo)
+	mock.lockGetAuthMiddleware.Unlock()
+	return mock.GetAuthMiddlewareFunc()
+}
+
+// GetAuthMiddlewareCalls gets all the calls that were made to GetAuthMiddleware.
+// Check the length with:
+//     len(mockedServiceContainer.GetAuthMiddlewareCalls())
+func (mock *ServiceContainerMock) GetAuthMiddlewareCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockGetAuthMiddleware.RLock()
+	calls = mock.calls.GetAuthMiddleware
+	mock.lockGetAuthMiddleware.RUnlock()
+	return calls
 }
 
 // GetClock calls GetClockFunc.
-func (mock *ServiceContainerMock) GetClock(ctx context.Context) clock.Clock {
+func (mock *ServiceContainerMock) GetClock() clock.Clock {
 	if mock.GetClockFunc == nil {
 		panic("ServiceContainerMock.GetClockFunc: method is nil but ServiceContainer.GetClock was just called")
 	}
 	callInfo := struct {
-		Ctx context.Context
-	}{
-		Ctx: ctx,
-	}
+	}{}
 	mock.lockGetClock.Lock()
 	mock.calls.GetClock = append(mock.calls.GetClock, callInfo)
 	mock.lockGetClock.Unlock()
-	return mock.GetClockFunc(ctx)
+	return mock.GetClockFunc()
 }
 
 // GetClockCalls gets all the calls that were made to GetClock.
 // Check the length with:
 //     len(mockedServiceContainer.GetClockCalls())
 func (mock *ServiceContainerMock) GetClockCalls() []struct {
-	Ctx context.Context
 } {
 	var calls []struct {
-		Ctx context.Context
 	}
 	mock.lockGetClock.RLock()
 	calls = mock.calls.GetClock
@@ -139,29 +162,24 @@ func (mock *ServiceContainerMock) GetClockCalls() []struct {
 }
 
 // GetHTTPServer calls GetHTTPServerFunc.
-func (mock *ServiceContainerMock) GetHTTPServer(router http.Handler) files.HTTPServer {
+func (mock *ServiceContainerMock) GetHTTPServer() files.HTTPServer {
 	if mock.GetHTTPServerFunc == nil {
 		panic("ServiceContainerMock.GetHTTPServerFunc: method is nil but ServiceContainer.GetHTTPServer was just called")
 	}
 	callInfo := struct {
-		Router http.Handler
-	}{
-		Router: router,
-	}
+	}{}
 	mock.lockGetHTTPServer.Lock()
 	mock.calls.GetHTTPServer = append(mock.calls.GetHTTPServer, callInfo)
 	mock.lockGetHTTPServer.Unlock()
-	return mock.GetHTTPServerFunc(router)
+	return mock.GetHTTPServerFunc()
 }
 
 // GetHTTPServerCalls gets all the calls that were made to GetHTTPServer.
 // Check the length with:
 //     len(mockedServiceContainer.GetHTTPServerCalls())
 func (mock *ServiceContainerMock) GetHTTPServerCalls() []struct {
-	Router http.Handler
 } {
 	var calls []struct {
-		Router http.Handler
 	}
 	mock.lockGetHTTPServer.RLock()
 	calls = mock.calls.GetHTTPServer
@@ -170,7 +188,7 @@ func (mock *ServiceContainerMock) GetHTTPServerCalls() []struct {
 }
 
 // GetHealthCheck calls GetHealthCheckFunc.
-func (mock *ServiceContainerMock) GetHealthCheck() (health.Checker, error) {
+func (mock *ServiceContainerMock) GetHealthCheck() health.Checker {
 	if mock.GetHealthCheckFunc == nil {
 		panic("ServiceContainerMock.GetHealthCheckFunc: method is nil but ServiceContainer.GetHealthCheck was just called")
 	}
@@ -196,29 +214,24 @@ func (mock *ServiceContainerMock) GetHealthCheckCalls() []struct {
 }
 
 // GetKafkaProducer calls GetKafkaProducerFunc.
-func (mock *ServiceContainerMock) GetKafkaProducer(ctx context.Context) (kafka.IProducer, error) {
+func (mock *ServiceContainerMock) GetKafkaProducer() kafka.IProducer {
 	if mock.GetKafkaProducerFunc == nil {
 		panic("ServiceContainerMock.GetKafkaProducerFunc: method is nil but ServiceContainer.GetKafkaProducer was just called")
 	}
 	callInfo := struct {
-		Ctx context.Context
-	}{
-		Ctx: ctx,
-	}
+	}{}
 	mock.lockGetKafkaProducer.Lock()
 	mock.calls.GetKafkaProducer = append(mock.calls.GetKafkaProducer, callInfo)
 	mock.lockGetKafkaProducer.Unlock()
-	return mock.GetKafkaProducerFunc(ctx)
+	return mock.GetKafkaProducerFunc()
 }
 
 // GetKafkaProducerCalls gets all the calls that were made to GetKafkaProducer.
 // Check the length with:
 //     len(mockedServiceContainer.GetKafkaProducerCalls())
 func (mock *ServiceContainerMock) GetKafkaProducerCalls() []struct {
-	Ctx context.Context
 } {
 	var calls []struct {
-		Ctx context.Context
 	}
 	mock.lockGetKafkaProducer.RLock()
 	calls = mock.calls.GetKafkaProducer
@@ -227,29 +240,24 @@ func (mock *ServiceContainerMock) GetKafkaProducerCalls() []struct {
 }
 
 // GetMongoDB calls GetMongoDBFunc.
-func (mock *ServiceContainerMock) GetMongoDB(ctx context.Context) (mongo.Client, error) {
+func (mock *ServiceContainerMock) GetMongoDB() mongo.Client {
 	if mock.GetMongoDBFunc == nil {
 		panic("ServiceContainerMock.GetMongoDBFunc: method is nil but ServiceContainer.GetMongoDB was just called")
 	}
 	callInfo := struct {
-		Ctx context.Context
-	}{
-		Ctx: ctx,
-	}
+	}{}
 	mock.lockGetMongoDB.Lock()
 	mock.calls.GetMongoDB = append(mock.calls.GetMongoDB, callInfo)
 	mock.lockGetMongoDB.Unlock()
-	return mock.GetMongoDBFunc(ctx)
+	return mock.GetMongoDBFunc()
 }
 
 // GetMongoDBCalls gets all the calls that were made to GetMongoDB.
 // Check the length with:
 //     len(mockedServiceContainer.GetMongoDBCalls())
 func (mock *ServiceContainerMock) GetMongoDBCalls() []struct {
-	Ctx context.Context
 } {
 	var calls []struct {
-		Ctx context.Context
 	}
 	mock.lockGetMongoDB.RLock()
 	calls = mock.calls.GetMongoDB

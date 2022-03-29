@@ -2,6 +2,7 @@ package steps
 
 import (
 	"context"
+	"github.com/gorilla/mux"
 	"net/http"
 	"time"
 
@@ -41,14 +42,15 @@ func NewFilesApiComponent() *FilesApiComponent {
 
 	log.Namespace = "dp-files-api"
 
-	d.svcList = &fakeServiceContainer{s}
 	d.isPublishing = true
 
 	return d
 }
 
 func (d *FilesApiComponent) Initialiser() (http.Handler, error) {
-	d.svc, _ = service.Run(context.Background(), d.svcList, d.errChan, d.isPublishing)
+	r := &mux.Router{}
+	d.svcList = &fakeServiceContainer{d.DpHttpServer, r}
+	d.svc, _ = service.Run(context.Background(), d.svcList, d.errChan, d.isPublishing, r)
 
 	return d.DpHttpServer.Handler, nil
 }

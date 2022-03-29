@@ -5,11 +5,11 @@ go 1.17
 replace github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
 
 require (
+	github.com/ONSdigital/dp-authorisation/v2 v2.16.0
 	github.com/ONSdigital/dp-component-test v0.6.3
 	github.com/ONSdigital/dp-healthcheck v1.2.3
 	github.com/ONSdigital/dp-kafka/v3 v3.1.1
 	github.com/ONSdigital/dp-mongodb/v3 v3.0.0-beta.9
-	github.com/ONSdigital/dp-net v1.2.0
 	github.com/ONSdigital/dp-net/v2 v2.2.0-beta
 	github.com/ONSdigital/log.go/v2 v2.0.9
 	github.com/cucumber/godog v0.12.2
@@ -23,11 +23,15 @@ require (
 )
 
 require (
+	github.com/ONSdigital/dp-net v1.2.0 // indirect
+	github.com/ONSdigital/dp-rchttp v1.0.0 // indirect
+	github.com/ONSdigital/go-ns v0.0.0-20210916104633-ac1c1c52327e // indirect
 	github.com/Shopify/sarama v1.30.1 // indirect
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/go-avro/avro v0.0.0-20171219232920-444163702c11 // indirect
+	github.com/golang-jwt/jwt/v4 v4.2.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
@@ -39,7 +43,7 @@ require (
 )
 
 require (
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.1.7-beta // indirect
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.4.7 // indirect
 	github.com/ONSdigital/dp-mongodb-in-memory v1.1.0 // indirect
 	github.com/cucumber/gherkin-go/v19 v19.0.3 // indirect
 	github.com/cucumber/messages-go/v16 v16.0.1
@@ -64,7 +68,7 @@ require (
 	github.com/smartystreets/assertions v1.2.1 // indirect
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/square/mongo-lock v0.0.0-20201208161834-4db518ed7fb2 // indirect
+	github.com/square/mongo-lock v0.0.0-20201208161834-4db518ed7fb2
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.0.2 // indirect
 	github.com/xdg-go/stringprep v1.0.2 // indirect
@@ -76,7 +80,6 @@ require (
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/leodido/go-urn v1.2.1 // indirect

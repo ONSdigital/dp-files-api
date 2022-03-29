@@ -2,12 +2,13 @@ package service
 
 import (
 	"context"
+	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
+
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/health"
 	"github.com/ONSdigital/dp-files-api/mongo"
 	kafka "github.com/ONSdigital/dp-kafka/v3"
-	"net/http"
 )
 
 //go:generate moq -out mock/serviceContainer.go -pkg mock . ServiceContainer
@@ -18,11 +19,11 @@ type OurProducer interface {
 }
 
 type ServiceContainer interface {
-	GetHTTPServer(router http.Handler) files.HTTPServer
-	GetHealthCheck() (health.Checker, error)
-	GetMongoDB(ctx context.Context) (mongo.Client, error)
-	GetClock(ctx context.Context) clock.Clock
-	GetKafkaProducer(ctx context.Context) (kafka.IProducer, error)
+	GetHTTPServer() files.HTTPServer
+	GetHealthCheck() health.Checker
+	GetMongoDB() mongo.Client
+	GetClock() clock.Clock
+	GetKafkaProducer() kafka.IProducer
+	GetAuthMiddleware() auth.Middleware
 	Shutdown(ctx context.Context) error
 }
-
