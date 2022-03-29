@@ -19,6 +19,7 @@ import (
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
+	"net/http"
 	"testing"
 	"time"
 
@@ -42,7 +43,11 @@ func TestClose(t *testing.T) {
 
 		km := &mock.OurProducerMock{}
 
-		am := &authMock.MiddlewareMock{}
+		am := &authMock.MiddlewareMock{
+			RequireFunc: func(permission string, handlerFunc http.HandlerFunc) http.HandlerFunc {
+				return handlerFunc
+			},
+		}
 
 		serviceList := &mock.ServiceContainerMock{
 			GetMongoDBFunc:        func() mongo.Client { return m },

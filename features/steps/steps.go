@@ -22,6 +22,8 @@ import (
 )
 
 func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
+	ctx.Step(`^I am an authorised user$`, c.iAmAnAuthorisedUser)
+	ctx.Step(`^I am not an authorised user$`, c.iAmNotAnAuthorisedUser)
 	ctx.Step(`^the file upload is registered with payload:`, c.iRegisterFile)
 	ctx.Step(`^the following document entry should be created:`, c.theFollowingDocumentShouldBeCreated)
 	ctx.Step(`^the file upload "([^"]*)" has been registered$`, c.theFileUploadHasBeenRegistered)
@@ -41,7 +43,18 @@ func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I am in web mode$`, c.iAmInWebMode)
 	ctx.Step(`^I set the collection ID to "([^"]*)" for file "([^"]*)"$`, c.iSetTheCollectionIDToForFile)
 	ctx.Step(`^I get files in the collection "([^"]*)"$`, c.iGetFilesInTheCollection)
+}
 
+func (c *FilesApiComponent) iAmAnAuthorisedUser() error {
+	c.isAuthorised = true
+
+	return nil
+}
+
+func (c *FilesApiComponent) iAmNotAnAuthorisedUser() error {
+	c.isAuthorised = false
+
+	return nil
 }
 
 func (c *FilesApiComponent) iRegisterFile(payload *godog.DocString) error {

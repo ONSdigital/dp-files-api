@@ -46,7 +46,7 @@ func NewServiceList(cfg *config.Config, buildTime, gitCommit, version string, ro
 }
 
 func (e *ExternalServiceList) setup() error {
-	if err := e.createHealthcheck(); err != nil {
+	if err := e.createHealthCheck(); err != nil {
 		return err
 	}
 
@@ -55,14 +55,14 @@ func (e *ExternalServiceList) setup() error {
 	}
 
 	e.createHttpServer()
-	if err := e.fooKafkaProducer(); err != nil {
+	if err := e.createKafkaProducer(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (e *ExternalServiceList) fooKafkaProducer() error {
+func (e *ExternalServiceList) createKafkaProducer() error {
 	pConfig := &kafka.ProducerConfig{
 		BrokerAddrs:       e.cfg.KafkaConfig.Addr,
 		Topic:             e.cfg.KafkaConfig.StaticFilePublishedTopic,
@@ -96,22 +96,19 @@ func (e *ExternalServiceList) fooKafkaProducer() error {
 	return nil
 }
 
-//
 func (e *ExternalServiceList) createHttpServer() {
 	s := dphttp.NewServer(e.cfg.BindAddr, e.router)
 	s.HandleOSSignals = false
 	e.httpServer = s
 }
 
-//
 func (e *ExternalServiceList) createMongo() error {
 	var err error
 	e.mongo, err = mongo.New(e.cfg.MongoConfig)
 	return err
 }
 
-//
-func (e *ExternalServiceList) createHealthcheck() error {
+func (e *ExternalServiceList) createHealthCheck() error {
 	versionInfo, err := healthcheck.NewVersionInfo(e.buildTime, e.gitCommit, e.version)
 	if err != nil {
 		return err
@@ -121,13 +118,10 @@ func (e *ExternalServiceList) createHealthcheck() error {
 	return nil
 }
 
-//
-//// GetHTTPServer creates an http server
 func (e *ExternalServiceList) GetHTTPServer() files.HTTPServer {
 	return e.httpServer
 }
 
-// GetHealthCheck creates a healthcheck with versionInfo and sets teh HealthCheck flag to true
 func (e *ExternalServiceList) GetHealthCheck() health.Checker {
 	return e.healthChecker
 }
@@ -140,7 +134,6 @@ func (e *ExternalServiceList) GetClock() clock.Clock {
 	return clock.SystemClock{}
 }
 
-// GetKafkaProducer returns a kafka producer with the provided cf
 func (e *ExternalServiceList) GetKafkaProducer() kafka.IProducer {
 	return e.kafkaProducer
 }
@@ -153,20 +146,17 @@ func (e *ExternalServiceList) Shutdown(ctx context.Context) error {
 	shutdownErr := false
 	e.healthChecker.Stop()
 
-	err := e.mongo.Close(ctx)
-	if err != nil {
+	if err := e.mongo.Close(ctx); err != nil {
 		shutdownErr = true
 		log.Error(ctx, "failed to shutdown mongo", err)
 	}
 
-	err = e.httpServer.Shutdown(ctx)
-	if err != nil {
+	if err := e.httpServer.Shutdown(ctx); err != nil {
 		shutdownErr = true
 		log.Error(ctx, "failed to shutdown HTTP server", err)
 	}
 
-	err = e.authMiddleware.Close(ctx)
-	if err != nil {
+	if err := e.authMiddleware.Close(ctx); err != nil {
 		shutdownErr = true
 		log.Error(ctx, "failed to shutdown Authorization Middleware", err)
 	}
