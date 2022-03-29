@@ -50,13 +50,15 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	collection := mongoClient.Collection(config.MetadataCollection)
 	store := store.NewStore(collection, kafkaProducer, serviceList.GetClock())
 
+	getSingleFile := api.HandleGetFileMetadata(store.GetFileMetadata)
+
 	r.Path("/health").HandlerFunc(hc.Handler)
 	if isPublishing {
 		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload)
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:create", register)).Methods(http.MethodPost)
 		r.Path("/files").HandlerFunc(api.HandlerGetFilesMetadata(store.GetFilesMetadata)).Methods(http.MethodGet)
 		r.Path("/collection/{collectionID}").HandlerFunc(api.HandleMarkCollectionPublished(store.MarkCollectionPublished)).Methods(http.MethodPatch)
-
+		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:retrieve", getSingleFile)).Methods(http.MethodGet)
 		patchRequestHandlers := api.PatchRequestHandlers{
 			UploadComplete:   api.HandleMarkUploadComplete(store.MarkUploadComplete),
 			Published:        api.HandleMarkFilePublished(store.MarkFilePublished),
@@ -73,9 +75,10 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path("/files").HandlerFunc(forbiddenHandler).Methods(http.MethodPost)
 		r.Path(filesURI).HandlerFunc(forbiddenHandler).Methods(http.MethodPatch)
 		r.Path("/collection/{collectionID}").HandlerFunc(forbiddenHandler).Methods(http.MethodPatch)
-	}
 
-	r.Path(filesURI).HandlerFunc(api.HandleGetFileMetadata(store.GetFileMetadata)).Methods(http.MethodGet)
+		// simple scenario - web mode where users are not authenticated - allowed based on publishing status
+		r.Path(filesURI).HandlerFunc(getSingleFile).Methods(http.MethodGet)
+	}
 
 	s := serviceList.GetHTTPServer()
 
