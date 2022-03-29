@@ -52,7 +52,8 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 
 	r.Path("/health").HandlerFunc(hc.Handler)
 	if isPublishing {
-		r.Path("/files").HandlerFunc(api.HandlerRegisterUploadStarted(store.RegisterFileUpload)).Methods(http.MethodPost)
+		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload)
+		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:create", register)).Methods(http.MethodPost)
 		r.Path("/files").HandlerFunc(api.HandlerGetFilesMetadata(store.GetFilesMetadata)).Methods(http.MethodGet)
 		r.Path("/collection/{collectionID}").HandlerFunc(api.HandleMarkCollectionPublished(store.MarkCollectionPublished)).Methods(http.MethodPatch)
 

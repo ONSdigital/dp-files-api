@@ -29,6 +29,7 @@ type FilesApiComponent struct {
 	cg           *kafka.ConsumerGroup
 	msgs         map[string]files.FilePublished
 	isPublishing bool
+	isAuthorised bool
 }
 
 func NewFilesApiComponent() *FilesApiComponent {
@@ -49,7 +50,7 @@ func NewFilesApiComponent() *FilesApiComponent {
 
 func (d *FilesApiComponent) Initialiser() (http.Handler, error) {
 	r := &mux.Router{}
-	d.svcList = &fakeServiceContainer{d.DpHttpServer, r}
+	d.svcList = &fakeServiceContainer{d.DpHttpServer, r, d.isAuthorised}
 	d.svc, _ = service.Run(context.Background(), d.svcList, d.errChan, d.isPublishing, r)
 
 	return d.DpHttpServer.Handler, nil

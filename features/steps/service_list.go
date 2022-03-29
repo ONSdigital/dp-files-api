@@ -3,6 +3,7 @@ package steps
 import (
 	"context"
 	"github.com/gorilla/mux"
+	"net/http"
 	"time"
 
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
@@ -21,14 +22,24 @@ import (
 )
 
 type fakeServiceContainer struct {
-	server *dphttp.Server
-	r      *mux.Router
+	server       *dphttp.Server
+	r            *mux.Router
+	isAuthorised bool
 }
 
 func (e *fakeServiceContainer) GetAuthMiddleware() auth.Middleware {
 	return &authMock.MiddlewareMock{
 		HealthCheckFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		CloseFunc:       func(ctx context.Context) error { return nil },
+		RequireFunc: func(permission string, handlerFunc http.HandlerFunc) http.HandlerFunc {
+			if e.isAuthorised {
+				return handlerFunc
+			} else {
+				return func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusForbidden)
+				}
+			}
+		},
 	}
 }
 

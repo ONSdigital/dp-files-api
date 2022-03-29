@@ -1,6 +1,7 @@
 Feature: Register new file upload
 
   Scenario: Register that an upload has started
+    Given I am an authorised user
     When the file upload is registered with payload:
         """
         {
@@ -29,7 +30,8 @@ Feature: Register new file upload
       | State         | CREATED                                                                   |
 
   Scenario: Attempting to register a file with a path that is already register
-    Given the file upload "images/old-meme.jpg" has been registered
+    Given I am an authorised user
+    And the file upload "images/old-meme.jpg" has been registered
     When the file upload is registered with payload:
         """
         {
@@ -44,3 +46,20 @@ Feature: Register new file upload
         }
         """
     Then the HTTP status code should be "400"
+
+  Scenario: Attempting to register a file with a path that is already register
+    Given I am not an authorised user
+    When the file upload is registered with payload:
+        """
+        {
+          "path": "images/meme.jpg",
+          "is_publishable": true,
+          "collection_id": "1234-asdfg-54321-qwerty",
+          "title": "The latest Meme",
+          "size_in_bytes": 14794,
+          "type": "image/jpeg",
+          "licence": "OGL v3",
+          "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+        }
+        """
+    Then the HTTP status code should be "403"
