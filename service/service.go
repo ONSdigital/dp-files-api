@@ -58,9 +58,9 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		getMultipleFiles := api.HandlerGetFilesMetadata(store.GetFilesMetadata)
 
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:create", register)).Methods(http.MethodPost)
-		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:retrieve", getMultipleFiles)).Methods(http.MethodGet)
+		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:read", getMultipleFiles)).Methods(http.MethodGet)
 		r.Path("/collection/{collectionID}").HandlerFunc(api.HandleMarkCollectionPublished(store.MarkCollectionPublished)).Methods(http.MethodPatch)
-		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:retrieve", getSingleFile)).Methods(http.MethodGet)
+		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:read", getSingleFile)).Methods(http.MethodGet)
 		patchRequestHandlers := api.PatchRequestHandlers{
 			UploadComplete:   api.HandleMarkUploadComplete(store.MarkUploadComplete),
 			Published:        api.HandleMarkFilePublished(store.MarkFilePublished),
