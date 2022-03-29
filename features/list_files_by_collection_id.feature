@@ -1,6 +1,7 @@
 Feature: List Files by Collection ID
 
   Scenario: The one where there are no files in the collection
+    Given I am an authorised user
     When I get files in the collection "1234-asdfg-54321-qwerty"
     Then I should receive the following JSON response with status "200":
     """
@@ -14,6 +15,7 @@ Feature: List Files by Collection ID
   """
 
   Scenario: The one where there are some file in the collection
+    Given I am an authorised user
     Given the file upload "images/meme.jpg" has been completed with:
       | IsPublishable     | true                                                                      |
       | CollectionID      | 1234-asdfg-54321-qwerty                                                   |
@@ -76,3 +78,8 @@ Feature: List Files by Collection ID
   ]
 }
     """
+
+  Scenario: The one where the user is not authorised to view a list of files
+    Given I am not an authorised user
+    When I get files in the collection "1234-asdfg-54321-qwerty"
+    Then the HTTP status code should be "403"
