@@ -2,10 +2,13 @@ package service
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-files-api/config"
-	"github.com/ONSdigital/dp-files-api/store"
 	"net/http"
 	"time"
+
+	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
+
+	"github.com/ONSdigital/dp-files-api/config"
+	"github.com/ONSdigital/dp-files-api/store"
 
 	"github.com/ONSdigital/dp-files-api/health"
 	kafka "github.com/ONSdigital/dp-kafka/v3"
@@ -20,43 +23,33 @@ import (
 
 // Service contains all the configs, server and clients to run the API
 type Service struct {
-	Server        files.HTTPServer
-	Router        *mux.Router
-	ServiceList   ServiceContainer
-	HealthCheck   health.Checker
-	MongoClient   mongo.Client
-	KafkaProducer kafka.IProducer
+	Server         files.HTTPServer
+	Router         *mux.Router
+	ServiceList    ServiceContainer
+	HealthCheck    health.Checker
+	MongoClient    mongo.Client
+	KafkaProducer  kafka.IProducer
+	AuthMiddleware auth.Middleware
 }
 
 var filesURI = "/files/{path:[a-zA-Z0-9_\\.\\-\\/]+}"
 
 // Run the service
-func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error, isPublishing bool) (*Service, error) {
+func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error, isPublishing bool, r *mux.Router) (*Service, error) {
 
 	log.Info(ctx, "running service")
 
-	mongoClient, err := serviceList.GetMongoDB(ctx)
-	if err != nil {
-		log.Error(ctx, "could not obtain mongo session", err)
-		return nil, err
-	}
+	mongoClient := serviceList.GetMongoDB()
 
-	kafkaProducer, err := serviceList.GetKafkaProducer(ctx)
-	if err != nil {
-		log.Error(ctx, "could not obtain kafka connection", err)
-		return nil, err
-	}
+	kafkaProducer := serviceList.GetKafkaProducer()
 
-	hc, err := serviceList.GetHealthCheck()
-	if err != nil {
-		log.Fatal(ctx, "could not instantiate healthcheck", err)
-		return nil, err
-	}
+	hc := serviceList.GetHealthCheck()
+
+	authMiddleware := serviceList.GetAuthMiddleware()
 
 	collection := mongoClient.Collection(config.MetadataCollection)
-	store := store.NewStore(collection, kafkaProducer, serviceList.GetClock(ctx))
+	store := store.NewStore(collection, kafkaProducer, serviceList.GetClock())
 
-	r := mux.NewRouter().StrictSlash(true)
 	r.Path("/health").HandlerFunc(hc.Handler)
 	if isPublishing {
 		r.Path("/files").HandlerFunc(api.HandlerRegisterUploadStarted(store.RegisterFileUpload)).Methods(http.MethodPost)
@@ -83,15 +76,16 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 
 	r.Path(filesURI).HandlerFunc(api.HandleGetFileMetadata(store.GetFileMetadata)).Methods(http.MethodGet)
 
-	s := serviceList.GetHTTPServer(r)
+	s := serviceList.GetHTTPServer()
 
 	svc := &Service{
-		Router:        r,
-		HealthCheck:   hc,
-		ServiceList:   serviceList,
-		Server:        s,
-		MongoClient:   mongoClient,
-		KafkaProducer: kafkaProducer,
+		Router:         r,
+		HealthCheck:    hc,
+		ServiceList:    serviceList,
+		Server:         s,
+		MongoClient:    mongoClient,
+		KafkaProducer:  kafkaProducer,
+		AuthMiddleware: authMiddleware,
 	}
 
 	if err := svc.registerCheckers(ctx, hc, isPublishing); err != nil {
@@ -147,6 +141,11 @@ func (svc *Service) registerCheckers(ctx context.Context, hc health.Checker, isP
 	if err = hc.AddCheck("Mongo DB", svc.MongoClient.Checker); err != nil {
 		hasErrors = true
 		log.Error(ctx, "error adding health for mongo db", err)
+	}
+
+	if err = hc.AddCheck("Authorization Middleware", svc.AuthMiddleware.HealthCheck); err != nil {
+		hasErrors = true
+		log.Error(ctx, "error adding health for authorization middleware", err)
 	}
 
 	if isPublishing {

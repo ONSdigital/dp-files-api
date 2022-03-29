@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/gorilla/mux"
 	"os"
 	"os/signal"
 
@@ -51,12 +52,17 @@ func run(ctx context.Context) error {
 
 	// Run the service, providing an error channel for fatal errors
 	svcErrors := make(chan error, 1)
-	svcList := service.NewServiceList(cfg, BuildTime, GitCommit, Version)
+	r := mux.NewRouter().StrictSlash(true)
 
+	svcList, err := service.NewServiceList(cfg, BuildTime, GitCommit, Version, r)
+	if err != nil {
+		return errors.Wrap(err, "initialising services failed")
+
+	}
 	log.Info(ctx, "dp-files-api version", log.Data{"version": Version})
 
 	// Start service
-	svc, err := service.Run(ctx, svcList, svcErrors, cfg.IsPublishing)
+	svc, err := service.Run(ctx, svcList, svcErrors, cfg.IsPublishing, r)
 	if err != nil {
 		return errors.Wrap(err, "running service failed")
 	}
