@@ -65,7 +65,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 			UploadComplete:   api.HandleMarkUploadComplete(store.MarkUploadComplete),
 			Published:        api.HandleMarkFilePublished(store.MarkFilePublished),
 			Decrypted:        api.HandleMarkFileDecrypted(store.MarkFileDecrypted),
-			CollectionUpdate: api.HandlerUpdateCollectionID(store.UpdateCollectionID),
+			CollectionUpdate: authMiddleware.Require("static-files:update", api.HandlerUpdateCollectionID(store.UpdateCollectionID)),
 		}
 
 		r.Path(filesURI).HandlerFunc(api.PatchRequestToHandler(patchRequestHandlers)).Methods(http.MethodPatch)
