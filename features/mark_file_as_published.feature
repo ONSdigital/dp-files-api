@@ -95,7 +95,7 @@ Feature: Mark single file as published
       | State             | UPLOADED                                                                  |
       | Etag              | 123456789                                                                 |
     When the file "images/meme.jpg" is marked as published
-    Then the HTTP status code should be "403"
+    Then the HTTP status code should be "409"
 
   Scenario: The one where the user is not authorised
     Given I am not an authorised user
