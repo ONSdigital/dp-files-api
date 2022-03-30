@@ -40,7 +40,7 @@ func handleError(w http.ResponseWriter, err error) {
 	case store.ErrNoFilesInCollection:
 		writeError(w, buildErrors(err, "EmptyCollection"), http.StatusNotFound)
 	case store.ErrFileIsNotPublishable:
-		writeError(w, buildErrors(err, "FileNotPublishable"), http.StatusForbidden)
+		writeError(w, buildErrors(err, "FileNotPublishable"), http.StatusConflict)
 	default:
 		writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)
 	}
