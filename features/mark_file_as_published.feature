@@ -97,7 +97,7 @@ Feature: Mark single file as published
     When the file "images/meme.jpg" is marked as published
     Then the HTTP status code should be "409"
 
-  Scenario: The one where the user is not authorised
+  Scenario: The one where the user is not authorised to mark a file as published
     Given I am not an authorised user
     And the file upload "images/meme.jpg" has been completed with:
       | IsPublishable     | true                                                                      |
