@@ -56,11 +56,13 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	if isPublishing {
 		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload)
 		getMultipleFiles := api.HandlerGetFilesMetadata(store.GetFilesMetadata)
+		collectionPublished := api.HandleMarkCollectionPublished(store.MarkCollectionPublished)
 
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:create", register)).Methods(http.MethodPost)
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:read", getMultipleFiles)).Methods(http.MethodGet)
-		r.Path("/collection/{collectionID}").HandlerFunc(api.HandleMarkCollectionPublished(store.MarkCollectionPublished)).Methods(http.MethodPatch)
+		r.Path("/collection/{collectionID}").HandlerFunc(authMiddleware.Require("static-files:update", collectionPublished)).Methods(http.MethodPatch)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:read", getSingleFile)).Methods(http.MethodGet)
+
 		patchRequestHandlers := api.PatchRequestHandlers{
 			UploadComplete:   authMiddleware.Require("static-files:update", api.HandleMarkUploadComplete(store.MarkUploadComplete)),
 			Published:        authMiddleware.Require("static-files:update", api.HandleMarkFilePublished(store.MarkFilePublished)),
