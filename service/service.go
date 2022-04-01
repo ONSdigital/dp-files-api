@@ -32,8 +32,6 @@ type Service struct {
 	AuthMiddleware auth.Middleware
 }
 
-var filesURI = "/files/{path:[a-zA-Z0-9_\\.\\-\\/]+}"
-
 // Run the service
 func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error, isPublishing bool, r *mux.Router) (*Service, error) {
 
@@ -52,7 +50,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 
 	getSingleFile := api.HandleGetFileMetadata(store.GetFileMetadata)
 
-	r.Path("/health").HandlerFunc(hc.Handler)
+	const filesURI = "/files/{path:[a-zA-Z0-9_\\.\\-\\/]+}"
 	if isPublishing {
 		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload)
 		getMultipleFiles := api.HandlerGetFilesMetadata(store.GetFilesMetadata)
@@ -83,6 +81,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		// simple scenario - web mode where users are not authenticated - allowed based on publishing status
 		r.Path(filesURI).HandlerFunc(getSingleFile).Methods(http.MethodGet)
 	}
+	r.Path("/health").HandlerFunc(hc.Handler)
 
 	s := serviceList.GetHTTPServer()
 

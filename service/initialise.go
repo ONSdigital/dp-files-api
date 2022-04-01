@@ -50,6 +50,10 @@ func (e *ExternalServiceList) setup() error {
 		return err
 	}
 
+	if err := e.createAuthMiddleware(); err != nil {
+		return err
+	}
+
 	if err := e.createMongo(); err != nil {
 		return err
 	}
@@ -60,6 +64,23 @@ func (e *ExternalServiceList) setup() error {
 	}
 
 	return nil
+}
+
+func (e *ExternalServiceList) createAuthMiddleware() error {
+	authCfg := &auth.Config{
+		Enabled:                             false,
+		JWTVerificationPublicKeys:           nil,
+		PermissionsAPIURL:                   "",
+		PermissionsCacheUpdateInterval:      0,
+		PermissionsMaxCacheTime:             0,
+		PermissionsCacheExpiryCheckInterval: 0,
+		ZebedeeURL:                          "",
+	}
+	m, err := auth.NewFeatureFlaggedMiddleware(context.Background(), authCfg)
+
+	e.authMiddleware = m
+
+	return err
 }
 
 func (e *ExternalServiceList) createKafkaProducer() error {
