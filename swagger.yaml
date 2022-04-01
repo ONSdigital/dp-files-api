@@ -9,8 +9,15 @@ info:
 
 schemes:
   - http
+host: localhost:26900
+basePath: /
 
-basePath: http://localhost:26900/
+securityDefinitions:
+   Bearer:
+     type: apiKey
+     description: JWT or Zebedee Token
+     name: Authorization
+     in: header
 
 tags:
   - name: "private"
@@ -21,6 +28,8 @@ paths:
       tags:
         - File upload started
       summary: POST's metadata for a file when an upload has started
+      security:
+        - Bearer: []
       produces:
         - application/json
       parameters:
@@ -29,7 +38,24 @@ paths:
         201:
           description: OK
         400:
-          $ref: '#/responses/JsonErrors'
+          $ref: '#/definitions/Error'
+        403:
+          description: Authoristion Failed - Check logs
+        500:
+          $ref: '#/responses/InternalError'
+    get:
+      tags:
+        - File upload started
+      summary: POST's metadata for a file when an upload has started
+      security:
+        - Bearer: []
+      produces:
+        - application/json
+      responses:
+        200:
+          $ref: '#/definitions/MetaDataCollection'
+        403:
+          description: Authoristion Failed - Check logs
         500:
           $ref: '#/responses/InternalError'
 
@@ -38,6 +64,8 @@ paths:
       tags:
         - Patch metadata state
       summary: PATCH metadata state for a file, (i.e. when an upload has completed)
+      security:
+        - Bearer: []
       produces:
         - application/json
       parameters:
@@ -47,7 +75,11 @@ paths:
         201:
           description: OK
         400:
-          $ref: '#/responses/JsonErrors'
+          $ref: '#/definitions/Error'
+        403:
+          description: Authoristion Failed - Check logs
+        409:
+          $ref: '#/definitions/Error'
         500:
           $ref: '#/responses/InternalError'
 
@@ -55,16 +87,19 @@ paths:
       tags:
         - Fetch file metadata
       summary: GET the metadata for a file whose upload has started
+      security:
+        - Bearer: []
       produces:
         - application/json
       parameters:
         - $ref: '#/parameters/file_path'
       responses:
         200:
-          schema:
-            $ref: '#/definitions/MetaData'
+          $ref: '#/definitions/MetaData'
+        403:
+          description: Authoristion Failed - Check logs
         404:
-          $ref: '#/responses/JsonErrors'
+          $ref: '#/definitions/Error'
         500:
           $ref: '#/responses/InternalError'
 
@@ -89,20 +124,9 @@ paths:
 responses:
   InternalError:
     description: "Failed to process the request due to an internal error"
-  JsonErrors:
-    type: object
-    description: "Common error response format"
-    schema:
-      $ref: "#/definitions/Error"
+
 
 definitions:
-  RegisterFileUploadResponse:
-    type: object
-    properties:
-      message:
-        type: string
-        description: "Message returned by hello world endpoint"
-        example: "Hello, world!"
   Health:
     type: object
     properties:
@@ -229,6 +253,31 @@ definitions:
         type: string
         description: "The etag for the file"
         example: "194577a7e20bdcc7afbb718f502c134c"
+  MetaDataCollection:
+    type: object
+    description: "Collection of File metadata"
+    properties:
+      count:
+        type: integer
+        description: "Number of items returned"
+        example: 10
+      limit:
+        type: integer
+        description: "Number of items requested"
+        example: 10
+      offset:
+        type: integer
+        description: "Start point"
+        example: 0
+      total_count:
+        type: integer
+        description: "total number of items available"
+        example: 100
+      items:
+        type: array
+        items:
+          $ref: "#/definitions/MetaData"
+
   MetaData:
     type: object
     description: "File metadata"
@@ -298,6 +347,7 @@ parameters:
       $ref: '#/definitions/NewFileUpload'
 
   file_path:
+    type: string
     name: filepath
     in: path
     required: true
