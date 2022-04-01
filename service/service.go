@@ -50,7 +50,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 
 	getSingleFile := api.HandleGetFileMetadata(store.GetFileMetadata)
 
-	const filesURI = "/files/{path:[a-zA-Z0-9_\\.\\-\\/]+}"
+	const filesURI = "/files/{path:.*}"
 	if isPublishing {
 		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload)
 		getMultipleFiles := api.HandlerGetFilesMetadata(store.GetFilesMetadata)
