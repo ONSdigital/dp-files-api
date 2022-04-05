@@ -5,13 +5,13 @@ go 1.17
 replace github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
 
 require (
-	github.com/ONSdigital/dp-authorisation/v2 v2.16.0
+	github.com/ONSdigital/dp-authorisation/v2 v2.17.0
 	github.com/ONSdigital/dp-component-test v0.6.3
 	github.com/ONSdigital/dp-healthcheck v1.2.3
 	github.com/ONSdigital/dp-kafka/v3 v3.1.1
 	github.com/ONSdigital/dp-mongodb/v3 v3.0.0-beta.9
 	github.com/ONSdigital/dp-net/v2 v2.2.0-beta
-	github.com/ONSdigital/log.go/v2 v2.0.9
+	github.com/ONSdigital/log.go/v2 v2.1.0
 	github.com/cucumber/godog v0.12.2
 	github.com/gorilla/mux v1.8.0
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -43,7 +43,7 @@ require (
 )
 
 require (
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.4.7 // indirect
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.92.2 // indirect
 	github.com/ONSdigital/dp-mongodb-in-memory v1.1.0 // indirect
 	github.com/cucumber/gherkin-go/v19 v19.0.3 // indirect
 	github.com/cucumber/messages-go/v16 v16.0.1
@@ -84,7 +84,7 @@ require (
 	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/leodido/go-urn v1.2.1 // indirect
 	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3 // indirect
-	golang.org/x/net v0.0.0-20220105145211-5b0dc2dfae98 // indirect
-	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
+	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
+	golang.org/x/sys v0.0.0-20220204135822-1c1b9b1eba6a // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 )
