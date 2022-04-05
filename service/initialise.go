@@ -67,16 +67,19 @@ func (e *ExternalServiceList) setup() error {
 }
 
 func (e *ExternalServiceList) createAuthMiddleware() error {
-	authCfg := &auth.Config{
-		Enabled:                             false,
-		JWTVerificationPublicKeys:           nil,
-		PermissionsAPIURL:                   "",
-		PermissionsCacheUpdateInterval:      0,
-		PermissionsMaxCacheTime:             0,
-		PermissionsCacheExpiryCheckInterval: 0,
-		ZebedeeURL:                          "",
-	}
-	m, err := auth.NewFeatureFlaggedMiddleware(context.Background(), authCfg)
+	//authCfg := &auth.Config{
+	//	Enabled:                             false,
+	//	JWTVerificationPublicKeys:           nil,
+	//	PermissionsAPIURL:                   "",
+	//	PermissionsCacheUpdateInterval:      0,
+	//	PermissionsMaxCacheTime:             0,
+	//	PermissionsCacheExpiryCheckInterval: 0,
+	//	ZebedeeURL:                          "",
+	//}
+	authCfg := auth.NewDefaultConfig()
+	authCfg.PermissionsAPIURL = e.cfg.PermissionsAPIURL
+	authCfg.ZebedeeURL = e.cfg.ZebedeeURL
+	m, err := auth.NewFeatureFlaggedMiddleware(context.Background(), authCfg, nil)
 
 	e.authMiddleware = m
 
