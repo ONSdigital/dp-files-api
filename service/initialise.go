@@ -8,6 +8,7 @@ import (
 	dphttp "github.com/ONSdigital/dp-net/v2/http"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
+	"time"
 
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 
@@ -67,18 +68,15 @@ func (e *ExternalServiceList) setup() error {
 }
 
 func (e *ExternalServiceList) createAuthMiddleware() error {
-	//authCfg := &auth.Config{
-	//	Enabled:                             false,
-	//	JWTVerificationPublicKeys:           nil,
-	//	PermissionsAPIURL:                   "",
-	//	PermissionsCacheUpdateInterval:      0,
-	//	PermissionsMaxCacheTime:             0,
-	//	PermissionsCacheExpiryCheckInterval: 0,
-	//	ZebedeeURL:                          "",
-	//}
-	authCfg := auth.NewDefaultConfig()
-	authCfg.PermissionsAPIURL = e.cfg.PermissionsAPIURL
-	authCfg.ZebedeeURL = e.cfg.ZebedeeURL
+	authCfg := &auth.Config{
+		Enabled:                             true,
+		PermissionsAPIURL:                   e.cfg.PermissionsAPIURL,
+		PermissionsCacheUpdateInterval:      time.Minute * 5,
+		PermissionsMaxCacheTime:             time.Minute * 15,
+		PermissionsCacheExpiryCheckInterval: time.Second * 10,
+		IdentityClientMaxRetries:            2,
+		ZebedeeURL:                          e.cfg.ZebedeeURL,
+	}
 	m, err := auth.NewFeatureFlaggedMiddleware(context.Background(), authCfg, nil)
 
 	e.authMiddleware = m
