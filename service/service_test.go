@@ -67,10 +67,11 @@ func TestClose(t *testing.T) {
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 3)
+			assert.Len(t, registerHealthChecks, 4)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
 			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
-			assert.Equal(t, registerHealthChecks[2].Name, "Kafka Producer")
+			assert.Equal(t, registerHealthChecks[2].Name, "jwt keys state health check")
+			assert.Equal(t, registerHealthChecks[3].Name, "Kafka Producer")
 			assert.NoError(t, svc.Close(ctx, 2*time.Second))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})
@@ -80,10 +81,11 @@ func TestClose(t *testing.T) {
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 3)
+			assert.Len(t, registerHealthChecks, 4)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
 			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
-			assert.Equal(t, registerHealthChecks[2].Name, "Kafka Producer")
+			assert.Equal(t, registerHealthChecks[2].Name, "jwt keys state health check")
+			assert.Equal(t, registerHealthChecks[3].Name, "Kafka Producer")
 			assert.Error(t, svc.Close(ctx, 2*time.Second))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})
@@ -96,10 +98,11 @@ func TestClose(t *testing.T) {
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 3)
+			assert.Len(t, registerHealthChecks, 4)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
 			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
-			assert.Equal(t, registerHealthChecks[2].Name, "Kafka Producer")
+			assert.Equal(t, registerHealthChecks[2].Name, "jwt keys state health check")
+			assert.Equal(t, registerHealthChecks[3].Name, "Kafka Producer")
 			assert.Error(t, svc.Close(ctx, 100*time.Millisecond))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})
@@ -139,9 +142,11 @@ func TestClose(t *testing.T) {
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 2)
+			assert.Len(t, registerHealthChecks, 3)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
 			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
+			assert.Equal(t, registerHealthChecks[2].Name, "jwt keys state health check")
+
 			assert.NoError(t, svc.Close(ctx, 2*time.Second))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})
@@ -151,9 +156,11 @@ func TestClose(t *testing.T) {
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 2)
+			assert.Len(t, registerHealthChecks, 3)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
 			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
+			assert.Equal(t, registerHealthChecks[2].Name, "jwt keys state health check")
+
 			assert.Error(t, svc.Close(ctx, 2*time.Second))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})
@@ -166,9 +173,11 @@ func TestClose(t *testing.T) {
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 2)
+			assert.Len(t, registerHealthChecks, 3)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
 			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
+			assert.Equal(t, registerHealthChecks[2].Name, "jwt keys state health check")
+
 			assert.Error(t, svc.Close(ctx, 100*time.Millisecond))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})
