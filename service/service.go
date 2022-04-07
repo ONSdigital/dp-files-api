@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -57,7 +56,6 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		getMultipleFiles := api.HandlerGetFilesMetadata(store.GetFilesMetadata)
 		collectionPublished := api.HandleMarkCollectionPublished(store.MarkCollectionPublished)
 
-		fmt.Println("DEBUG:")
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:create", register)).Methods(http.MethodPost)
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:read", getMultipleFiles)).Methods(http.MethodGet)
 		r.Path("/collection/{collectionID}").HandlerFunc(authMiddleware.Require("static-files:update", collectionPublished)).Methods(http.MethodPatch)
@@ -155,6 +153,11 @@ func (svc *Service) registerCheckers(ctx context.Context, hc health.Checker, isP
 	if err = hc.AddCheck("Authorization Middleware", svc.AuthMiddleware.HealthCheck); err != nil {
 		hasErrors = true
 		log.Error(ctx, "error adding health for authorization middleware", err)
+	}
+
+	if err := hc.AddCheck("jwt keys state health check", svc.AuthMiddleware.IdentityHealthCheck); err != nil {
+		hasErrors = true
+		log.Error(ctx, "error getting jwt keys from identity service", err)
 	}
 
 	if isPublishing {
