@@ -29,8 +29,9 @@ type fakeServiceContainer struct {
 
 func (e *fakeServiceContainer) GetAuthMiddleware() auth.Middleware {
 	return &authMock.MiddlewareMock{
-		HealthCheckFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-		CloseFunc:       func(ctx context.Context) error { return nil },
+		HealthCheckFunc:         func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+		CloseFunc:               func(ctx context.Context) error { return nil },
+		IdentityHealthCheckFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		RequireFunc: func(permission string, handlerFunc http.HandlerFunc) http.HandlerFunc {
 			if e.isAuthorised {
 				return handlerFunc
