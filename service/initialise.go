@@ -71,6 +71,7 @@ func (e *ExternalServiceList) createAuthMiddleware() error {
 	authCfg := &auth.Config{
 		Enabled:                             true,
 		PermissionsAPIURL:                   e.cfg.PermissionsAPIURL,
+		IdentityWebKeySetURL:                e.cfg.IdentityAPIURL,
 		PermissionsCacheUpdateInterval:      time.Minute * 5,
 		PermissionsMaxCacheTime:             time.Minute * 15,
 		PermissionsCacheExpiryCheckInterval: time.Second * 10,
