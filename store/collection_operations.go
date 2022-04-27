@@ -68,14 +68,15 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 		return ErrFileNotInUploadedState
 	}
 
+	now := store.clock.GetCurrentTime()
 	_, err = store.mongoCollection.UpdateMany(
 		ctx,
 		bson.M{fieldCollectionID: collectionID},
 		bson.D{
 			{"$set", bson.D{
 				{fieldState, StatePublished},
-				{fieldLastModified, store.clock.GetCurrentTime()},
-				{fieldPublishedAt, store.clock.GetCurrentTime()}}},
+				{fieldLastModified, now},
+				{fieldPublishedAt, now}}},
 		})
 	if err != nil {
 		log.Error(ctx, fmt.Sprintf("failed to change files to %s state", StatePublished), err, logdata)

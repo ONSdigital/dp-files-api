@@ -83,14 +83,15 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 		return ErrFileIsNotPublishable
 	}
 
+	now := store.clock.GetCurrentTime()
 	_, err := store.mongoCollection.Update(
 		ctx,
 		bson.M{fieldPath: path},
 		bson.D{
 			{"$set", bson.D{
 				{fieldState, StatePublished},
-				{fieldLastModified, store.clock.GetCurrentTime()},
-				{fieldPublishedAt, store.clock.GetCurrentTime()}}},
+				{fieldLastModified, now},
+				{fieldPublishedAt, now}}},
 		})
 	if err != nil {
 		return err
@@ -123,6 +124,7 @@ func (store *Store) updateStatus(ctx context.Context, path, etag, toState, expec
 		return ErrFileNotInPublishedState
 	}
 
+	now := store.clock.GetCurrentTime()
 	_, err := store.mongoCollection.Update(
 		ctx,
 		bson.M{fieldPath: path},
@@ -130,8 +132,8 @@ func (store *Store) updateStatus(ctx context.Context, path, etag, toState, expec
 			{"$set", bson.D{
 				{fieldEtag, etag},
 				{fieldState, toState},
-				{fieldLastModified, store.clock.GetCurrentTime()},
-				{timestampField, store.clock.GetCurrentTime()}}},
+				{fieldLastModified, now},
+				{timestampField, now}}},
 		})
 
 	return err
