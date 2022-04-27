@@ -4,36 +4,33 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
-
 	"github.com/ONSdigital/dp-files-api/files"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/ONSdigital/log.go/v2/log"
 	"go.mongodb.org/mongo-driver/bson"
+	"strconv"
 )
 
 func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID string) error {
 	metadata := files.StoredRegisteredMetaData{}
-	err := store.mongoCollection.FindOne(ctx, bson.M{"path": path}, &metadata)
-	if err != nil {
+	logdata := log.Data{"path": path}
+
+	if err := store.mongoCollection.FindOne(ctx, bson.M{"path": path}, &metadata); err != nil {
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
-			log.Error(ctx, "update collection ID: attempted to operate on unregistered file", err, log.Data{"path": path})
+			log.Error(ctx, "update collection ID: attempted to operate on unregistered file", err, logdata)
 			return ErrFileNotRegistered
 		}
-		log.Error(ctx, "failed finding metadata to update collection ID", err, log.Data{"path": path})
+		log.Error(ctx, "failed finding metadata to update collection ID", err, logdata)
 		return err
 	}
 
 	if metadata.CollectionID != nil {
-		err := ErrCollectionIDAlreadySet
-		log.Error(
-			ctx, "update collection ID: collection ID already set",
-			err, log.Data{"path": path, "collection_id": *metadata.CollectionID},
-		)
-		return err
+		logdata["collection_id"] = *metadata.CollectionID
+		log.Error(ctx, "update collection ID: collection ID already set", ErrCollectionIDAlreadySet, logdata)
+		return ErrCollectionIDAlreadySet
 	}
 
-	_, err = store.mongoCollection.Update(
+	_, err := store.mongoCollection.Update(
 		ctx,
 		bson.M{"path": path},
 		bson.D{
@@ -46,21 +43,22 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 }
 
 func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID string) error {
-	count, err := store.mongoCollection.Count(ctx, bson.M{"collection_id": collectionID})
+	count, err := store.mongoCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
+	logdata := log.Data{"collection_id": collectionID}
 	if err != nil {
-		log.Error(ctx, "failed to count files collection", err, log.Data{"collection_id": collectionID})
+		log.Error(ctx, "failed to count files collection", err, logdata)
 		return err
 	}
 
 	if count == 0 {
-		log.Info(ctx, "no files found in collection", log.Data{"collection_id": collectionID})
+		log.Info(ctx, "no files found in collection", logdata)
 		return ErrNoFilesInCollection
 	}
 
 	count, err = store.mongoCollection.Count(ctx, createCollectionContainsNotUploadedFilesQuery(collectionID))
 
 	if err != nil {
-		log.Error(ctx, "failed to count unpublishable files", err, log.Data{"collection_id": collectionID})
+		log.Error(ctx, "failed to count unpublishable files", err, logdata)
 		return err
 	}
 
@@ -72,39 +70,27 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 
 	_, err = store.mongoCollection.UpdateMany(
 		ctx,
-		bson.M{"collection_id": collectionID},
+		bson.M{fieldCollectionID: collectionID},
 		bson.D{
 			{"$set", bson.D{
-				{"state", StatePublished},
-				{"last_modified", store.clock.GetCurrentTime()},
-				{"published_at", store.clock.GetCurrentTime()}}},
+				{fieldState, StatePublished},
+				{fieldLastModified, store.clock.GetCurrentTime()},
+				{fieldPublishedAt, store.clock.GetCurrentTime()}}},
 		})
-
 	if err != nil {
-		event := fmt.Sprintf("failed to change files to %s state", StatePublished)
-		log.Error(ctx, event, err, log.Data{"collection_id": collectionID})
+		log.Error(ctx, fmt.Sprintf("failed to change files to %s state", StatePublished), err, logdata)
 		return err
 	}
 
 	col := make([]files.StoredRegisteredMetaData, 0)
-	_, err = store.mongoCollection.Find(ctx, bson.M{"collection_id": collectionID}, &col)
-
-	if err != nil {
+	if _, err := store.mongoCollection.Find(ctx, bson.M{fieldCollectionID: collectionID}, &col); err != nil {
 		return err
 	}
 
 	for _, m := range col {
-		err = store.kafka.Send(files.AvroSchema, &files.FilePublished{
-			Path:        m.Path,
-			Etag:        m.Etag,
-			Type:        m.Type,
-			SizeInBytes: strconv.FormatUint(m.SizeInBytes, 10),
-		})
-
-		if err != nil {
-			logdata := log.Data{}
-			logdata["metadata"] = m
-			log.Error(ctx, "sending published message to kafka", err, logdata)
+		fp := &files.FilePublished{m.Path, m.Type, m.Etag, strconv.FormatUint(m.SizeInBytes, 10)}
+		if err := store.kafka.Send(files.AvroSchema, fp); err != nil {
+			log.Error(ctx, "sending published message to kafka", err, log.Data{"metadata": m})
 		}
 	}
 

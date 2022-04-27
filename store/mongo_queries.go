@@ -6,7 +6,7 @@ import (
 
 func createCollectionContainsNotUploadedFilesQuery(collectionID string) bson.M {
 	return bson.M{"$and": []bson.M{
-		{"collection_id": collectionID},
-		{"state": bson.M{"$ne": StateUploaded}},
+		{fieldCollectionID: collectionID},
+		{fieldState: bson.M{"$ne": StateUploaded}},
 	}}
 }

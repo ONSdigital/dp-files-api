@@ -31,14 +31,12 @@ func HandlerRegisterUploadStarted(register RegisterFileUpload) http.HandlerFunc 
 			return
 		}
 
-		err = validateRegisterMetadata(rm)
-		if err != nil {
+		if err := validateRegisterMetadata(rm); err != nil {
 			handleError(w, err)
 			return
 		}
 
-		err = register(req.Context(), generateStoredRegisterMetaData(rm))
-		if err != nil {
+		if err := register(req.Context(), generateStoredRegisterMetaData(rm)); err != nil {
 			handleError(w, err)
 			return
 		}
@@ -50,14 +48,12 @@ func HandlerRegisterUploadStarted(register RegisterFileUpload) http.HandlerFunc 
 func validateRegisterMetadata(rm RegisterMetadata) error {
 	validate := validator.New()
 	validate.RegisterValidation("aws-upload-key", awsUploadKeyValidator)
-	err := validate.Struct(rm)
-	return err
+	return validate.Struct(rm)
 }
 
 func getRegisterMetadataFromRequest(req *http.Request) (RegisterMetadata, error) {
 	rm := RegisterMetadata{}
-	err := json.NewDecoder(req.Body).Decode(&rm)
-	return rm, err
+	return rm, json.NewDecoder(req.Body).Decode(&rm)
 }
 
 func generateStoredRegisterMetaData(m RegisterMetadata) files.StoredRegisteredMetaData {

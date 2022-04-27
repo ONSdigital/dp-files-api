@@ -15,6 +15,7 @@ func HandleMarkCollectionPublished(markCollectionPublished MarkCollectionPublish
 
 		if err := markCollectionPublished(req.Context(), collectionID); err != nil {
 			handleError(w, err)
+			return
 		}
 
 		w.WriteHeader(http.StatusCreated)
