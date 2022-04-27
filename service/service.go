@@ -38,15 +38,10 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	log.Info(ctx, "running service")
 
 	mongoClient := serviceList.GetMongoDB()
-
 	kafkaProducer := serviceList.GetKafkaProducer()
-
 	hc := serviceList.GetHealthCheck()
-
 	authMiddleware := serviceList.GetAuthMiddleware()
-
-	collection := mongoClient.Collection(config.MetadataCollection)
-	store := store.NewStore(collection, kafkaProducer, serviceList.GetClock())
+	store := store.NewStore(mongoClient.Collection(config.MetadataCollection), kafkaProducer, serviceList.GetClock())
 
 	getSingleFile := api.HandleGetFileMetadata(store.GetFileMetadata)
 

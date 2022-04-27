@@ -22,6 +22,7 @@ func HandleMarkFileDecrypted(markDecryptionComplete MarkDecryptionComplete) http
 
 		if err := markDecryptionComplete(req.Context(), generateFileEtagChange(m, mux.Vars(req)["path"])); err != nil {
 			handleError(w, err)
+			return
 		}
 
 		w.WriteHeader(http.StatusCreated)
