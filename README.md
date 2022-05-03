@@ -55,7 +55,7 @@ Additional data about the file is store in the database but not exposed via the 
 
 ### File States
 
-| Field     | Description                                                                                                                 |
+| State     | Description                                                                                                                 |
 |-----------|-----------------------------------------------------------------------------------------------------------------------------|
 | CREATED   | File upload has started and the metadata has been provide to this API                                                       |
 | UPLOADED  | File upload has been completed. The etag for the final file has been provided                                               |
