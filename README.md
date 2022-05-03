@@ -12,10 +12,10 @@ moved to UPLOADED.
 Any service interesting in the metadata or the state of a file can just the GET endpoints. A single files metadata can
 be retrieved by its path or all files in a collection can be retrieved by ID.
 
-The [Download Service](https://github.com/ONSdigital/dp-download-service) used this API to see whether a file exists and
+The [Download Service](https://github.com/ONSdigital/dp-download-service) uses this API to see whether a file exists and
 what state it is in before attempting to serve the file to consumers wishing to access the file.
 
-When a file is published this API send a message via Kafka to the [Static File Publisher](https://github.com/ONSdigital/dp-static-file-publisher)
+When a file is published this API sends a message via Kafka to the [Static File Publisher](https://github.com/ONSdigital/dp-static-file-publisher)
 that permanently decrypts the file and inform this API that the file is now decrypted via an HTTP call.
 
 ### REST API
@@ -23,7 +23,7 @@ that permanently decrypts the file and inform this API that the file is now decr
 The api is fully documented in [Swagger Docs](swagger.yaml)
 
 **Note:** When using PATCH calls to modify the file metadata you can either send a `collection_id` to set the collection_id on a file
-where it is not already sent or change the state of a file.
+where it is not already sent or change the `state` of a file.
 
 ### Metadata
 
