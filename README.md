@@ -27,22 +27,22 @@ where it is not already sent or change the `state` of a file.
 
 ### Metadata
 
-| Field          | Notes                                                                                                      |
-|----------------|------------------------------------------------------------------------------------------------------------|
-| path           |                                                                                                            |
-| is_publishable | This field currently is ignored and has no affect, the file will be published if a publish update is sent! |
-| collection_id  | Optional during upload, must be set for the file to be published                                           |
-| title          | Optional                                                                                                   |
-| size_in_bytes  |                                                                                                            |
-| type           |                                                                                                            |
-| licence        |                                                                                                            |
-| licence_url    |                                                                                                            |
-| state          |                                                                                                            |
-| etag           |                                                                                                            |
+| Field          | Notes                                                                                                          |
+|----------------|----------------------------------------------------------------------------------------------------------------|
+| path           | The identifier of a file that is stored. Globally unique, and forms part of the bucket/object name when stored |
+| is_publishable | This field currently is ignored and has no affect, the file will be published if a publish update is sent!     |
+| collection_id  | Optional during upload, must be set for the file to be published                                               |
+| title          | Optional                                                                                                       |
+| size_in_bytes  | The size of the file (unencrypted)                                                                             |
+| type           | mimetype of the file, e.g. "text/csv", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"     |
+| licence        | Freetext name of the licence under which the file is made available                                            |
+| licence_url    | URL to the license                                                                                             |
+| state          | State of the file - CREATED, UPLOADED, PUBLISHED, DECRYPTED                                                    |
+| etag           | Cyrptographic hash of the file content                                                                         |
 
 #### Additional Metadata
 
-Additional data about the file is store in the database but not exposed via the API. Those fields are: 
+Additional timestamp data about the file is stored in the database but not exposed via the API. Those fields are: 
 
 | Field               |
 |---------------------|
@@ -61,6 +61,22 @@ Additional data about the file is store in the database but not exposed via the 
 | UPLOADED  | File upload has been completed. The etag for the final file has been provided                                               |
 | PUBLISHED | The file has been published (it is available to the public, but is not yet permently decrypted)                             |
 | DECRYPTED | The file has been permanently decrypted and moved to the public bucket for storage. The public files etag has been provided |
+
+```
+
+
+ Start     ┌──────────────┐ File      ┌──────────────┐ File       ┌───────────────┐ File       ┌───────────────┐
+ Upload    │              │ Uploaded  │              │ Published  │               │ Decrypted  │               │
+      ────►│   CREATED    ├──────────►│   UPLOADED   ├───────────►│   PUBLISHED   ├───────────►│   DECRYPTED   │
+           │              │           │              │            │               │            │               │
+           └──────────────┘           └──────────────┘            └───────────────┘            └───────────────┘
+             File is in a               File is ready               File is available           File is available
+             unusable                   for review &                for public download         for public download
+             state                      approval                    The stored encrypted        directly from S3
+             Can resume upoad           Can be pre-viewed           version is decrypted        where it is stored
+                                                                    on-demand                   unencrypted
+
+```
 
 ## Getting started
 
