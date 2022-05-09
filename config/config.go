@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	"time"
 
 	"github.com/ONSdigital/dp-mongodb/v3/mongodb"
@@ -9,6 +10,7 @@ import (
 )
 
 type MongoConfig = mongodb.MongoDriverConfig
+type AuthConfig = authorisation.Config
 
 // Config represents service configuration for dp-files-api
 type Config struct {
@@ -17,11 +19,9 @@ type Config struct {
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
 	IsPublishing               bool          `envconfig:"IS_PUBLISHING"`
-	PermissionsAPIURL          string        `envconfig:"PERMISSIONS_API_URL"`
-	IdentityAPIURL             string        `envconfig:"IDENTITY_API_URL"`
-	ZebedeeURL                 string        `envconfig:"ZEBEDEE_URL"`
 	MongoConfig
 	KafkaConfig
+	AuthConfig
 }
 
 // KafkaConfig contains the config required to connect to Kafka
@@ -55,9 +55,6 @@ func Get() (*Config, error) {
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
 		IsPublishing:               false,
-		PermissionsAPIURL:          "http://localhost:25400",
-		IdentityAPIURL:             "http://localhost:25600",
-		ZebedeeURL:                 "http://localhost:8082",
 		MongoConfig: MongoConfig{
 			ClusterEndpoint:               "localhost:27017",
 			Database:                      "files",
@@ -81,6 +78,16 @@ func Get() (*Config, error) {
 			SecClientCert:             "",
 			SecSkipVerify:             false,
 			StaticFilePublishedTopic:  "static-file-published-v2",
+		},
+		AuthConfig: AuthConfig{
+				Enabled:                             true,
+				PermissionsAPIURL:                   "http://localhost:25400",
+				IdentityWebKeySetURL:                "http://localhost:25600",
+				PermissionsCacheUpdateInterval:      time.Minute * 5,
+				PermissionsMaxCacheTime:             time.Minute * 15,
+				PermissionsCacheExpiryCheckInterval: time.Second * 10,
+				IdentityClientMaxRetries:            2,
+				ZebedeeURL:                          "http://localhost:8082",
 		},
 	}
 

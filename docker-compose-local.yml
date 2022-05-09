@@ -8,10 +8,11 @@ services:
     ports:
       - "26900:26900"
     environment:
-      BIND_ADDR: ':'
+      BIND_ADDR: ':26900'
       GRACEFUL_SHUTDOWN_TIMEOUT: '30s'
       HEALTHCHECK_INTERVAL: '5s'
       HEALTHCHECK_CRITICAL_TIMEOUT: '30s'
+      AUTHORISATION_ENABLED: 'false'
       MONGODB_USERNAME: 'tester'
       MONGODB_PASSWORD: 'testing'
       MONGODB_BIND_ADDR: 'mongo'
