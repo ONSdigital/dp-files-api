@@ -65,12 +65,10 @@ func (e *ExternalServiceList) setup() error {
 	return nil
 }
 
-func (e *ExternalServiceList) createAuthMiddleware() error {
-	m, err := auth.NewFeatureFlaggedMiddleware(context.Background(), &e.cfg.AuthConfig, nil)
+func (e *ExternalServiceList) createAuthMiddleware() (err error)  {
+	e.authMiddleware, err = auth.NewFeatureFlaggedMiddleware(context.Background(), &e.cfg.AuthConfig, nil)
 
-	e.authMiddleware = m
-
-	return err
+	return
 }
 
 func (e *ExternalServiceList) createKafkaProducer() error {
@@ -113,10 +111,9 @@ func (e *ExternalServiceList) createHttpServer() {
 	e.httpServer = s
 }
 
-func (e *ExternalServiceList) createMongo() error {
-	var err error
+func (e *ExternalServiceList) createMongo() (err error) {
 	e.mongo, err = mongo.New(e.cfg.MongoConfig)
-	return err
+	return
 }
 
 func (e *ExternalServiceList) createHealthCheck() error {

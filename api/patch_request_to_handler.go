@@ -26,13 +26,12 @@ type StateMetadata struct {
 func PatchRequestToHandler(handlers PatchRequestHandlers) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		stateMetaData, err := getStateMetadataFromRequest(req)
-
 		if err != nil {
 			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
 			return
 		}
 
-		if stateMetaData.CollectionID != nil && stateMetaData.State == nil {
+		if isCollectionIDUpdate(stateMetaData) {
 			handlers.CollectionUpdate.ServeHTTP(w, req)
 			return
 		}
@@ -49,6 +48,10 @@ func PatchRequestToHandler(handlers PatchRequestHandlers) http.HandlerFunc {
 			writeError(w, buildErrors(errors.New("invalid state change"), "InvalidStateChange"), http.StatusBadRequest)
 		}
 	}
+}
+
+func isCollectionIDUpdate(stateMetaData StateMetadata) bool {
+	return stateMetaData.CollectionID != nil && stateMetaData.State == nil
 }
 
 func getStateMetadataFromRequest(req *http.Request) (StateMetadata, error) {

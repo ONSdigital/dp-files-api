@@ -13,7 +13,7 @@ import (
 func (store *Store) GetFileMetadata(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 	metadata := files.StoredRegisteredMetaData{}
 
-	err := store.mongoCollection.FindOne(ctx, bson.M{"path": path}, &metadata)
+	err := store.mongoCollection.FindOne(ctx, bson.M{fieldPath: path}, &metadata)
 	if err != nil && errors.Is(err, mongodriver.ErrNoDocumentFound) {
 		log.Error(ctx, "file metadata not found", err, log.Data{"path": path})
 		return metadata, ErrFileNotRegistered
@@ -24,7 +24,7 @@ func (store *Store) GetFileMetadata(ctx context.Context, path string) (files.Sto
 
 func (store *Store) GetFilesMetadata(ctx context.Context, collectionID string) ([]files.StoredRegisteredMetaData, error) {
 	files := make([]files.StoredRegisteredMetaData, 0)
-	_, err := store.mongoCollection.Find(ctx, bson.M{"collection_id": collectionID}, &files)
+	_, err := store.mongoCollection.Find(ctx, bson.M{fieldCollectionID: collectionID}, &files)
 
 	return files, err
 }

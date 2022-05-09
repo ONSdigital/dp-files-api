@@ -11,11 +11,9 @@ type MarkFilePublished func(ctx context.Context, path string) error
 
 func HandleMarkFilePublished(markFilePublished MarkFilePublished) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-
-		path := mux.Vars(req)["path"]
-
-		if err := markFilePublished(req.Context(), path); err != nil {
+		if err := markFilePublished(req.Context(), mux.Vars(req)["path"]); err != nil {
 			handleError(w, err)
+			return
 		}
 		w.WriteHeader(http.StatusOK)
 	}

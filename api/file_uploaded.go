@@ -3,11 +3,11 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"github.com/gorilla/mux"
 	"net/http"
 
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/go-playground/validator"
-	"github.com/gorilla/mux"
 )
 
 type MarkUploadComplete func(ctx context.Context, metaData files.FileEtagChange) error
@@ -25,9 +25,9 @@ func HandleMarkUploadComplete(markUploaded MarkUploadComplete) http.HandlerFunc 
 			return
 		}
 
-		err = markUploaded(req.Context(), generateFileEtagChange(ec, mux.Vars(req)["path"]))
-		if err != nil {
+		if err := markUploaded(req.Context(), generateFileEtagChange(ec, mux.Vars(req)["path"])); err != nil {
 			handleError(w, err)
+			return
 		}
 
 		w.WriteHeader(http.StatusOK)

@@ -28,11 +28,9 @@ func HandlerGetFilesMetadata(getFilesMetadata GetFilesMetadata) http.HandlerFunc
 		}
 
 		fc := filesCollectionFromMetadata(fm)
-		err = respondWithFilesCollectionJSON(w, fc)
-		if err != nil {
+		if err := respondWithFilesCollectionJSON(w, fc); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
-
 	}
 }
 

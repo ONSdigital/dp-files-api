@@ -9,8 +9,5 @@ type EtagChange struct {
 }
 
 func generateFileEtagChange(m EtagChange, path string) files.FileEtagChange {
-	return files.FileEtagChange{
-		Path: path,
-		Etag: m.Etag,
-	}
+	return files.FileEtagChange{path, m.Etag}
 }
