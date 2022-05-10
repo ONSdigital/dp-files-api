@@ -145,17 +145,17 @@ func (svc *Service) registerCheckers(ctx context.Context, hc health.Checker, isP
 		log.Error(ctx, "error adding health for mongo db", err)
 	}
 
-	if err = hc.AddCheck("Authorization Middleware", svc.AuthMiddleware.HealthCheck); err != nil {
-		hasErrors = true
-		log.Error(ctx, "error adding health for authorization middleware", err)
-	}
-
-	if err := hc.AddCheck("jwt keys state health check", svc.AuthMiddleware.IdentityHealthCheck); err != nil {
-		hasErrors = true
-		log.Error(ctx, "error getting jwt keys from identity service", err)
-	}
-
 	if isPublishing {
+		if err = hc.AddCheck("Authorization Middleware", svc.AuthMiddleware.HealthCheck); err != nil {
+			hasErrors = true
+			log.Error(ctx, "error adding health for authorization middleware", err)
+		}
+
+		if err := hc.AddCheck("jwt keys state health check", svc.AuthMiddleware.IdentityHealthCheck); err != nil {
+			hasErrors = true
+			log.Error(ctx, "error getting jwt keys from identity service", err)
+		}
+
 		if err = hc.AddCheck("Kafka Producer", svc.KafkaProducer.Checker); err != nil {
 			hasErrors = true
 			log.Error(ctx, "error adding health for kafka producer", err)
