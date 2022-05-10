@@ -105,6 +105,18 @@ Additional data about the file is store in the database but not exposed via the 
 | MONGODB_CERT_CHAIN           |                          |                                                                                                                    |
 | MONGODB_REAL_HOSTNAME        |                          |                                                                                                                    |
 
+
+## API Client
+
+There is an [API Client](https://github.com/ONSdigital/dp-api-clients-go/tree/main/files) for the File API this is part 
+of [dp-api-clients-go](https://github.com/ONSdigital/dp-api-clients-go) package.
+
+The Files Client provides functions that enables:
+
+  - Setting the Collection ID of existing file
+  - Publish all Files in a Collection
+  - Get the details of a single file
+
 ## Contributing
 
 See [CONTRIBUTING](CONTRIBUTING.md) for details.
