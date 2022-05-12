@@ -1,0 +1,362 @@
+swagger: "2.0"
+info:
+  title: "dp-files-api"
+  description: "Digital Publishing API for handling file metadata"
+  version: 1.0.0
+  license:
+    name: "Open Government Licence v3.0"
+    url: "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+
+schemes:
+  - http
+host: localhost:26900
+basePath: /
+
+securityDefinitions:
+   Bearer:
+     type: apiKey
+     description: JWT or Zebedee Token
+     name: Authorization
+     in: header
+
+tags:
+  - name: "private"
+
+paths:
+  /files:
+    post:
+      tags:
+        - File upload started
+      summary: POST's metadata for a file when an upload has started
+      security:
+        - Bearer: []
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/new_file_upload'
+      responses:
+        201:
+          description: OK
+        400:
+          $ref: '#/definitions/Error'
+        403:
+          description: Authoristion Failed - Check logs
+        500:
+          $ref: '#/responses/InternalError'
+    get:
+      tags:
+        - File upload started
+      summary: POST's metadata for a file when an upload has started
+      security:
+        - Bearer: []
+      produces:
+        - application/json
+      responses:
+        200:
+          $ref: '#/definitions/MetaDataCollection'
+        403:
+          description: Authoristion Failed - Check logs
+        500:
+          $ref: '#/responses/InternalError'
+
+  /files/{filepath}:
+    patch:
+      tags:
+        - Patch metadata state
+      summary: PATCH metadata state for a file, (i.e. when an upload has completed)
+      security:
+        - Bearer: []
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/file_path'
+        - $ref: '#/parameters/patch_file'
+      responses:
+        201:
+          description: OK
+        400:
+          $ref: '#/definitions/Error'
+        403:
+          description: Authoristion Failed - Check logs
+        409:
+          $ref: '#/definitions/Error'
+        500:
+          $ref: '#/responses/InternalError'
+
+    get:
+      tags:
+        - Fetch file metadata
+      summary: GET the metadata for a file whose upload has started
+      security:
+        - Bearer: []
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/file_path'
+      responses:
+        200:
+          $ref: '#/definitions/MetaData'
+        403:
+          description: Authoristion Failed - Check logs
+        404:
+          $ref: '#/definitions/Error'
+        500:
+          $ref: '#/responses/InternalError'
+
+  /health:
+    get:
+      tags:
+        - private
+      summary: "Returns API's health status"
+      description: "Returns health status of the API and checks on dependent services"
+      produces:
+        - application/json
+      responses:
+        200:
+          description: "Successfully returns OK status with checks of dependent services"
+          schema:
+            $ref: "#/definitions/Health"
+        429:
+          description: "Services warming up or degraded (at least one health in WARNING or CRITICAL status)"
+        500:
+          $ref: "#/responses/InternalError"
+
+responses:
+  InternalError:
+    description: "Failed to process the request due to an internal error"
+
+
+definitions:
+  Health:
+    type: object
+    properties:
+      status:
+        type: string
+        description: "The status of the API"
+        enum: ["OK", "WARNING", "CRITICAL"]
+      version:
+        type: object
+        properties:
+          build_time:
+            type: string
+            description: "The build date and time of the API"
+            example: "2020-06-11T12:49:20+01:00"
+          git_commit:
+            type: string
+            description: "The git commit hash of the API"
+            example: "7c2febbf2b818175112478d4ffbadbee1b654f63"
+          language:
+            type: string
+            description: "The programming language used to implement API"
+            example: "go"
+          language_version:
+            type: string
+            description: "The version of the programming language used to implement API"
+            example: "go1.14.3"
+          version:
+            type: string
+            description: "The version of API"
+            example: "1.0.0"
+      uptime:
+        type: string
+        description: "The uptime of API"
+        example: "34516"
+      start_time:
+        type: string
+        description: "The start date and time of API running"
+        example: "2020-06-11T11:49:21.520922Z"
+      checks:
+        type: array
+        items:
+          $ref: '#/definitions/HealthChecker'
+  HealthChecker:
+    type: object
+    properties:
+      name:
+        type: string
+        description: "The name of external service used by API"
+        enum: ["mongodb"]
+      status:
+        type: string
+        description: "The status of the external service"
+        enum: ["OK", "WARNING", "CRITICAL"]
+      message:
+        type: string
+        description: "The message status of the external service"
+        example: "mongodb is OK"
+      last_checked:
+        type: string
+        description: "The last health health date and time of the external service"
+        example: "2020-06-11T11:49:50.330089Z"
+      last_success:
+        type: string
+        description: "The last successful health health date and time of the external service"
+        example: "2020-06-11T11:49:50.330089Z"
+      last_failure:
+        type: string
+        description: "The last failed health health date and time of the external service"
+        example: "2019-09-22T11:48:51.0000001Z"
+  NewFileUpload:
+    type: object
+    description: "New file upload metadata to be POSTed"
+    required:
+      - "path"
+      - "is_publishable"
+      - "size_in_bytes"
+      - "type"
+      - "licence"
+      - "licence_url"
+    properties:
+      path:
+        type: string
+        description: "Path to file"
+        example: "images/meme.jpg"
+      is_publishable:
+        type: boolean
+        description: "Is the file publishable"
+        example: true
+      collection_id:
+        type: string
+        description: "The collection ID to which the file is attached"
+        example: "1234-asdfg-54321-qwerty"
+      title:
+        type: string
+        description: "The title given to the file"
+        example: "The latest Meme"
+      size_in_bytes:
+        type: integer
+        description: "Size of the file in bytes"
+        example: 14794
+      type:
+        type: string
+        description: "The file type"
+        example: "image/jpeg"
+      licence:
+        type: string
+        description: "The type of licence the file has"
+        example: "OGL v3"
+      licence_url:
+        type: string
+        description: "Licence URL"
+        example: "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+  ChangeFileState:
+    type: object
+    description: "File upload complete metadata to be POSTed"
+    required:
+      - "state"
+    properties:
+      state:
+        type: string
+        description: "New state for the file: UPLOADED, PUBLISHED or DECRYPTED"
+        example: "UPLOADED"
+      etag:
+        type: string
+        description: "The etag for the file"
+        example: "194577a7e20bdcc7afbb718f502c134c"
+  MetaDataCollection:
+    type: object
+    description: "Collection of File metadata"
+    properties:
+      count:
+        type: integer
+        description: "Number of items returned"
+        example: 10
+      limit:
+        type: integer
+        description: "Number of items requested"
+        example: 10
+      offset:
+        type: integer
+        description: "Start point"
+        example: 0
+      total_count:
+        type: integer
+        description: "total number of items available"
+        example: 100
+      items:
+        type: array
+        items:
+          $ref: "#/definitions/MetaData"
+
+  MetaData:
+    type: object
+    description: "File metadata"
+    properties:
+      path:
+        type: string
+        description: "Path to file"
+        example: "images/meme.jpg"
+      is_publishable:
+        type: boolean
+        description: "Is the file publishable"
+        example: true
+      collection_id:
+        type: string
+        description: "The collection ID to which the file is attached"
+        example: "1234-asdfg-54321-qwerty"
+      title:
+        type: string
+        description: "The title given to the file"
+        example: "The latest Meme"
+      size_in_bytes:
+        type: integer
+        description: "Size of the file in bytes"
+        example: 14794
+      type:
+        type: string
+        description: "The file type"
+        example: "image/jpeg"
+      licence:
+        type: string
+        description: "The type of licence the file has"
+        example: "OGL v3"
+      licence_url:
+        type: string
+        description: "Licence URL"
+        example: "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+      etag:
+        type: string
+        description: "File etag"
+        example: "1234567890asdfghjk"
+      status:
+        type: string
+        description: "File status"
+        example: "UPLOADED"
+  Error:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+          properties:
+            code:
+              type: string
+              example: BadJson
+            description:
+              type: string
+              example: The JSON is not in a valid format
+
+parameters:
+  new_file_upload:
+    name: new_file_upload
+    description: "Register a new file upload"
+    in: body
+    required: true
+    schema:
+      $ref: '#/definitions/NewFileUpload'
+
+  file_path:
+    type: string
+    name: filepath
+    in: path
+    required: true
+    description: filepath of required file
+
+  patch_file:
+    name: state
+    description: "Change the state of a file in the metadata"
+    in: body
+    required: true
+    schema:
+      $ref: '#/definitions/ChangeFileState'
