@@ -15,6 +15,11 @@ be retrieved by its path or all files in a collection can be retrieved by ID.
 The [Download Service](https://github.com/ONSdigital/dp-download-service) uses this API to see whether a file exists and
 what state it is in before attempting to serve the file to consumers wishing to access the file.
 
+The API has two end points to publish files. Files can be individually published by PATCHING the state to be PUBLISHED.
+It is also to publish all files in a collection in one call by PATCHING /collection/{collection_id}, this can be used to
+reduce the number of API calls required to publish a large collection.
+Currently, most calls to a publish file will come from the [Zebedee Publisher](https://github.com/ONSdigital/zebedee/blob/ff5d1a23b2bba50dc1ed67b10fbc213972f9ad21/zebedee-cms/src/main/java/com/github/onsdigital/zebedee/model/publishing/Publisher.java#L153)
+
 When a file is published this API sends a message via Kafka to the [Static File Publisher](https://github.com/ONSdigital/dp-static-file-publisher)
 that permanently decrypts the file and inform this API that the file is now decrypted via an HTTP call.
 
