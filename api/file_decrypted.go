@@ -25,6 +25,6 @@ func HandleMarkFileDecrypted(markDecryptionComplete MarkDecryptionComplete) http
 			return
 		}
 
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(http.StatusOK)
 	}
 }
