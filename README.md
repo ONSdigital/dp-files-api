@@ -1,6 +1,6 @@
 # DP Files API
 
-## Introduction 
+## Introduction
 The Files API is part of the [Static Files System](https://github.com/ONSdigital/dp-static-files-compose).
 This API is responsible for storing the metadata and state of files.
 
@@ -47,15 +47,15 @@ where it is not already sent or change the `state` of a file.
 
 #### Additional Metadata
 
-Additional timestamp data about the file is stored in the database but not exposed via the API. Those fields are: 
+Additional timestamp data about the file is stored in the database but not exposed via the API. Those fields are:
 
 | Field               |
 |---------------------|
-| created_at          | 
-| last_modified       | 
-| upload_completed_at | 
-| published_at        | 
-| decrypted_at        | 
+| created_at          |
+| last_modified       |
+| upload_completed_at |
+| published_at        |
+| decrypted_at        |
 
 
 ### File States
@@ -129,7 +129,7 @@ Additional timestamp data about the file is stored in the database but not expos
 
 ## API Client
 
-There is an [API Client](https://github.com/ONSdigital/dp-api-clients-go/tree/main/files) for the File API this is part 
+There is an [API Client](https://github.com/ONSdigital/dp-api-clients-go/tree/main/files) for the File API this is part
 of [dp-api-clients-go](https://github.com/ONSdigital/dp-api-clients-go) package.
 
 The Files Client provides functions that enables:
@@ -144,7 +144,7 @@ See [CONTRIBUTING](CONTRIBUTING.md) for details.
 
 ## License
 
-Copyright © 2021, Office for National Statistics (https://www.ons.gov.uk)
+Copyright © 2022, Office for National Statistics (https://www.ons.gov.uk)
 
 Released under MIT license, see [LICENSE](LICENSE.md) for details.
 
