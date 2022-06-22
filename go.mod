@@ -6,16 +6,7 @@ go 1.18
 // So, to avoid 'sonatype-2021-4899' non-CVE Vulnerability
 exclude github.com/gorilla/sessions v1.2.1
 
-replace (
-	github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible => github.com/golang-jwt/jwt v3.2.2+incompatible
-	github.com/gobuffalo/packr/v2 => github.com/gobuffalo/packr/v2 v2.8.3
-	github.com/hashicorp/consul/api => github.com/hashicorp/consul/api v1.13.0
-	github.com/hashicorp/consul/sdk => github.com/hashicorp/consul/sdk v0.9.0
-	github.com/pkg/sftp => github.com/pkg/sftp v1.13.5
-	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.12.2
-	github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
-)
+replace github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
 
 require (
 	github.com/ONSdigital/dp-authorisation/v2 v2.17.0
