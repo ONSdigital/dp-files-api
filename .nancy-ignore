@@ -1,9 +1,0 @@
-# the go.mod file specifies the latest:
-# api@v1.13.0
-# sdk@v0.9.0
-# but the audit still complains about "Server-Side Request Forgery (SSRF)", that does not affect this app, so this exclusion exists
-CVE-2022-29153 # 7.5 HIGH # pkg:golang/github.com/hashicorp/consul@v1.12.2
-
-# the go.mod file specifies the latest sdk@v0.9.0, but audit still indicates problems, so this exclusion exists
-# "Uncontrolled Resource Consumption ('Resource Exhaustion')" ... i cant see in the code base where this would affect us.
-CVE-2022-24687 # 6.5 MEDIUM # pkg:golang/github.com/hashicorp/consul/sdk@v0.9.0
