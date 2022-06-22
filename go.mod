@@ -2,6 +2,10 @@ module github.com/ONSdigital/dp-files-api
 
 go 1.18
 
+// We are not using `github.com/gorilla/sessions` and there is a non-CVE vulnerability found.
+// So, to avoid 'sonatype-2021-4899' non-CVE Vulnerability
+exclude github.com/gorilla/sessions v1.2.1
+
 replace (
 	github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible => github.com/golang-jwt/jwt v3.2.2+incompatible
