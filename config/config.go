@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	"time"
+
+	"github.com/ONSdigital/dp-authorisation/v2/authorisation"
 
 	"github.com/ONSdigital/dp-mongodb/v3/mongodb"
 
@@ -80,14 +81,13 @@ func Get() (*Config, error) {
 			StaticFilePublishedTopic:  "static-file-published-v2",
 		},
 		AuthConfig: AuthConfig{
-				Enabled:                             true,
-				PermissionsAPIURL:                   "http://localhost:25400",
-				IdentityWebKeySetURL:                "http://localhost:25600",
-				PermissionsCacheUpdateInterval:      time.Minute * 5,
-				PermissionsMaxCacheTime:             time.Minute * 15,
-				PermissionsCacheExpiryCheckInterval: time.Second * 10,
-				IdentityClientMaxRetries:            2,
-				ZebedeeURL:                          "http://localhost:8082",
+			Enabled:                        true,
+			PermissionsAPIURL:              "http://localhost:25400",
+			IdentityWebKeySetURL:           "http://localhost:25600",
+			PermissionsCacheUpdateInterval: time.Minute * 5,
+			PermissionsMaxCacheTime:        time.Minute * 15,
+			IdentityClientMaxRetries: 2,
+			ZebedeeURL:               "http://localhost:8082",
 		},
 	}
 
