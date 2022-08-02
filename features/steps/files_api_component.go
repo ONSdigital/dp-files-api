@@ -2,9 +2,11 @@ package steps
 
 import (
 	"context"
-	"github.com/gorilla/mux"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/ONSdigital/dp-files-api/files"
 
@@ -66,7 +68,14 @@ func (d *FilesApiComponent) Reset() {
 
 	d.mongoClient = client
 	d.mongoClient.Database("files").Collection("metadata").Drop(ctx)
-
+	d.mongoClient.Database("files").CreateCollection(ctx, "metadata")
+	d.mongoClient.Database("files").Collection("metadata").Indexes().CreateOne(
+		ctx,
+		mongo.IndexModel{
+			Keys:    bson.D{{"path", 1}},
+			Options: options.Index().SetUnique(true),
+		},
+	)
 	d.isPublishing = true
 }
 

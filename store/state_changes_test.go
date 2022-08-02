@@ -3,42 +3,25 @@ package store_test
 import (
 	"context"
 	"errors"
+
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/mongo/mock"
 	"github.com/ONSdigital/dp-files-api/store"
 	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
-
-func (suite *StoreSuite) TestRegisterFileUploadCountReturnsError() {
-	suite.logInterceptor.Start()
-	defer suite.logInterceptor.Stop()
-
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
-	expectedError := errors.New("error occurred")
-
-	alwaysFindsExistingCollection := mock.MongoCollectionMock{
-		CountFunc: CollectionCountReturnsValueAndError(0, expectedError),
-	}
-
-	subject := store.NewStore(&alwaysFindsExistingCollection, &suite.defaultKafkaProducer, suite.defaultClock)
-	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
-
-	logEvent := suite.logInterceptor.GetLogEvent()
-
-	suite.Equal("mongo driver count error", logEvent)
-	suite.Error(err)
-}
 
 func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	expectedError := mongo.WriteError{Code: 11000}
 
 	alwaysFindsExistingCollection := mock.MongoCollectionMock{
-		CountFunc: CollectionCountReturnsValueAndNil(1),
+		InsertFunc: CollectionInsertReturnsNilAndError(expectedError),
 	}
 
 	subject := store.NewStore(&alwaysFindsExistingCollection, &suite.defaultKafkaProducer, suite.defaultClock)
@@ -55,7 +38,6 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFileDoesNotAlreadyExist() {
 	metadata.State = ""
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{
-		CountFunc: CollectionCountReturnsValueAndNil(0),
 		InsertFunc: func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
 			actualMetadata := document.(files.StoredRegisteredMetaData)
 
@@ -85,7 +67,6 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertReturnsError() {
 	expectedError := errors.New("error occurred")
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{
-		CountFunc:  CollectionCountReturnsValueAndNil(0),
 		InsertFunc: CollectionInsertReturnsNilAndError(expectedError),
 	}
 
@@ -106,7 +87,6 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertSucceeds() {
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{
-		CountFunc:  CollectionCountReturnsValueAndNil(0),
 		InsertFunc: CollectionInsertReturnsNilAndNil(),
 	}
 
