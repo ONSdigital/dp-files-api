@@ -11,6 +11,7 @@ import (
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/ONSdigital/log.go/v2/log"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 const (
@@ -21,22 +22,17 @@ const (
 )
 
 func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
-	count, err := store.mongoCollection.Count(ctx, bson.M{fieldPath: metaData.Path})
 	logdata := log.Data{"path": metaData.Path}
-	if err != nil {
-		log.Error(ctx, "mongo driver count error", err, logdata)
-		return err
-	}
-	if count > 0 {
-		log.Error(ctx, "file upload already registered", err, logdata)
-		return ErrDuplicateFile
-	}
 
 	metaData.CreatedAt = store.clock.GetCurrentTime()
 	metaData.LastModified = store.clock.GetCurrentTime()
 	metaData.State = StateCreated
 
 	if _, err := store.mongoCollection.Insert(ctx, metaData); err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			log.Error(ctx, "file upload already registered", err, logdata)
+			return ErrDuplicateFile
+		}
 		log.Error(ctx, "failed to insert metadata", err, log.Data{"collection": config.MetadataCollection, "metadata": metaData})
 		return err
 	}
