@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+
 	"github.com/ONSdigital/dp-files-api/files"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/ONSdigital/log.go/v2/log"
 	"go.mongodb.org/mongo-driver/bson"
-	"strconv"
 )
 
 func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID string) error {
@@ -30,7 +31,15 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 		return ErrCollectionIDAlreadySet
 	}
 
-	_, err := store.mongoCollection.Update(
+	//check to see if collectionID exists and is not-published
+	m := files.StoredRegisteredMetaData{}
+	err := store.mongoCollection.FindOne(ctx, bson.M{fieldCollectionID: collectionID}, &m)
+	if err == nil && m.State == StatePublished {
+		log.Error(ctx, fmt.Sprintf("collection with id [%s] is already published", collectionID), ErrCollectionAlreadyPublished, logdata)
+		return ErrCollectionAlreadyPublished
+	}
+
+	_, err = store.mongoCollection.Update(
 		ctx,
 		bson.M{"path": path},
 		bson.D{

@@ -24,6 +24,16 @@ const (
 func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 	logdata := log.Data{"path": metaData.Path}
 
+	//check to see if collectionID exists and is not-published
+	if metaData.CollectionID != nil {
+		m := files.StoredRegisteredMetaData{}
+		err := store.mongoCollection.FindOne(ctx, bson.M{fieldCollectionID: *metaData.CollectionID}, &m)
+		if err == nil && m.State == StatePublished {
+			log.Error(ctx, fmt.Sprintf("collection with id [%s] is already published", *metaData.CollectionID), ErrCollectionAlreadyPublished, logdata)
+			return ErrCollectionAlreadyPublished
+		}
+	}
+
 	metaData.CreatedAt = store.clock.GetCurrentTime()
 	metaData.LastModified = store.clock.GetCurrentTime()
 	metaData.State = StateCreated
