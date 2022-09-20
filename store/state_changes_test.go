@@ -39,6 +39,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata.State = store.StateUploaded
 	expectedError := mongo.WriteError{Code: 11000}
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -89,6 +90,7 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertReturnsError() {
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata.State = store.StateUploaded
 	expectedError := errors.New("error occurred")
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -112,6 +114,7 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertSucceeds() {
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata.State = store.StateUploaded
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{

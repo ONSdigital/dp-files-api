@@ -27,8 +27,11 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 	//check to see if collectionID exists and is not-published
 	if metaData.CollectionID != nil {
 		m := files.StoredRegisteredMetaData{}
-		err := store.mongoCollection.FindOne(ctx, bson.M{fieldCollectionID: *metaData.CollectionID}, &m)
-		if err == nil && m.State == StatePublished {
+		if err := store.mongoCollection.FindOne(ctx, bson.M{fieldCollectionID: *metaData.CollectionID}, &m); err != nil {
+			log.Error(ctx, "register file upload: caught db error", err, logdata)
+			return err
+		}
+		if m.State == StatePublished || m.State == StateDecrypted {
 			log.Error(ctx, fmt.Sprintf("collection with id [%s] is already published", *metaData.CollectionID), ErrCollectionAlreadyPublished, logdata)
 			return ErrCollectionAlreadyPublished
 		}
