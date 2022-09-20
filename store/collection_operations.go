@@ -95,13 +95,23 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID string) {
 	log.Info(ctx, "notify collection published start", log.Data{"collection_id": collectionID})
 
-	col := make([]files.StoredRegisteredMetaData, 0)
-	if _, err := store.mongoCollection.Find(ctx, bson.M{fieldCollectionID: collectionID}, &col); err != nil {
+	cursor, err := store.mongoCollection.FindCursor(ctx, bson.M{fieldCollectionID: collectionID})
+	if err != nil {
 		log.Error(ctx, "notify collection published: failed to query collection", err, log.Data{"collection_id": collectionID})
 		return
 	}
+	defer func() {
+		if err := cursor.Close(ctx); err != nil {
+			log.Error(ctx, "notify collection published: failed to close cursor", err, log.Data{"collection_id": collectionID})
+		}
+	}()
 
-	for _, m := range col {
+	for cursor.Next(ctx) {
+		var m files.StoredRegisteredMetaData
+		if err := cursor.Decode(&m); err != nil {
+			log.Error(ctx, "notify collection published: failed to decode cursor", err, log.Data{"collection_id": collectionID})
+			continue
+		}
 		fp := &files.FilePublished{
 			Path:        m.Path,
 			Type:        m.Type,
@@ -111,6 +121,9 @@ func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID 
 		if err := store.kafka.Send(files.AvroSchema, fp); err != nil {
 			log.Error(ctx, "notify collection published: can't send message to kafka", err, log.Data{"metadata": m})
 		}
+	}
+	if err := cursor.Err(); err != nil {
+		log.Error(ctx, "notify collection published: cursor error", err, log.Data{"collection_id": collectionID})
 	}
 
 	log.Info(ctx, "notify collection published end", log.Data{"collection_id": collectionID})

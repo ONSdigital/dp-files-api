@@ -42,6 +42,9 @@ var _ mongo.MongoCollection = &MongoCollectionMock{}
 // 			FindFunc: func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
 // 				panic("mock out the Find method")
 // 			},
+// 			FindCursorFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (mongodriver.Cursor, error) {
+// 				panic("mock out the FindCursor method")
+// 			},
 // 			FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
 // 				panic("mock out the FindOne method")
 // 			},
@@ -99,6 +102,9 @@ type MongoCollectionMock struct {
 
 	// FindFunc mocks the Find method.
 	FindFunc func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error)
+
+	// FindCursorFunc mocks the FindCursor method.
+	FindCursorFunc func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (mongodriver.Cursor, error)
 
 	// FindOneFunc mocks the FindOne method.
 	FindOneFunc func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error
@@ -191,6 +197,15 @@ type MongoCollectionMock struct {
 			// Opts is the opts argument value.
 			Opts []mongodriver.FindOption
 		}
+		// FindCursor holds details about calls to the FindCursor method.
+		FindCursor []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Filter is the filter argument value.
+			Filter interface{}
+			// Opts is the opts argument value.
+			Opts []mongodriver.FindOption
+		}
 		// FindOne holds details about calls to the FindOne method.
 		FindOne []struct {
 			// Ctx is the ctx argument value.
@@ -275,6 +290,7 @@ type MongoCollectionMock struct {
 	lockDeleteMany    sync.RWMutex
 	lockDistinct      sync.RWMutex
 	lockFind          sync.RWMutex
+	lockFindCursor    sync.RWMutex
 	lockFindOne       sync.RWMutex
 	lockInsert        sync.RWMutex
 	lockInsertMany    sync.RWMutex
@@ -549,6 +565,45 @@ func (mock *MongoCollectionMock) FindCalls() []struct {
 	mock.lockFind.RLock()
 	calls = mock.calls.Find
 	mock.lockFind.RUnlock()
+	return calls
+}
+
+// FindCursor calls FindCursorFunc.
+func (mock *MongoCollectionMock) FindCursor(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (mongodriver.Cursor, error) {
+	if mock.FindCursorFunc == nil {
+		panic("MongoCollectionMock.FindCursorFunc: method is nil but MongoCollection.FindCursor was just called")
+	}
+	callInfo := struct {
+		Ctx    context.Context
+		Filter interface{}
+		Opts   []mongodriver.FindOption
+	}{
+		Ctx:    ctx,
+		Filter: filter,
+		Opts:   opts,
+	}
+	mock.lockFindCursor.Lock()
+	mock.calls.FindCursor = append(mock.calls.FindCursor, callInfo)
+	mock.lockFindCursor.Unlock()
+	return mock.FindCursorFunc(ctx, filter, opts...)
+}
+
+// FindCursorCalls gets all the calls that were made to FindCursor.
+// Check the length with:
+//     len(mockedMongoCollection.FindCursorCalls())
+func (mock *MongoCollectionMock) FindCursorCalls() []struct {
+	Ctx    context.Context
+	Filter interface{}
+	Opts   []mongodriver.FindOption
+} {
+	var calls []struct {
+		Ctx    context.Context
+		Filter interface{}
+		Opts   []mongodriver.FindOption
+	}
+	mock.lockFindCursor.RLock()
+	calls = mock.calls.FindCursor
+	mock.lockFindCursor.RUnlock()
 	return calls
 }
 
