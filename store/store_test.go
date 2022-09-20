@@ -34,6 +34,7 @@ type StoreSuite struct {
 
 type CollectionCountFunc func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error)
 type CollectionFindFunc func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error)
+type CollectionFindCursorFunc func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (mongodriver.Cursor, error)
 type CollectionFindOneFunc func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error
 type CollectionUpdateFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
 type CollectionUpdateManyFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
@@ -56,6 +57,12 @@ func CollectionFindReturnsValueAndError(value int, expectedError error) Collecti
 func CollectionFindOneReturnsError(expectedError error) CollectionFindOneFunc {
 	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
 		return expectedError
+	}
+}
+
+func CollectionFindCursorReturnsCursorAndError(cursor mongodriver.Cursor, expectedError error) CollectionFindCursorFunc {
+	return func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (mongodriver.Cursor, error) {
+		return cursor, expectedError
 	}
 }
 
@@ -144,6 +151,16 @@ func CollectionInsertReturnsNilAndError(expectedError error) CollectionInsertFun
 func CollectionInsertReturnsNilAndNil() CollectionInsertFunc {
 	return func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
 		return nil, nil
+	}
+}
+
+func CursorReturnsNumberOfNext(number int) func(ctx context.Context) bool {
+	return func(ctx context.Context) bool {
+		if number > 0 {
+			number--
+			return true
+		}
+		return false
 	}
 }
 
