@@ -27,7 +27,7 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 	//check to see if collectionID exists and is not-published
 	if metaData.CollectionID != nil {
 		m := files.StoredRegisteredMetaData{}
-		if err := store.mongoCollection.FindOne(ctx, bson.M{fieldCollectionID: *metaData.CollectionID}, &m); err != nil {
+		if err := store.mongoCollection.FindOne(ctx, bson.M{fieldCollectionID: *metaData.CollectionID}, &m); err != nil && !errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			log.Error(ctx, "register file upload: caught db error", err, logdata)
 			return err
 		}

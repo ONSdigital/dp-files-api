@@ -33,7 +33,7 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 
 	//check to see if collectionID exists and is not-published
 	m := files.StoredRegisteredMetaData{}
-	if err := store.mongoCollection.FindOne(ctx, bson.M{fieldCollectionID: collectionID}, &m); err != nil {
+	if err := store.mongoCollection.FindOne(ctx, bson.M{fieldCollectionID: collectionID}, &m); err != nil && !errors.Is(err, mongodriver.ErrNoDocumentFound) {
 		log.Error(ctx, "update collection ID: caught db error", err, logdata)
 		return err
 	}
