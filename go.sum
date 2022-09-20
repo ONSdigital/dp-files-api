@@ -68,6 +68,8 @@ github.com/ONSdigital/dp-mongodb-in-memory v1.4.0-beta h1:9WkWoiX0Ap3aA4STNpUXqw
 github.com/ONSdigital/dp-mongodb-in-memory v1.4.0-beta/go.mod h1:uuJppjbxz8L2V5Ma8R34Kb4EFoYBWovFP5D2doAML/I=
 github.com/ONSdigital/dp-mongodb/v3 v3.0.2 h1:CbIGAnhMvqwfKg3Dc3LCP6ALcFV4I9vdWRDOTi/QPdc=
 github.com/ONSdigital/dp-mongodb/v3 v3.0.2/go.mod h1:5EtdWLz6X+S6mtFLvmsYqaP/uzGCFLmEbzjbepZwHgE=
+github.com/ONSdigital/dp-mongodb/v3 v3.1.0 h1:m90m1plT9H5bS5wc5cAwyOHnn/qg9snuKLYiPKsm8zA=
+github.com/ONSdigital/dp-mongodb/v3 v3.1.0/go.mod h1:5EtdWLz6X+S6mtFLvmsYqaP/uzGCFLmEbzjbepZwHgE=
 github.com/ONSdigital/dp-net v1.0.5-0.20200805082802-e518bc287596/go.mod h1:wDVhk2pYosQ1q6PXxuFIRYhYk2XX5+1CeRRnXpSczPY=
 github.com/ONSdigital/dp-net v1.0.5-0.20200805145012-9227a11caddb/go.mod h1:MrSZwDUvp8u1VJEqa+36Gwq4E7/DdceW+BDCvGes6Cs=
 github.com/ONSdigital/dp-net v1.0.5-0.20200805150805-cac050646ab5/go.mod h1:de3LB9tedE0tObBwa12dUOt5rvTW4qQkF5rXtt4b6CE=
