@@ -32,6 +32,17 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 		return ErrCollectionIDAlreadySet
 	}
 
+	//check to see if collectionID exists and is not-published
+	m := files.StoredRegisteredMetaData{}
+	if err := store.mongoCollection.FindOne(ctx, bson.M{fieldCollectionID: collectionID}, &m); err != nil && !errors.Is(err, mongodriver.ErrNoDocumentFound) {
+		log.Error(ctx, "update collection ID: caught db error", err, logdata)
+		return err
+	}
+	if m.State == StatePublished || m.State == StateDecrypted {
+		log.Error(ctx, fmt.Sprintf("collection with id [%s] is already published", collectionID), ErrCollectionAlreadyPublished, logdata)
+		return ErrCollectionAlreadyPublished
+	}
+
 	_, err := store.mongoCollection.Update(
 		ctx,
 		bson.M{"path": path},

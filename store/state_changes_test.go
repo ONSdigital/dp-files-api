@@ -13,14 +13,38 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+func (suite *StoreSuite) TestRegisterFileUploadWhenCollectionAlreadyPublished() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata.State = store.StatePublished
+	metadataBytes, _ := bson.Marshal(metadata)
+	
+	alwaysFindsExistingCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+
+	subject := store.NewStore(&alwaysFindsExistingCollection, &suite.defaultKafkaProducer, suite.defaultClock)
+	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("collection with id [123456] is already published", logEvent)
+	suite.ErrorIs(err, store.ErrCollectionAlreadyPublished)
+}
+
 func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata.State = store.StateUploaded
 	expectedError := mongo.WriteError{Code: 11000}
+	metadataBytes, _ := bson.Marshal(metadata)
 
 	alwaysFindsExistingCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		InsertFunc: CollectionInsertReturnsNilAndError(expectedError),
 	}
 
@@ -36,8 +60,10 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 func (suite *StoreSuite) TestRegisterFileUploadWhenFileDoesNotAlreadyExist() {
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
 	metadata.State = ""
+	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		InsertFunc: func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
 			actualMetadata := document.(files.StoredRegisteredMetaData)
 
@@ -64,10 +90,13 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertReturnsError() {
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata.State = store.StateUploaded
 	expectedError := errors.New("error occurred")
+	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{
-		InsertFunc: CollectionInsertReturnsNilAndError(expectedError),
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+		InsertFunc:  CollectionInsertReturnsNilAndError(expectedError),
 	}
 
 	subject := store.NewStore(&collectionCountReturnsZero, &suite.defaultKafkaProducer, suite.defaultClock)
@@ -85,9 +114,12 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertSucceeds() {
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata.State = store.StateUploaded
+	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{
-		InsertFunc: CollectionInsertReturnsNilAndNil(),
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+		InsertFunc:  CollectionInsertReturnsNilAndNil(),
 	}
 
 	subject := store.NewStore(&collectionCountReturnsZero, &suite.defaultKafkaProducer, suite.defaultClock)

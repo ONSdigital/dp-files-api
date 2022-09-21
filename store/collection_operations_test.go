@@ -78,6 +78,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDCollectionIDAlreadySet() {
 
 func (suite *StoreSuite) TestUpdateCollectionIDUpdateReturnsError() {
 	metadata := suite.generateMetadata("")
+	metadata.State = store.StateUploaded
 	metadata.CollectionID = nil
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -98,6 +99,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDUpdateReturnsError() {
 
 func (suite *StoreSuite) TestUpdateCollectionIDUpdateSuccess() {
 	metadata := suite.generateMetadata("")
+	metadata.State = store.StateUploaded
 	metadata.CollectionID = nil
 	metadataBytes, _ := bson.Marshal(metadata)
 
