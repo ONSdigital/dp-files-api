@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	max_num_batches = 30
-	min_batch_size  = 20
+	MAX_NUM_BATCHES = 30
+	MIN_BATCH_SIZE  = 20
 )
 
 func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID string) error {
@@ -111,10 +111,10 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID string, totalCount int) {
 	log.Info(ctx, "notify collection published start", log.Data{"collection_id": collectionID, "total_files": totalCount})
 	// balance the number of batches Vs batch size
-	batch_size := min_batch_size
+	batch_size := MIN_BATCH_SIZE
 	num_batches := int(math.Ceil(float64(totalCount) / float64(batch_size)))
-	if num_batches > max_num_batches {
-		num_batches = max_num_batches
+	if num_batches > MAX_NUM_BATCHES {
+		num_batches = MAX_NUM_BATCHES
 		batch_size = int(math.Ceil(float64(totalCount) / float64(num_batches)))
 	}
 

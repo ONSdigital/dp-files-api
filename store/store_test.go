@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -258,6 +259,24 @@ func (l *LogInterceptor) GetLogEvent() string {
 	json.Unmarshal(logResult, &logOut)
 
 	return logOut["event"].(string)
+}
+
+func (l *LogInterceptor) GetLogEvents(eventName string) map[int]map[string]interface{} {
+	retVal := make(map[int]map[string]interface{})
+	logResult, _ := ioutil.ReadAll(l.logBuffer)
+	logz := strings.Split(string(logResult), "\n")
+	counter := 0
+	for _, line := range logz {
+		logOut := make(map[string]interface{})
+		json.Unmarshal([]byte(line), &logOut)
+		evt, ok := logOut["event"]
+		if ok && evt.(string) == eventName {
+			retVal[counter] = logOut["data"].(map[string]interface{})
+			counter++
+		}
+	}
+
+	return retVal
 }
 
 func NewLogInterceptor() LogInterceptor {
