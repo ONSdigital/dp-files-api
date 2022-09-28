@@ -4,13 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
+	"sync"
 
 	"github.com/ONSdigital/dp-files-api/files"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/ONSdigital/dp-net/v2/request"
 	"github.com/ONSdigital/log.go/v2/log"
 	"go.mongodb.org/mongo-driver/bson"
+)
+
+const (
+	max_num_batches = 30
+	min_batch_size  = 20
 )
 
 func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID string) error {
@@ -56,25 +63,23 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 }
 
 func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID string) error {
-	count, err := store.mongoCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
+	totalFiles, err := store.mongoCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
 	logdata := log.Data{"collection_id": collectionID}
 	if err != nil {
 		log.Error(ctx, "failed to count files collection", err, logdata)
 		return err
 	}
 
-	if count == 0 {
+	if totalFiles == 0 {
 		log.Info(ctx, "no files found in collection", logdata)
 		return ErrNoFilesInCollection
 	}
 
-	count, err = store.mongoCollection.Count(ctx, createCollectionContainsNotUploadedFilesQuery(collectionID))
-
+	count, err := store.mongoCollection.Count(ctx, createCollectionContainsNotUploadedFilesQuery(collectionID))
 	if err != nil {
 		log.Error(ctx, "failed to count unpublishable files", err, logdata)
 		return err
 	}
-
 	if count > 0 {
 		event := fmt.Sprintf("can not publish collection, not all files in %s state", StateUploaded)
 		log.Info(ctx, event, log.Data{"collection_id": collectionID, "num_file_not_state_uploaded": count})
@@ -98,44 +103,68 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 
 	requestID := request.GetRequestId(ctx)
 	newCtx := request.WithRequestId(context.Background(), requestID)
-	go store.NotifyCollectionPublished(newCtx, collectionID)
+	go store.NotifyCollectionPublished(newCtx, collectionID, totalFiles)
 
 	return nil
 }
 
-func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID string) {
-	log.Info(ctx, "notify collection published start", log.Data{"collection_id": collectionID})
+func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID string, totalCount int) {
+	log.Info(ctx, "notify collection published start", log.Data{"collection_id": collectionID, "total_files": totalCount})
+	// balance the number of batches Vs batch size
+	batch_size := min_batch_size
+	num_batches := int(math.Ceil(float64(totalCount) / float64(batch_size)))
+	if num_batches > max_num_batches {
+		num_batches = max_num_batches
+		batch_size = int(math.Ceil(float64(totalCount) / float64(num_batches)))
+	}
 
-	cursor, err := store.mongoCollection.FindCursor(ctx, bson.M{fieldCollectionID: collectionID})
+	var wg sync.WaitGroup
+	wg.Add(num_batches)
+	for i := 0; i < num_batches; i++ {
+		offset := i * batch_size
+		go store.BatchSendKafkaMessages(ctx, &wg, collectionID, offset, batch_size, i)
+	}
+	wg.Wait()
+
+	log.Info(ctx, "notify collection published end", log.Data{"collection_id": collectionID})
+}
+
+func (store *Store) BatchSendKafkaMessages(ctx context.Context, wg *sync.WaitGroup, collectionID string, offset, batch_size, batch_num int) {
+	defer wg.Done()
+	log.Info(ctx, "BatchSendKafkaMessages", log.Data{"collection_id": collectionID, "offset": offset, "batch_size": batch_size, "batch_num": batch_num})
+	cursor, err := store.mongoCollection.FindCursor(ctx, bson.M{fieldCollectionID: collectionID}, mongodriver.Offset(offset))
 	if err != nil {
-		log.Error(ctx, "notify collection published: failed to query collection", err, log.Data{"collection_id": collectionID})
+		log.Error(ctx, "BatchSendKafkaMessages: failed to query collection", err, log.Data{"collection_id": collectionID})
 		return
 	}
 	defer func() {
 		if err := cursor.Close(ctx); err != nil {
-			log.Error(ctx, "notify collection published: failed to close cursor", err, log.Data{"collection_id": collectionID})
+			log.Error(ctx, "BatchSendKafkaMessages: failed to close cursor", err, log.Data{"collection_id": collectionID})
 		}
 	}()
 
-	for cursor.Next(ctx) {
-		var m files.StoredRegisteredMetaData
-		if err := cursor.Decode(&m); err != nil {
-			log.Error(ctx, "notify collection published: failed to decode cursor", err, log.Data{"collection_id": collectionID})
-			continue
-		}
-		fp := &files.FilePublished{
-			Path:        m.Path,
-			Type:        m.Type,
-			Etag:        m.Etag,
-			SizeInBytes: strconv.FormatUint(m.SizeInBytes, 10),
-		}
-		if err := store.kafka.Send(files.AvroSchema, fp); err != nil {
-			log.Error(ctx, "notify collection published: can't send message to kafka", err, log.Data{"metadata": m})
+	for i := 0; i < batch_size; i++ {
+		if cursor.Next(ctx) {
+			var m files.StoredRegisteredMetaData
+			if err := cursor.Decode(&m); err != nil {
+				log.Error(ctx, "BatchSendKafkaMessages: failed to decode cursor", err, log.Data{"collection_id": collectionID})
+				continue
+			}
+			//fmt.Println(batch_num, m.Path)
+			fp := &files.FilePublished{
+				Path:        m.Path,
+				Type:        m.Type,
+				Etag:        m.Etag,
+				SizeInBytes: strconv.FormatUint(m.SizeInBytes, 10),
+			}
+			if err := store.kafka.Send(files.AvroSchema, fp); err != nil {
+				log.Error(ctx, "BatchSendKafkaMessages: can't send message to kafka", err, log.Data{"metadata": m})
+			}
+		} else {
+			break
 		}
 	}
 	if err := cursor.Err(); err != nil {
-		log.Error(ctx, "notify collection published: cursor error", err, log.Data{"collection_id": collectionID})
+		log.Error(ctx, "BatchSendKafkaMessages: cursor error", err, log.Data{"collection_id": collectionID, "batch_num": batch_num})
 	}
-
-	log.Info(ctx, "notify collection published end", log.Data{"collection_id": collectionID})
 }

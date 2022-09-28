@@ -227,7 +227,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedFindErrored() {
 
 	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock)
 
-	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
+	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID, 1)
 
 	suite.Eventually(func() bool {
 		return len(collection.FindCursorCalls()) == 1
@@ -268,7 +268,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedPersistenceSuccess() {
 
 	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock)
 
-	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
+	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID, 5)
 
 	suite.Equal(6, len(cursor.NextCalls()))
 	suite.Equal(5, len(cursor.DecodeCalls()))
@@ -303,7 +303,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedKafkaErrorDoesNotFailOpera
 
 	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock)
 
-	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
+	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID, 5)
 
 	suite.Equal(6, len(cursor.NextCalls()))
 	suite.Equal(5, len(cursor.DecodeCalls()))
@@ -333,7 +333,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedDecodeErrorDoesNotFailOper
 
 	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock)
 
-	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
+	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID, 5)
 
 	suite.Equal(6, len(cursor.NextCalls()))
 	suite.Equal(5, len(cursor.DecodeCalls()))
