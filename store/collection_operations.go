@@ -63,19 +63,20 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 }
 
 func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID string) error {
-	count, err := store.mongoCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
 	logdata := log.Data{"collection_id": collectionID}
+
+	empty, err := store.IsCollectionEmpty(ctx, collectionID)
 	if err != nil {
-		log.Error(ctx, "failed to count files collection", err, logdata)
+		log.Error(ctx, "failed to check if collection is empty", err, logdata)
 		return err
 	}
 
-	if count == 0 {
+	if empty {
 		log.Info(ctx, "no files found in collection", logdata)
 		return ErrNoFilesInCollection
 	}
 
-	count, err = store.mongoCollection.Count(ctx, createCollectionContainsNotUploadedFilesQuery(collectionID))
+	count, err := store.mongoCollection.Count(ctx, createCollectionContainsNotUploadedFilesQuery(collectionID))
 	if err != nil {
 		log.Error(ctx, "failed to count unpublishable files", err, logdata)
 		return err
@@ -106,6 +107,19 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 	go store.NotifyCollectionPublished(newCtx, collectionID)
 
 	return nil
+}
+
+func (store *Store) IsCollectionEmpty(ctx context.Context, collectionID string) (bool, error) {
+	metadata := files.StoredRegisteredMetaData{}
+
+	if err := store.mongoCollection.FindOne(ctx, bson.M{fieldCollectionID: collectionID}, &metadata); err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			return true, nil
+		}
+		return true, err
+	}
+
+	return false, nil
 }
 
 func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID string) {
