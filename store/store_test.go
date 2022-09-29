@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -32,6 +33,10 @@ type StoreSuite struct {
 	defaultClock         steps.TestClock
 	defaultKafkaProducer kafkatest.IProducerMock
 }
+
+var (
+	mu sync.Mutex
+)
 
 type CollectionCountFunc func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error)
 type CollectionFindFunc func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error)
@@ -157,6 +162,8 @@ func CollectionInsertReturnsNilAndNil() CollectionInsertFunc {
 
 func CursorReturnsNumberOfNext(number int) func(ctx context.Context) bool {
 	return func(ctx context.Context) bool {
+		mu.Lock()
+		defer mu.Unlock()
 		if number > 0 {
 			number--
 			return true
