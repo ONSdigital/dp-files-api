@@ -228,7 +228,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedFindErrored() {
 
 	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock)
 
-	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID, 1)
+	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
 	suite.Eventually(func() bool {
 		return len(collection.FindCursorCalls()) == 1
@@ -269,7 +269,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedPersistenceSuccess() {
 
 	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock)
 
-	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID, 5)
+	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
 	suite.Equal(6, len(cursor.NextCalls()))
 	suite.Equal(5, len(cursor.DecodeCalls()))
@@ -297,7 +297,7 @@ func (suite *StoreSuite) TestBatchingWithLargeNumberOfFiles() {
 	}
 
 	collection := mock.MongoCollectionMock{
-		CountFunc:      CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout(),
+		CountFunc:      CollectionCountReturnsValueAndNil(numFiles),
 		UpdateManyFunc: CollectionUpdateManyReturnsNilAndNil(),
 		FindCursorFunc: CollectionFindCursorReturnsCursorAndError(&cursor, nil),
 	}
@@ -317,7 +317,7 @@ func (suite *StoreSuite) TestBatchingWithLargeNumberOfFiles() {
 
 	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock)
 
-	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID, numFiles)
+	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
 	evts := suite.logInterceptor.GetLogEvents("BatchSendKafkaMessages")
 
@@ -355,7 +355,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedKafkaErrorDoesNotFailOpera
 
 	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock)
 
-	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID, 5)
+	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
 	suite.Equal(6, len(cursor.NextCalls()))
 	suite.Equal(5, len(cursor.DecodeCalls()))
@@ -385,7 +385,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedDecodeErrorDoesNotFailOper
 
 	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock)
 
-	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID, 5)
+	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
 	suite.Equal(6, len(cursor.NextCalls()))
 	suite.Equal(5, len(cursor.DecodeCalls()))

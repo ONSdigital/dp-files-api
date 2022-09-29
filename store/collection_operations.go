@@ -63,19 +63,19 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 }
 
 func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID string) error {
-	totalFiles, err := store.mongoCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
+	count, err := store.mongoCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
 	logdata := log.Data{"collection_id": collectionID}
 	if err != nil {
 		log.Error(ctx, "failed to count files collection", err, logdata)
 		return err
 	}
 
-	if totalFiles == 0 {
+	if count == 0 {
 		log.Info(ctx, "no files found in collection", logdata)
 		return ErrNoFilesInCollection
 	}
 
-	count, err := store.mongoCollection.Count(ctx, createCollectionContainsNotUploadedFilesQuery(collectionID))
+	count, err = store.mongoCollection.Count(ctx, createCollectionContainsNotUploadedFilesQuery(collectionID))
 	if err != nil {
 		log.Error(ctx, "failed to count unpublishable files", err, logdata)
 		return err
@@ -103,12 +103,14 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 
 	requestID := request.GetRequestId(ctx)
 	newCtx := request.WithRequestId(context.Background(), requestID)
-	go store.NotifyCollectionPublished(newCtx, collectionID, totalFiles)
+	go store.NotifyCollectionPublished(newCtx, collectionID)
 
 	return nil
 }
 
-func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID string, totalCount int) {
+func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID string) {
+	// ignoring err as this would have been done previously
+	totalCount, _ := store.mongoCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
 	log.Info(ctx, "notify collection published start", log.Data{"collection_id": collectionID, "total_files": totalCount})
 	// balance the number of batches Vs batch size
 	batch_size := MIN_BATCH_SIZE
