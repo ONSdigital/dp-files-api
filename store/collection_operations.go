@@ -123,8 +123,12 @@ func (store *Store) IsCollectionEmpty(ctx context.Context, collectionID string) 
 }
 
 func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID string) {
-	// ignoring err as this would have been done previously
-	totalCount, _ := store.mongoCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
+	totalCount, err := store.mongoCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
+	if err != nil {
+		log.Error(ctx, "notify collection published: failed to count collection", err, log.Data{"collection_id": collectionID})
+		return
+	}
+
 	log.Info(ctx, "notify collection published start", log.Data{"collection_id": collectionID, "total_files": totalCount})
 	// balance the number of batches Vs batch size
 	batch_size := MIN_BATCH_SIZE
