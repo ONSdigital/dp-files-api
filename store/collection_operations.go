@@ -170,7 +170,6 @@ func (store *Store) BatchSendKafkaMessages(ctx context.Context, wg *sync.WaitGro
 				log.Error(ctx, "BatchSendKafkaMessages: failed to decode cursor", err, log.Data{"collection_id": collectionID})
 				continue
 			}
-			//fmt.Println(batch_num, m.Path)
 			fp := &files.FilePublished{
 				Path:        m.Path,
 				Type:        m.Type,
