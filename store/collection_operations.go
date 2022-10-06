@@ -71,10 +71,12 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 	}
 
 	count, err = store.mongoCollection.Count(ctx, createCollectionContainsNotUploadedFilesQuery(collectionID))
+
 	if err != nil {
 		log.Error(ctx, "failed to count unpublishable files", err, logdata)
 		return err
 	}
+
 	if count > 0 {
 		event := fmt.Sprintf("can not publish collection, not all files in %s state", StateUploaded)
 		log.Info(ctx, event, log.Data{"collection_id": collectionID, "num_file_not_state_uploaded": count})
@@ -140,32 +142,29 @@ func (store *Store) BatchSendKafkaMessages(ctx context.Context,
 	log.Info(ctx, "BatchSendKafkaMessages", log.Data{"collection_id": collectionID, "offset": offset, "batch_size": batch_size, "batch_num": batch_num})
 	defer func() {
 		if err := cursor.Close(ctx); err != nil {
-			log.Error(ctx, "BatchSendKafkaMessages: failed to close cursor", err, log.Data{"collection_id": collectionID})
+			log.Error(ctx, "notify collection published: failed to close cursor", err, log.Data{"collection_id": collectionID})
 		}
 	}()
 
-	for i := 0; i < batch_size; i++ {
-		if cursor.Next(ctx) {
-			var m files.StoredRegisteredMetaData
-			if err := cursor.Decode(&m); err != nil {
-				log.Error(ctx, "BatchSendKafkaMessages: failed to decode cursor", err, log.Data{"collection_id": collectionID})
-				continue
-			}
-			//fmt.Println(batch_num, m.Path)
-			fp := &files.FilePublished{
-				Path:        m.Path,
-				Type:        m.Type,
-				Etag:        m.Etag,
-				SizeInBytes: strconv.FormatUint(m.SizeInBytes, 10),
-			}
-			if err := store.kafka.Send(files.AvroSchema, fp); err != nil {
-				log.Error(ctx, "BatchSendKafkaMessages: can't send message to kafka", err, log.Data{"metadata": m})
-			}
-		} else {
-			break
+	for cursor.Next(ctx) {
+		var m files.StoredRegisteredMetaData
+		if err := cursor.Decode(&m); err != nil {
+			log.Error(ctx, "notify collection published: failed to decode cursor", err, log.Data{"collection_id": collectionID})
+			continue
+		}
+		fp := &files.FilePublished{
+			Path:        m.Path,
+			Type:        m.Type,
+			Etag:        m.Etag,
+			SizeInBytes: strconv.FormatUint(m.SizeInBytes, 10),
+		}
+		if err := store.kafka.Send(files.AvroSchema, fp); err != nil {
+			log.Error(ctx, "notify collection published: can't send message to kafka", err, log.Data{"metadata": m})
 		}
 	}
 	if err := cursor.Err(); err != nil {
-		log.Error(ctx, "BatchSendKafkaMessages: cursor error", err, log.Data{"collection_id": collectionID, "batch_num": batch_num})
+		log.Error(ctx, "notify collection published: cursor error", err, log.Data{"collection_id": collectionID})
 	}
+
+	log.Info(ctx, "notify collection published end", log.Data{"collection_id": collectionID})
 }

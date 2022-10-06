@@ -328,7 +328,7 @@ func (suite *StoreSuite) TestBatchingWithLargeNumberOfFiles() {
 			return nil
 		},
 	}
-	
+
 	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock, cfg)
 
 	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
