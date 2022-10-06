@@ -3,7 +3,6 @@ package store_test
 import (
 	"context"
 	"errors"
-	"math"
 	"strconv"
 	"time"
 
@@ -276,57 +275,6 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedPersistenceSuccess() {
 	suite.Equal(5, len(kafkaMock.SendCalls()))
 	suite.Equal(1, len(cursor.ErrCalls()))
 	suite.Equal(1, len(cursor.CloseCalls()))
-}
-
-func (suite *StoreSuite) TestBatchingWithLargeNumberOfFiles() {
-	suite.logInterceptor.Start()
-	defer suite.logInterceptor.Stop()
-	numFiles := 5000
-	expectedBatchSize := int(math.Ceil(float64(numFiles) / float64(store.MAX_NUM_BATCHES)))
-
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
-	metadataBytes, _ := bson.Marshal(metadata)
-
-	cursor := mock.MongoCursorMock{
-		CloseFunc: func(ctx context.Context) error { return nil },
-		NextFunc:  CursorReturnsNumberOfNext(numFiles),
-		DecodeFunc: func(val interface{}) error {
-			return bson.Unmarshal(metadataBytes, val)
-		},
-		ErrFunc: func() error { return nil },
-	}
-
-	collection := mock.MongoCollectionMock{
-		CountFunc:      CollectionCountReturnsValueAndNil(numFiles),
-		UpdateManyFunc: CollectionUpdateManyReturnsNilAndNil(),
-		FindCursorFunc: CollectionFindCursorReturnsCursorAndError(&cursor, nil),
-	}
-
-	kafkaMock := kafkatest.IProducerMock{
-		SendFunc: func(schema *avro.Schema, event interface{}) error {
-			filePublished := event.(*files.FilePublished)
-
-			suite.Equal(metadata.Path, filePublished.Path)
-			suite.Equal(metadata.Etag, filePublished.Etag)
-			suite.Equal(metadata.Type, filePublished.Type)
-			suite.Equal(strconv.FormatUint(metadata.SizeInBytes, 10), filePublished.SizeInBytes)
-
-			return nil
-		},
-	}
-
-	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock)
-
-	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
-
-	evts := suite.logInterceptor.GetLogEvents("BatchSendKafkaMessages")
-
-	for _, evt := range evts {
-		suite.EqualValues(evt["batch_size"].(float64), expectedBatchSize)
-	}
-	suite.Equal(store.MAX_NUM_BATCHES, len(evts))
-	suite.Equal(store.MAX_NUM_BATCHES, len(cursor.ErrCalls()))
-	suite.Equal(store.MAX_NUM_BATCHES, len(cursor.CloseCalls()))
 }
 
 func (suite *StoreSuite) TestNotifyCollectionPublishedKafkaErrorDoesNotFailOperation() {
