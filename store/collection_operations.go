@@ -15,11 +15,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-const (
-	MAX_NUM_BATCHES = 30
-	MIN_BATCH_SIZE  = 20
-)
-
 func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID string) error {
 	metadata := files.StoredRegisteredMetaData{}
 	logdata := log.Data{"path": path}
@@ -113,10 +108,10 @@ func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID 
 	totalCount, _ := store.mongoCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
 	log.Info(ctx, "notify collection published start", log.Data{"collection_id": collectionID, "total_files": totalCount})
 	// balance the number of batches Vs batch size
-	batch_size := MIN_BATCH_SIZE
+	batch_size := store.cfg.MinBatchSize
 	num_batches := int(math.Ceil(float64(totalCount) / float64(batch_size)))
-	if num_batches > MAX_NUM_BATCHES {
-		num_batches = MAX_NUM_BATCHES
+	if num_batches > store.cfg.MaxNumBatches {
+		num_batches = store.cfg.MaxNumBatches
 		batch_size = int(math.Ceil(float64(totalCount) / float64(num_batches)))
 	}
 
@@ -124,21 +119,25 @@ func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID 
 	wg.Add(num_batches)
 	for i := 0; i < num_batches; i++ {
 		offset := i * batch_size
-		go store.BatchSendKafkaMessages(ctx, &wg, collectionID, offset, batch_size, i)
+		cursor, err := store.mongoCollection.FindCursor(ctx, bson.M{fieldCollectionID: collectionID}, mongodriver.Offset(offset))
+		if err != nil {
+			wg.Done()
+			log.Error(ctx, "BatchSendKafkaMessages: failed to query collection", err, log.Data{"collection_id": collectionID})
+			continue
+		}
+		go store.BatchSendKafkaMessages(ctx, cursor, &wg, collectionID, offset, batch_size, i)
 	}
 	wg.Wait()
 
 	log.Info(ctx, "notify collection published end", log.Data{"collection_id": collectionID})
 }
 
-func (store *Store) BatchSendKafkaMessages(ctx context.Context, wg *sync.WaitGroup, collectionID string, offset, batch_size, batch_num int) {
+func (store *Store) BatchSendKafkaMessages(ctx context.Context,
+	cursor mongodriver.Cursor,
+	wg *sync.WaitGroup,
+	collectionID string, offset, batch_size, batch_num int) {
 	defer wg.Done()
 	log.Info(ctx, "BatchSendKafkaMessages", log.Data{"collection_id": collectionID, "offset": offset, "batch_size": batch_size, "batch_num": batch_num})
-	cursor, err := store.mongoCollection.FindCursor(ctx, bson.M{fieldCollectionID: collectionID}, mongodriver.Offset(offset))
-	if err != nil {
-		log.Error(ctx, "BatchSendKafkaMessages: failed to query collection", err, log.Data{"collection_id": collectionID})
-		return
-	}
 	defer func() {
 		if err := cursor.Close(ctx); err != nil {
 			log.Error(ctx, "BatchSendKafkaMessages: failed to close cursor", err, log.Data{"collection_id": collectionID})

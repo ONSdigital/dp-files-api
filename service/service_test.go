@@ -3,9 +3,14 @@ package service_test
 import (
 	"context"
 	"errors"
+	"net/http"
+	"testing"
+	"time"
+
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	authMock "github.com/ONSdigital/dp-authorisation/v2/authorisation/mock"
 	"github.com/ONSdigital/dp-files-api/clock"
+	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	mockFiles "github.com/ONSdigital/dp-files-api/files/mock"
 	"github.com/ONSdigital/dp-files-api/health"
@@ -19,9 +24,6 @@ import (
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"testing"
-	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -60,7 +62,9 @@ func TestClose(t *testing.T) {
 		svcErrors := make(chan error, 1)
 
 		ctx := context.Background()
-		svc, _ := service.Run(ctx, serviceList, svcErrors, true, &mux.Router{})
+		cfg, _ := config.Get()
+		cfg.IsPublishing = true
+		svc, _ := service.Run(ctx, serviceList, svcErrors, cfg, &mux.Router{})
 
 		Convey("Closing the service results in all the dependencies being closed in the expected order", func() {
 			serviceList.ShutdownFunc = func(ctx context.Context) error { return nil }
@@ -135,7 +139,9 @@ func TestClose(t *testing.T) {
 		svcErrors := make(chan error, 1)
 
 		ctx := context.Background()
-		svc, _ := service.Run(ctx, serviceList, svcErrors, false, &mux.Router{})
+		cfg, _ := config.Get()
+		cfg.IsPublishing = false
+		svc, _ := service.Run(ctx, serviceList, svcErrors, cfg, &mux.Router{})
 
 		Convey("Closing the service results in all the dependencies being closed in the expected order", func() {
 			serviceList.ShutdownFunc = func(ctx context.Context) error { return nil }

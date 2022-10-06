@@ -62,7 +62,7 @@ func run(ctx context.Context) error {
 	log.Info(ctx, "dp-files-api version", log.Data{"version": Version})
 
 	// Start service
-	svc, err := service.Run(ctx, svcList, svcErrors, cfg.IsPublishing, r)
+	svc, err := service.Run(ctx, svcList, svcErrors, cfg, r)
 	if err != nil {
 		return errors.Wrap(err, "running service failed")
 	}

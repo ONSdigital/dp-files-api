@@ -33,7 +33,7 @@ type Service struct {
 }
 
 // Run the service
-func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error, isPublishing bool, r *mux.Router) (*Service, error) {
+func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error, cfg *config.Config, r *mux.Router) (*Service, error) {
 
 	log.Info(ctx, "running service")
 
@@ -41,12 +41,12 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	kafkaProducer := serviceList.GetKafkaProducer()
 	hc := serviceList.GetHealthCheck()
 	authMiddleware := serviceList.GetAuthMiddleware()
-	store := store.NewStore(mongoClient.Collection(config.MetadataCollection), kafkaProducer, serviceList.GetClock())
+	store := store.NewStore(mongoClient.Collection(config.MetadataCollection), kafkaProducer, serviceList.GetClock(), cfg)
 
 	getSingleFile := api.HandleGetFileMetadata(store.GetFileMetadata)
 
 	const filesURI = "/files/{path:.*}"
-	if isPublishing {
+	if cfg.IsPublishing {
 		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload)
 		getMultipleFiles := api.HandlerGetFilesMetadata(store.GetFilesMetadata)
 		collectionPublished := api.HandleMarkCollectionPublished(store.MarkCollectionPublished)
@@ -90,7 +90,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		AuthMiddleware: authMiddleware,
 	}
 
-	if err := svc.registerCheckers(ctx, hc, isPublishing); err != nil {
+	if err := svc.registerCheckers(ctx, hc, cfg.IsPublishing); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
