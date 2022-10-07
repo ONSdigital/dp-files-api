@@ -13,11 +13,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-const (
-	MAX_NUM_BATCHES = 30
-	MIN_BATCH_SIZE  = 20
-)
-
 func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID string) error {
 	metadata := files.StoredRegisteredMetaData{}
 	logdata := log.Data{"path": path}
