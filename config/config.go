@@ -20,8 +20,6 @@ type Config struct {
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
 	IsPublishing               bool          `envconfig:"IS_PUBLISHING"`
-	MaxNumBatches              int           `envconfig:"MAX_NUM_BATCHES"`
-	MinBatchSize               int           `envconfig:"MIN_BATCH_SIZE"`
 	MongoConfig
 	KafkaConfig
 	AuthConfig
@@ -58,8 +56,6 @@ func Get() (*Config, error) {
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
 		IsPublishing:               false,
-		MaxNumBatches:              5,
-		MinBatchSize:               20,
 		MongoConfig: MongoConfig{
 			ClusterEndpoint:               "localhost:27017",
 			Database:                      "files",
@@ -90,8 +86,8 @@ func Get() (*Config, error) {
 			IdentityWebKeySetURL:           "http://localhost:25600",
 			PermissionsCacheUpdateInterval: time.Minute * 5,
 			PermissionsMaxCacheTime:        time.Minute * 15,
-			IdentityClientMaxRetries:       2,
-			ZebedeeURL:                     "http://localhost:8082",
+			IdentityClientMaxRetries: 2,
+			ZebedeeURL:               "http://localhost:8082",
 		},
 	}
 

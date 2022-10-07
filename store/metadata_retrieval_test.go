@@ -1,7 +1,6 @@
 package store_test
 
 import (
-	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/mongo/mock"
 	"github.com/ONSdigital/dp-files-api/store"
@@ -17,8 +16,7 @@ func (suite *StoreSuite) TestGetFileMetadataError() {
 		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
 
-	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock)
 	_, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -36,8 +34,7 @@ func (suite *StoreSuite) TestGetFileMetadataSuccess() {
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 	}
 
-	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock)
 	actualMetadata, _ := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	suite.Exactly(expectedMetadata, actualMetadata)
@@ -51,8 +48,7 @@ func (suite *StoreSuite) TestGetFilesMetadataSuccessSingleResult() {
 		FindFunc: CollectionFindSetsResultAndReturns1IfCollectionIDMatchesFilter(metadataBytes),
 	}
 
-	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock)
 
 	expectedMetadata := []files.StoredRegisteredMetaData{metadata}
 	actualMetadata, _ := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID)
@@ -68,8 +64,7 @@ func (suite *StoreSuite) TestGetFilesMetadataNoResult() {
 		FindFunc: CollectionFindSetsResultAndReturns1IfCollectionIDMatchesFilter(metadataBytes),
 	}
 
-	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock)
 
 	expectedMetadata := make([]files.StoredRegisteredMetaData, 0)
 	actualMetadata, _ := subject.GetFilesMetadata(suite.defaultContext, "INVALID_COLLECTION_ID")
