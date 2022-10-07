@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"strconv"
-	"sync"
 
 	"github.com/ONSdigital/dp-files-api/files"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
@@ -111,34 +109,11 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 }
 
 func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID string) {
-	// ignoring err as this would have been done previously
-	totalCount, _ := store.mongoCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
-	log.Info(ctx, "notify collection published start", log.Data{"collection_id": collectionID, "total_files": totalCount})
-	// balance the number of batches Vs batch size
-	batch_size := MIN_BATCH_SIZE
-	num_batches := int(math.Ceil(float64(totalCount) / float64(batch_size)))
-	if num_batches > MAX_NUM_BATCHES {
-		num_batches = MAX_NUM_BATCHES
-		batch_size = int(math.Ceil(float64(totalCount) / float64(num_batches)))
-	}
+	log.Info(ctx, "notify collection published start", log.Data{"collection_id": collectionID})
 
-	var wg sync.WaitGroup
-	wg.Add(num_batches)
-	for i := 0; i < num_batches; i++ {
-		offset := i * batch_size
-		go store.BatchSendKafkaMessages(ctx, &wg, collectionID, offset, batch_size, i)
-	}
-	wg.Wait()
-
-	log.Info(ctx, "notify collection published end", log.Data{"collection_id": collectionID})
-}
-
-func (store *Store) BatchSendKafkaMessages(ctx context.Context, wg *sync.WaitGroup, collectionID string, offset, batch_size, batch_num int) {
-	defer wg.Done()
-	log.Info(ctx, "BatchSendKafkaMessages", log.Data{"collection_id": collectionID, "offset": offset, "batch_size": batch_size, "batch_num": batch_num})
-	cursor, err := store.mongoCollection.FindCursor(ctx, bson.M{fieldCollectionID: collectionID}, mongodriver.Offset(offset))
+	cursor, err := store.mongoCollection.FindCursor(ctx, bson.M{fieldCollectionID: collectionID})
 	if err != nil {
-		log.Error(ctx, "BatchSendKafkaMessages: failed to query collection", err, log.Data{"collection_id": collectionID})
+		log.Error(ctx, "notify collection published: failed to query collection", err, log.Data{"collection_id": collectionID})
 		return
 	}
 	defer func() {
