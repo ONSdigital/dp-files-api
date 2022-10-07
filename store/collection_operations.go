@@ -146,20 +146,25 @@ func (store *Store) BatchSendKafkaMessages(ctx context.Context,
 		}
 	}()
 
-	for cursor.Next(ctx) {
-		var m files.StoredRegisteredMetaData
-		if err := cursor.Decode(&m); err != nil {
-			log.Error(ctx, "notify collection published: failed to decode cursor", err, log.Data{"collection_id": collectionID})
-			continue
-		}
-		fp := &files.FilePublished{
-			Path:        m.Path,
-			Type:        m.Type,
-			Etag:        m.Etag,
-			SizeInBytes: strconv.FormatUint(m.SizeInBytes, 10),
-		}
-		if err := store.kafka.Send(files.AvroSchema, fp); err != nil {
-			log.Error(ctx, "notify collection published: can't send message to kafka", err, log.Data{"metadata": m})
+	for i := 0; i < batch_size; i++ {
+		if cursor.Next(ctx) {
+			var m files.StoredRegisteredMetaData
+			if err := cursor.Decode(&m); err != nil {
+				log.Error(ctx, "BatchSendKafkaMessages: failed to decode cursor", err, log.Data{"collection_id": collectionID})
+				continue
+			}
+			//fmt.Println(batch_num, m.Path)
+			fp := &files.FilePublished{
+				Path:        m.Path,
+				Type:        m.Type,
+				Etag:        m.Etag,
+				SizeInBytes: strconv.FormatUint(m.SizeInBytes, 10),
+			}
+			if err := store.kafka.Send(files.AvroSchema, fp); err != nil {
+				log.Error(ctx, "BatchSendKafkaMessages: can't send message to kafka", err, log.Data{"metadata": m})
+			}
+		} else {
+			break
 		}
 	}
 	if err := cursor.Err(); err != nil {
