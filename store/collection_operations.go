@@ -139,32 +139,38 @@ func (store *Store) BatchSendKafkaMessages(ctx context.Context,
 	wg *sync.WaitGroup,
 	collectionID string, offset, batch_size, batch_num int) {
 	defer wg.Done()
-	log.Info(ctx, "BatchSendKafkaMessages", log.Data{"collection_id": collectionID, "offset": offset, "batch_size": batch_size, "batch_num": batch_num})
+	ld := log.Data{"collection_id": collectionID, "offset": offset, "batch_size": batch_size, "batch_num": batch_num}
+	log.Info(ctx, "BatchSendKafkaMessages", ld)
 	defer func() {
 		if err := cursor.Close(ctx); err != nil {
-			log.Error(ctx, "notify collection published: failed to close cursor", err, log.Data{"collection_id": collectionID})
+			log.Error(ctx, "BatchSendKafkaMessages: failed to close cursor", err, ld)
 		}
 	}()
 
-	for cursor.Next(ctx) {
-		var m files.StoredRegisteredMetaData
-		if err := cursor.Decode(&m); err != nil {
-			log.Error(ctx, "notify collection published: failed to decode cursor", err, log.Data{"collection_id": collectionID})
-			continue
-		}
-		fp := &files.FilePublished{
-			Path:        m.Path,
-			Type:        m.Type,
-			Etag:        m.Etag,
-			SizeInBytes: strconv.FormatUint(m.SizeInBytes, 10),
-		}
-		if err := store.kafka.Send(files.AvroSchema, fp); err != nil {
-			log.Error(ctx, "notify collection published: can't send message to kafka", err, log.Data{"metadata": m})
+	for i := 0; i < batch_size; i++ {
+		if cursor.Next(ctx) {
+			var m files.StoredRegisteredMetaData
+			if err := cursor.Decode(&m); err != nil {
+				log.Error(ctx, "BatchSendKafkaMessages: failed to decode cursor", err, ld)
+				continue
+			}
+			//fmt.Println(batch_num, m.Path)
+			fp := &files.FilePublished{
+				Path:        m.Path,
+				Type:        m.Type,
+				Etag:        m.Etag,
+				SizeInBytes: strconv.FormatUint(m.SizeInBytes, 10),
+			}
+			if err := store.kafka.Send(files.AvroSchema, fp); err != nil {
+				log.Error(ctx, "BatchSendKafkaMessages: can't send message to kafka", err, log.Data{"metadata": m})
+			}
+		} else {
+			break
 		}
 	}
 	if err := cursor.Err(); err != nil {
-		log.Error(ctx, "notify collection published: cursor error", err, log.Data{"collection_id": collectionID})
+		log.Error(ctx, "BatchSendKafkaMessages: cursor error", err, ld)
 	}
 
-	log.Info(ctx, "notify collection published end", log.Data{"collection_id": collectionID})
+	log.Info(ctx, "BatchSendKafkaMessages end", ld)
 }

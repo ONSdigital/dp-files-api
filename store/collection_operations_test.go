@@ -338,6 +338,8 @@ func (suite *StoreSuite) TestBatchingWithLargeNumberOfFiles() {
 	for _, evt := range evts {
 		suite.EqualValues(evt["batch_size"].(float64), expectedBatchSize)
 	}
+	// make sure correct number of messages are sent
+	suite.Equal(len(kafkaMock.SendCalls()), numFiles)
 	suite.Equal(cfg.MaxNumBatches, len(evts))
 	suite.Equal(cfg.MaxNumBatches, len(cursor.ErrCalls()))
 	suite.Equal(cfg.MaxNumBatches, len(cursor.CloseCalls()))
