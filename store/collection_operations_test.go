@@ -122,14 +122,14 @@ func (suite *StoreSuite) TestUpdateCollectionIDUpdateSuccess() {
 	suite.NoError(err)
 }
 
-func (suite *StoreSuite) TestMarkCollectionPublishedCountReturnsError() {
+func (suite *StoreSuite) TestMarkCollectionPublishedCollectionEmptyCheckReturnsError() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
 	expectedError := errors.New("an error occurred during files count")
 
 	collectionCountReturnsError := mock.MongoCollectionMock{
-		CountFunc: CollectionCountReturnsValueAndError(0, expectedError),
+		FindOneFunc: CollectionFindOneReturnsError(expectedError),
 	}
 
 	cfg, _ := config.Get()
@@ -139,17 +139,17 @@ func (suite *StoreSuite) TestMarkCollectionPublishedCountReturnsError() {
 
 	logEvent := suite.logInterceptor.GetLogEvent()
 
-	suite.Equal("failed to count files collection", logEvent)
+	suite.Equal("failed to check if collection is empty", logEvent)
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
 }
 
-func (suite *StoreSuite) TestMarkCollectionPublishedCountReturnsZero() {
+func (suite *StoreSuite) TestMarkCollectionPublishedCollectionEmpty() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
 	collectionCountReturnsError := mock.MongoCollectionMock{
-		CountFunc: CollectionCountReturnsValueAndNil(0),
+		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
 
 	cfg, _ := config.Get()
@@ -159,7 +159,7 @@ func (suite *StoreSuite) TestMarkCollectionPublishedCountReturnsZero() {
 
 	logEvent := suite.logInterceptor.GetLogEvent()
 
-	suite.Equal("no files found in collection", logEvent)
+	suite.Equal("collection empty check fail", logEvent)
 	suite.Error(err)
 	suite.ErrorIs(err, store.ErrNoFilesInCollection)
 }
@@ -168,8 +168,33 @@ func (suite *StoreSuite) TestMarkCollectionPublishedWhenFileExistsInStateOtherTh
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
+	collection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSucceeds(), // there are some files in the collection
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+
+	err := subject.MarkCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("collection uploaded check fail", logEvent)
+	suite.Error(err)
+	suite.ErrorIs(err, store.ErrFileNotInUploadedState)
+}
+
+func (suite *StoreSuite) TestMarkCollectionPublishedCollectionUploadedCheckReturnsError() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	expectedError := errors.New("an error occurred during uploaded check")
+
 	collectionCountReturnsError := mock.MongoCollectionMock{
-		CountFunc: CollectionCountReturnsValueAndNil(1),
+		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
+			{CollectionFindOneSucceeds(), 1},                  // there are some files in the collection
+			{CollectionFindOneReturnsError(expectedError), 1}, // but UPLOADED check fails
+		}),
 	}
 
 	cfg, _ := config.Get()
@@ -179,9 +204,9 @@ func (suite *StoreSuite) TestMarkCollectionPublishedWhenFileExistsInStateOtherTh
 
 	logEvent := suite.logInterceptor.GetLogEvent()
 
-	suite.Equal("can not publish collection, not all files in UPLOADED state", logEvent)
+	suite.Equal("failed to check if collection is uploaded", logEvent)
 	suite.Error(err)
-	suite.ErrorIs(err, store.ErrFileNotInUploadedState)
+	suite.ErrorIs(err, expectedError)
 }
 
 func (suite *StoreSuite) TestMarkCollectionPublishedPersistenceFailure() {
@@ -190,7 +215,10 @@ func (suite *StoreSuite) TestMarkCollectionPublishedPersistenceFailure() {
 
 	expectedError := errors.New("an error occurred")
 	collection := mock.MongoCollectionMock{
-		CountFunc:      CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout(),
+		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
+			{CollectionFindOneSucceeds(), 1},                                   // there are some files in the collection
+			{CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound), 1}, // all of them are UPLOADED
+		}),
 		UpdateManyFunc: CollectionUpdateManyReturnsNilAndError(expectedError),
 	}
 
@@ -211,6 +239,10 @@ func (suite *StoreSuite) TestMarkCollectionPublishedFindCalled() {
 	expectedError := errors.New("an error occurred")
 
 	collection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
+			{CollectionFindOneSucceeds(), 1},                                   // there are some files in the collection
+			{CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound), 1}, // all of them are UPLOADED
+		}),
 		CountFunc:      CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout(),
 		UpdateManyFunc: CollectionUpdateManyReturnsNilAndNil(),
 		FindCursorFunc: CollectionFindCursorReturnsCursorAndError(nil, expectedError),

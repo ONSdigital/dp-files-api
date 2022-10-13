@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -47,22 +48,49 @@ type CollectionUpdateManyFunc func(ctx context.Context, selector interface{}, up
 type CollectionInsertFunc func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error)
 type KafkaSendFunc func(schema *avro.Schema, event interface{}) error
 
-func CollectionFindOneSetsResultAndReturnsNil(metadataBytes []byte) CollectionFindOneFunc {
-	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-		bson.Unmarshal(metadataBytes, result)
-		return nil
-	}
-}
-
 func CollectionFindReturnsValueAndError(value int, expectedError error) CollectionFindFunc {
 	return func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
 		return value, expectedError
 	}
 }
 
+func CollectionFindOneSetsResultAndReturnsNil(metadataBytes []byte) CollectionFindOneFunc {
+	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+		bson.Unmarshal(metadataBytes, result)
+		return nil
+	}
+}
+func CollectionFindOneSucceeds() CollectionFindOneFunc {
+	metadata := files.StoredRegisteredMetaData{}
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	return CollectionFindOneSetsResultAndReturnsNil(metadataBytes)
+}
+
 func CollectionFindOneReturnsError(expectedError error) CollectionFindOneFunc {
 	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
 		return expectedError
+	}
+}
+
+type CollectionFindOneFuncChainEntry struct {
+	fun   CollectionFindOneFunc
+	times int
+}
+
+func CollectionFindOneChain(chain []CollectionFindOneFuncChainEntry) CollectionFindOneFunc {
+	currentRun := 0
+	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+		currentRun++
+		run := 0
+		for _, item := range chain {
+			run += item.times
+			if currentRun <= run {
+				return item.fun(ctx, filter, result, opts...)
+			}
+
+		}
+		return errors.New("unexpected CollectionFindOne call: no functions left in the chain")
 	}
 }
 
