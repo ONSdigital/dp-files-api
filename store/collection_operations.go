@@ -58,28 +58,25 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 }
 
 func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID string) error {
-	count, err := store.mongoCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
 	logdata := log.Data{"collection_id": collectionID}
+
+	empty, err := store.IsCollectionEmpty(ctx, collectionID)
 	if err != nil {
-		log.Error(ctx, "failed to count files collection", err, logdata)
+		log.Error(ctx, "failed to check if collection is empty", err, logdata)
 		return err
 	}
-
-	if count == 0 {
-		log.Info(ctx, "no files found in collection", logdata)
+	if empty {
+		log.Error(ctx, "collection empty check fail", ErrNoFilesInCollection, logdata)
 		return ErrNoFilesInCollection
 	}
 
-	count, err = store.mongoCollection.Count(ctx, createCollectionContainsNotUploadedFilesQuery(collectionID))
-
+	allUploaded, err := store.IsCollectionUploaded(ctx, collectionID)
 	if err != nil {
-		log.Error(ctx, "failed to count unpublishable files", err, logdata)
+		log.Error(ctx, "failed to check if collection is uploaded", err, logdata)
 		return err
 	}
-
-	if count > 0 {
-		event := fmt.Sprintf("can not publish collection, not all files in %s state", StateUploaded)
-		log.Info(ctx, event, log.Data{"collection_id": collectionID, "num_file_not_state_uploaded": count})
+	if !allUploaded {
+		log.Error(ctx, "collection uploaded check fail", ErrFileNotInUploadedState, logdata)
 		return ErrFileNotInUploadedState
 	}
 
@@ -103,6 +100,37 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 	go store.NotifyCollectionPublished(newCtx, collectionID)
 
 	return nil
+}
+
+func (store *Store) IsCollectionEmpty(ctx context.Context, collectionID string) (bool, error) {
+	metadata := files.StoredRegisteredMetaData{}
+
+	err := store.mongoCollection.FindOne(ctx, bson.M{fieldCollectionID: collectionID}, &metadata)
+	if err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			return true, nil
+		}
+		return true, err
+	}
+
+	return false, nil
+}
+
+func (store *Store) IsCollectionUploaded(ctx context.Context, collectionID string) (bool, error) {
+	metadata := files.StoredRegisteredMetaData{}
+
+	err := store.mongoCollection.FindOne(ctx, bson.M{"$and": []bson.M{
+		{fieldCollectionID: collectionID},
+		{fieldState: bson.M{"$ne": StateUploaded}},
+	}}, &metadata)
+	if err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			return true, nil
+		}
+		return false, err
+	}
+
+	return false, nil
 }
 
 func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID string) {
@@ -134,10 +162,15 @@ func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID 
 	log.Info(ctx, "notify collection published end", log.Data{"collection_id": collectionID})
 }
 
-func (store *Store) BatchSendKafkaMessages(ctx context.Context,
+func (store *Store) BatchSendKafkaMessages(
+	ctx context.Context,
 	cursor mongodriver.Cursor,
 	wg *sync.WaitGroup,
-	collectionID string, offset, batch_size, batch_num int) {
+	collectionID string,
+	offset,
+	batch_size,
+	batch_num int,
+) {
 	defer wg.Done()
 	ld := log.Data{"collection_id": collectionID, "offset": offset, "batch_size": batch_size, "batch_num": batch_num}
 	log.Info(ctx, "BatchSendKafkaMessages", ld)
@@ -154,7 +187,6 @@ func (store *Store) BatchSendKafkaMessages(ctx context.Context,
 				log.Error(ctx, "BatchSendKafkaMessages: failed to decode cursor", err, ld)
 				continue
 			}
-			//fmt.Println(batch_num, m.Path)
 			fp := &files.FilePublished{
 				Path:        m.Path,
 				Type:        m.Type,
