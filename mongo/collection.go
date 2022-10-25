@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+
 	"github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	lock "github.com/square/mongo-lock"
 )
@@ -14,6 +15,7 @@ type MongoCollection interface {
 	Distinct(ctx context.Context, fieldName string, filter interface{}) ([]interface{}, error)
 	Count(ctx context.Context, filter interface{}, opts ...mongodb.FindOption) (int, error)
 	Find(ctx context.Context, filter interface{}, results interface{}, opts ...mongodb.FindOption) (int, error)
+	FindCursor(ctx context.Context, filter interface{}, opts ...mongodb.FindOption) (mongodb.Cursor, error)
 	FindOne(ctx context.Context, filter interface{}, result interface{}, opts ...mongodb.FindOption) error
 	Insert(ctx context.Context, document interface{}) (*mongodb.CollectionInsertResult, error)
 	InsertMany(ctx context.Context, documents []interface{}) (*mongodb.CollectionInsertManyResult, error)
@@ -27,4 +29,9 @@ type MongoCollection interface {
 	DeleteById(ctx context.Context, id interface{}) (*mongodb.CollectionDeleteResult, error)
 	Aggregate(ctx context.Context, pipeline interface{}, results interface{}) error
 	NewLockClient() *lock.Client
+}
+
+//go:generate moq -out mock/cursor.go -pkg mock . MongoCursor
+type MongoCursor interface {
+	mongodb.Cursor
 }

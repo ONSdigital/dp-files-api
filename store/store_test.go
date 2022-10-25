@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -32,20 +35,18 @@ type StoreSuite struct {
 	defaultKafkaProducer kafkatest.IProducerMock
 }
 
+var (
+	mu sync.Mutex
+)
+
 type CollectionCountFunc func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error)
 type CollectionFindFunc func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error)
+type CollectionFindCursorFunc func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (mongodriver.Cursor, error)
 type CollectionFindOneFunc func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error
 type CollectionUpdateFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
 type CollectionUpdateManyFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
 type CollectionInsertFunc func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error)
 type KafkaSendFunc func(schema *avro.Schema, event interface{}) error
-
-func CollectionFindOneSetsResultAndReturnsNil(metadataBytes []byte) CollectionFindOneFunc {
-	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-		bson.Unmarshal(metadataBytes, result)
-		return nil
-	}
-}
 
 func CollectionFindReturnsValueAndError(value int, expectedError error) CollectionFindFunc {
 	return func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
@@ -53,9 +54,49 @@ func CollectionFindReturnsValueAndError(value int, expectedError error) Collecti
 	}
 }
 
+func CollectionFindOneSetsResultAndReturnsNil(metadataBytes []byte) CollectionFindOneFunc {
+	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+		bson.Unmarshal(metadataBytes, result)
+		return nil
+	}
+}
+func CollectionFindOneSucceeds() CollectionFindOneFunc {
+	metadata := files.StoredRegisteredMetaData{}
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	return CollectionFindOneSetsResultAndReturnsNil(metadataBytes)
+}
+
 func CollectionFindOneReturnsError(expectedError error) CollectionFindOneFunc {
 	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
 		return expectedError
+	}
+}
+
+type CollectionFindOneFuncChainEntry struct {
+	fun   CollectionFindOneFunc
+	times int
+}
+
+func CollectionFindOneChain(chain []CollectionFindOneFuncChainEntry) CollectionFindOneFunc {
+	currentRun := 0
+	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+		currentRun++
+		run := 0
+		for _, item := range chain {
+			run += item.times
+			if currentRun <= run {
+				return item.fun(ctx, filter, result, opts...)
+			}
+
+		}
+		return errors.New("unexpected CollectionFindOne call: no functions left in the chain")
+	}
+}
+
+func CollectionFindCursorReturnsCursorAndError(cursor mongodriver.Cursor, expectedError error) CollectionFindCursorFunc {
+	return func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (mongodriver.Cursor, error) {
+		return cursor, expectedError
 	}
 }
 
@@ -144,6 +185,18 @@ func CollectionInsertReturnsNilAndError(expectedError error) CollectionInsertFun
 func CollectionInsertReturnsNilAndNil() CollectionInsertFunc {
 	return func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
 		return nil, nil
+	}
+}
+
+func CursorReturnsNumberOfNext(number int) func(ctx context.Context) bool {
+	return func(ctx context.Context) bool {
+		mu.Lock()
+		defer mu.Unlock()
+		if number > 0 {
+			number--
+			return true
+		}
+		return false
 	}
 }
 
@@ -241,6 +294,24 @@ func (l *LogInterceptor) GetLogEvent() string {
 	json.Unmarshal(logResult, &logOut)
 
 	return logOut["event"].(string)
+}
+
+func (l *LogInterceptor) GetLogEvents(eventName string) map[int]map[string]interface{} {
+	retVal := make(map[int]map[string]interface{})
+	logResult, _ := ioutil.ReadAll(l.logBuffer)
+	logz := strings.Split(string(logResult), "\n")
+	counter := 0
+	for _, line := range logz {
+		logOut := make(map[string]interface{})
+		json.Unmarshal([]byte(line), &logOut)
+		evt, ok := logOut["event"]
+		if ok && evt.(string) == eventName {
+			retVal[counter] = logOut["data"].(map[string]interface{})
+			counter++
+		}
+	}
+
+	return retVal
 }
 
 func NewLogInterceptor() LogInterceptor {

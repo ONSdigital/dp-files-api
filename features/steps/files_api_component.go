@@ -2,9 +2,11 @@ package steps
 
 import (
 	"context"
-	"github.com/gorilla/mux"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/ONSdigital/dp-files-api/files"
 
@@ -51,7 +53,9 @@ func NewFilesApiComponent() *FilesApiComponent {
 func (d *FilesApiComponent) Initialiser() (http.Handler, error) {
 	r := &mux.Router{}
 	d.svcList = &fakeServiceContainer{d.DpHttpServer, r, d.isAuthorised}
-	d.svc, _ = service.Run(context.Background(), d.svcList, d.errChan, d.isPublishing, r)
+	cfg, _ := config.Get()
+	cfg.IsPublishing = d.isPublishing
+	d.svc, _ = service.Run(context.Background(), d.svcList, d.errChan, cfg, r)
 
 	return d.DpHttpServer.Handler, nil
 }
@@ -66,7 +70,14 @@ func (d *FilesApiComponent) Reset() {
 
 	d.mongoClient = client
 	d.mongoClient.Database("files").Collection("metadata").Drop(ctx)
-
+	d.mongoClient.Database("files").CreateCollection(ctx, "metadata")
+	d.mongoClient.Database("files").Collection("metadata").Indexes().CreateOne(
+		ctx,
+		mongo.IndexModel{
+			Keys:    bson.D{{"path", 1}},
+			Options: options.Index().SetUnique(true),
+		},
+	)
 	d.isPublishing = true
 }
 

@@ -22,7 +22,7 @@ Feature: Mark files as decrypted
       | Etag              | 123456789                                                                 |
       | State             | PUBLISHED                                                                 |
     When the file "images/meme.jpg" is marked as decrypted with etag "987654321"
-    Then the HTTP status code should be "201"
+    Then the HTTP status code should be "200"
     And the following document entry should be look like:
       | Path              | images/meme.jpg                                                           |
       | IsPublishable     | true                                                                      |

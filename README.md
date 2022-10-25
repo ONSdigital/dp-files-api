@@ -1,6 +1,6 @@
 # DP Files API
 
-## Introduction 
+## Introduction
 The Files API is part of the [Static Files System](https://github.com/ONSdigital/dp-static-files-compose).
 This API is responsible for storing the metadata and state of files.
 
@@ -15,6 +15,11 @@ be retrieved by its path or all files in a collection can be retrieved by ID.
 The [Download Service](https://github.com/ONSdigital/dp-download-service) uses this API to see whether a file exists and
 what state it is in before attempting to serve the file to consumers wishing to access the file.
 
+The API has two end points to publish files. Files can be individually published by PATCHING the state to be PUBLISHED.
+It is also to publish all files in a collection in one call by PATCHING /collection/{collection_id}, this can be used to
+reduce the number of API calls required to publish a large collection.
+Currently, most calls to a publish file will come from the [Zebedee Publisher](https://github.com/ONSdigital/zebedee/blob/ff5d1a23b2bba50dc1ed67b10fbc213972f9ad21/zebedee-cms/src/main/java/com/github/onsdigital/zebedee/model/publishing/Publisher.java#L153)
+
 When a file is published this API sends a message via Kafka to the [Static File Publisher](https://github.com/ONSdigital/dp-static-file-publisher)
 that permanently decrypts the file and inform this API that the file is now decrypted via an HTTP call.
 
@@ -27,30 +32,30 @@ where it is not already sent or change the `state` of a file.
 
 ### Metadata
 
-| Field          | Notes                                                                                                      |
-|----------------|------------------------------------------------------------------------------------------------------------|
-| path           |                                                                                                            |
-| is_publishable | This field currently is ignored and has no affect, the file will be published if a publish update is sent! |
-| collection_id  | Optional during upload, must be set for the file to be published                                           |
-| title          | Optional                                                                                                   |
-| size_in_bytes  |                                                                                                            |
-| type           |                                                                                                            |
-| licence        |                                                                                                            |
-| licence_url    |                                                                                                            |
-| state          |                                                                                                            |
-| etag           |                                                                                                            |
+| Field          | Notes                                                                                                          |
+|----------------|----------------------------------------------------------------------------------------------------------------|
+| path           | The identifier of a file that is stored. Globally unique, and forms part of the bucket/object name when stored |
+| is_publishable | This field currently is ignored and has no affect, the file will be published if a publish update is sent!     |
+| collection_id  | Optional during upload, must be set for the file to be published                                               |
+| title          | Optional                                                                                                       |
+| size_in_bytes  | The size of the file (unencrypted)                                                                             |
+| type           | mimetype of the file, e.g. "text/csv", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"     |
+| licence        | Freetext name of the licence under which the file is made available                                            |
+| licence_url    | URL to the license                                                                                             |
+| state          | State of the file - CREATED, UPLOADED, PUBLISHED, DECRYPTED                                                    |
+| etag           | Cyrptographic hash of the file content                                                                         |
 
 #### Additional Metadata
 
-Additional data about the file is store in the database but not exposed via the API. Those fields are: 
+Additional timestamp data about the file is stored in the database but not exposed via the API. Those fields are:
 
 | Field               |
 |---------------------|
-| created_at          | 
-| last_modified       | 
-| upload_completed_at | 
-| published_at        | 
-| decrypted_at        | 
+| created_at          |
+| last_modified       |
+| upload_completed_at |
+| published_at        |
+| decrypted_at        |
 
 
 ### File States
@@ -61,6 +66,22 @@ Additional data about the file is store in the database but not exposed via the 
 | UPLOADED  | File upload has been completed. The etag for the final file has been provided                                               |
 | PUBLISHED | The file has been published (it is available to the public, but is not yet permently decrypted)                             |
 | DECRYPTED | The file has been permanently decrypted and moved to the public bucket for storage. The public files etag has been provided |
+
+```
+
+
+ Start     ┌──────────────┐ File      ┌──────────────┐ File       ┌───────────────┐ File       ┌───────────────┐
+ Upload    │              │ Uploaded  │              │ Published  │               │ Decrypted  │               │
+      ────►│   CREATED    ├──────────►│   UPLOADED   ├───────────►│   PUBLISHED   ├───────────►│   DECRYPTED   │
+           │              │           │              │            │               │            │               │
+           └──────────────┘           └──────────────┘            └───────────────┘            └───────────────┘
+             File is in a               File is ready               File is available           File is available
+             unusable                   for review &                for public download         for public download
+             state                      approval                    The stored encrypted        directly from S3
+             Can resume upoad           Can be pre-viewed           version is decrypted        where it is stored
+                                                                    on-demand                   unencrypted
+
+```
 
 ## Getting started
 
@@ -108,7 +129,7 @@ Additional data about the file is store in the database but not exposed via the 
 
 ## API Client
 
-There is an [API Client](https://github.com/ONSdigital/dp-api-clients-go/tree/main/files) for the File API this is part 
+There is an [API Client](https://github.com/ONSdigital/dp-api-clients-go/tree/main/files) for the File API this is part
 of [dp-api-clients-go](https://github.com/ONSdigital/dp-api-clients-go) package.
 
 The Files Client provides functions that enables:
@@ -123,7 +144,7 @@ See [CONTRIBUTING](CONTRIBUTING.md) for details.
 
 ## License
 
-Copyright © 2021, Office for National Statistics (https://www.ons.gov.uk)
+Copyright © 2022, Office for National Statistics (https://www.ons.gov.uk)
 
 Released under MIT license, see [LICENSE](LICENSE.md) for details.
 

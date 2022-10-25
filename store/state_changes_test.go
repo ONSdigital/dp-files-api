@@ -3,32 +3,37 @@ package store_test
 import (
 	"context"
 	"errors"
+
+	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/mongo/mock"
 	"github.com/ONSdigital/dp-files-api/store"
 	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func (suite *StoreSuite) TestRegisterFileUploadCountReturnsError() {
+func (suite *StoreSuite) TestRegisterFileUploadWhenCollectionAlreadyPublished() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
-	expectedError := errors.New("error occurred")
-
+	metadata.State = store.StatePublished
+	metadataBytes, _ := bson.Marshal(metadata)
+	
 	alwaysFindsExistingCollection := mock.MongoCollectionMock{
-		CountFunc: CollectionCountReturnsValueAndError(0, expectedError),
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 	}
 
-	subject := store.NewStore(&alwaysFindsExistingCollection, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&alwaysFindsExistingCollection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
 
-	suite.Equal("mongo driver count error", logEvent)
-	suite.Error(err)
+	suite.Equal("collection with id [123456] is already published", logEvent)
+	suite.ErrorIs(err, store.ErrCollectionAlreadyPublished)
 }
 
 func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
@@ -36,12 +41,17 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata.State = store.StateUploaded
+	expectedError := mongo.WriteError{Code: 11000}
+	metadataBytes, _ := bson.Marshal(metadata)
 
 	alwaysFindsExistingCollection := mock.MongoCollectionMock{
-		CountFunc: CollectionCountReturnsValueAndNil(1),
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+		InsertFunc: CollectionInsertReturnsNilAndError(expectedError),
 	}
 
-	subject := store.NewStore(&alwaysFindsExistingCollection, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&alwaysFindsExistingCollection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -53,9 +63,10 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 func (suite *StoreSuite) TestRegisterFileUploadWhenFileDoesNotAlreadyExist() {
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
 	metadata.State = ""
+	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{
-		CountFunc: CollectionCountReturnsValueAndNil(0),
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		InsertFunc: func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
 			actualMetadata := document.(files.StoredRegisteredMetaData)
 
@@ -71,7 +82,8 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFileDoesNotAlreadyExist() {
 		},
 	}
 
-	subject := store.NewStore(&collectionCountReturnsZero, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionCountReturnsZero, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.NoError(err)
@@ -82,14 +94,17 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertReturnsError() {
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata.State = store.StateUploaded
 	expectedError := errors.New("error occurred")
+	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{
-		CountFunc:  CollectionCountReturnsValueAndNil(0),
-		InsertFunc: CollectionInsertReturnsNilAndError(expectedError),
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+		InsertFunc:  CollectionInsertReturnsNilAndError(expectedError),
 	}
 
-	subject := store.NewStore(&collectionCountReturnsZero, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionCountReturnsZero, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -104,13 +119,16 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertSucceeds() {
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata.State = store.StateUploaded
+	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{
-		CountFunc:  CollectionCountReturnsValueAndNil(0),
-		InsertFunc: CollectionInsertReturnsNilAndNil(),
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+		InsertFunc:  CollectionInsertReturnsNilAndNil(),
 	}
 
-	subject := store.NewStore(&collectionCountReturnsZero, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionCountReturnsZero, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -143,7 +161,8 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
 			FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		}
 
-		subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock)
+		cfg, _ := config.Get()
+		subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 		err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
 		logEvent := suite.logInterceptor.GetLogEvent()
@@ -166,7 +185,8 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenFileNotExists() {
 		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 	err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -188,7 +208,8 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenUpdateReturnsError() {
 		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 	err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.Error(err)
@@ -206,7 +227,8 @@ func (suite *StoreSuite) TestMarkUploadCompleteSucceeds() {
 		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 	err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.NoError(err)
@@ -236,7 +258,8 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenNotInCreatedState() {
 			FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		}
 
-		subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock)
+		cfg, _ := config.Get()
+		subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 		err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
 
 		logEvent := suite.logInterceptor.GetLogEvent()
@@ -259,7 +282,8 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenFileNotExists() {
 		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 	err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -282,7 +306,8 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenUpdateReturnsError() {
 		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 	err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.Error(err)
@@ -299,7 +324,8 @@ func (suite *StoreSuite) TestMarkFileDecryptedSucceeds() {
 		UpdateFunc:  CollectionUpdateReturnsNilAndNil(),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 	err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.NoError(err)
@@ -313,7 +339,8 @@ func (suite *StoreSuite) TestMarkFilePublishedFindReturnsErrNoDocumentFound() {
 		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -333,7 +360,8 @@ func (suite *StoreSuite) TestMarkFilePublishedFindReturnsUnspecifiedError() {
 		FindOneFunc: CollectionFindOneReturnsError(expectedError),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -355,7 +383,8 @@ func (suite *StoreSuite) TestMarkFilePublishedCollectionIDNil() {
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -384,7 +413,8 @@ func (suite *StoreSuite) TestMarkFilePublishedStateUploaded() {
 			FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		}
 
-		subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock)
+		cfg, _ := config.Get()
+		subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 		err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 		logEvent := suite.logInterceptor.GetLogEvent()
@@ -407,7 +437,8 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateReturnsError() {
 		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
 
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
@@ -430,7 +461,8 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaReturnsError() {
 		SendFunc: KafkaSendReturnsError(expectedError),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &kafkaMock, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &kafkaMock, suite.defaultClock, cfg)
 
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
@@ -453,7 +485,8 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaDoesNotReturnError() {
 		SendFunc: KafkaSendReturnsNil(),
 	}
 
-	subject := store.NewStore(&collectionWithUploadedFile, &kafkaMock, suite.defaultClock)
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &kafkaMock, suite.defaultClock, cfg)
 
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
