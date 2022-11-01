@@ -16,6 +16,9 @@ type AuthConfig = authorisation.Config
 // Config represents service configuration for dp-files-api
 type Config struct {
 	BindAddr                   string        `envconfig:"BIND_ADDR"`
+	AwsRegion                  string        `envconfig:"AWS_REGION"`
+	PrivateBucketName          string        `envconfig:"S3_PRIVATE_BUCKET_NAME"`
+	LocalstackHost             string        `envconfig:"LOCALSTACK_HOST"`
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
@@ -54,6 +57,9 @@ func Get() (*Config, error) {
 
 	cfg = &Config{
 		BindAddr:                   "localhost:26900",
+		AwsRegion:                  "eu-west-1",
+		PrivateBucketName:          "testing",
+		LocalstackHost:             "http://127.0.0.1:4566", //"http://localstack:4566"
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,

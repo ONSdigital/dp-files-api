@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
@@ -131,6 +132,18 @@ func (store *Store) updateStatus(ctx context.Context, path, etag, toState, expec
 		log.Error(ctx, fmt.Sprintf("mark file decrypted: file was not in state %s", StateCreated),
 			ErrFileNotInPublishedState, log.Data{"path": path, "current_state": metadata.State})
 		return ErrFileNotInPublishedState
+	}
+	// while publishing check that you are publishing the correct/expected version of the file
+	if toState == StateDecrypted {
+		head, err := store.s3client.Head(metadata.Path)
+		if err != nil {
+			log.Error(ctx, fmt.Sprintf("Failed trying to get head data for %s from bucket %s", metadata.Path, store.cfg.PrivateBucketName), err)
+			return err
+		}
+		if head.ETag != nil && (strings.Trim(*head.ETag, "\"") != metadata.Etag) {
+			log.Error(ctx, fmt.Sprintf("Etags mismatch, expected [%s], from s3 [%s]", metadata.Etag, *head.ETag), ErrEtagMismatchWhilePublishing)
+			return ErrEtagMismatchWhilePublishing
+		}
 	}
 
 	now := store.clock.GetCurrentTime()

@@ -56,6 +56,8 @@ github.com/ONSdigital/dp-healthcheck v1.0.5/go.mod h1:2wbVAUHMl9+4tWhUlxYUuA1dnf
 github.com/ONSdigital/dp-healthcheck v1.1.0/go.mod h1:vZwyjMJiCHjp/sJ2R1ZEqzZT0rJ0+uHVGwxqdP4J5vg=
 github.com/ONSdigital/dp-healthcheck v1.4.0-beta h1:rnFF65/1gaswgOzs4zMjoR7yD4vF+8aqoOQ9SRS1DB0=
 github.com/ONSdigital/dp-healthcheck v1.4.0-beta/go.mod h1:rIy35w7Bqos8+iSMISsiYG4GsDUH7vgKgtjAQCP5cVo=
+github.com/ONSdigital/dp-healthcheck v1.4.0-beta.1 h1:U5rgko7nWxZK22fIor4v81Mu/34aR6NrccMxbTPCZY8=
+github.com/ONSdigital/dp-healthcheck v1.4.0-beta.1/go.mod h1:YwWlueMucOMrTJ7648o9H2JdIS8naNw6gI2/Mu82YTE=
 github.com/ONSdigital/dp-kafka/v3 v3.1.1 h1:OIHQbOYg2FU7npxlvdpm+WUUTAaJ2qwZRLV1PUDKhZA=
 github.com/ONSdigital/dp-kafka/v3 v3.1.1/go.mod h1:gUor77tPx4VxT7OjZzAUCc7eeNcmLbaaaBp3WFJg52E=
 github.com/ONSdigital/dp-mocking v0.0.0-20190905163309-fee2702ad1b9 h1:+WXVfTDyWXY1DQRDFSmt1b/ORKk5c7jGiPu7NoeaM/0=
@@ -78,6 +80,8 @@ github.com/ONSdigital/dp-rchttp v0.0.0-20190919143000-bb5699e6fd59/go.mod h1:KkW
 github.com/ONSdigital/dp-rchttp v0.0.0-20200114090501-463a529590e8/go.mod h1:821jZtK0oBsV8hjIkNr8vhAWuv0FxJBPJuAHa2B70Gk=
 github.com/ONSdigital/dp-rchttp v1.0.0 h1:K/1/gDtfMZCX1Mbmq80nZxzDirzneqA1c89ea26FqP4=
 github.com/ONSdigital/dp-rchttp v1.0.0/go.mod h1:821jZtK0oBsV8hjIkNr8vhAWuv0FxJBPJuAHa2B70Gk=
+github.com/ONSdigital/dp-s3/v2 v2.1.0-beta.1 h1:Gm85NKUS3ZHrzw8ATfqw6zTmz9u3zwOfc216RCycLB8=
+github.com/ONSdigital/dp-s3/v2 v2.1.0-beta.1/go.mod h1:rYmVgbGoQXJ+A3QEykFXoEoy7axmxY4Q5hX002i78cU=
 github.com/ONSdigital/go-ns v0.0.0-20191104121206-f144c4ec2e58/go.mod h1:iWos35il+NjbvDEqwtB736pyHru0MPFE/LqcwkV1wDc=
 github.com/ONSdigital/go-ns v0.0.0-20210916104633-ac1c1c52327e h1:o+AK5m0lxRIFn4t9ng9x19kez72ErAB0cW9ArT6sAZM=
 github.com/ONSdigital/go-ns v0.0.0-20210916104633-ac1c1c52327e/go.mod h1:BCx4ULp5nT3dT7Mft5iMrp9439JG9lqIlc0JOPmsHTg=

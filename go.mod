@@ -11,7 +11,7 @@ replace github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
 require (
 	github.com/ONSdigital/dp-authorisation/v2 v2.25.1
 	github.com/ONSdigital/dp-component-test v0.8.0-beta
-	github.com/ONSdigital/dp-healthcheck v1.4.0-beta
+	github.com/ONSdigital/dp-healthcheck v1.4.0-beta.1
 	github.com/ONSdigital/dp-kafka/v3 v3.1.1
 	github.com/ONSdigital/dp-mongodb/v3 v3.3.0
 	github.com/ONSdigital/dp-net/v2 v2.5.0-beta
@@ -94,6 +94,7 @@ require (
 )
 
 require (
+	github.com/ONSdigital/dp-s3/v2 v2.1.0-beta.1
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/leodido/go-urn v1.2.1 // indirect

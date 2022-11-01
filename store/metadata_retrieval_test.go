@@ -18,7 +18,7 @@ func (suite *StoreSuite) TestGetFileMetadataError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	_, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -37,7 +37,7 @@ func (suite *StoreSuite) TestGetFileMetadataSuccess() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	actualMetadata, _ := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	suite.Exactly(expectedMetadata, actualMetadata)
@@ -52,7 +52,7 @@ func (suite *StoreSuite) TestGetFilesMetadataSuccessSingleResult() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	expectedMetadata := []files.StoredRegisteredMetaData{metadata}
 	actualMetadata, _ := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID)
@@ -69,7 +69,7 @@ func (suite *StoreSuite) TestGetFilesMetadataNoResult() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	expectedMetadata := make([]files.StoredRegisteredMetaData, 0)
 	actualMetadata, _ := subject.GetFilesMetadata(suite.defaultContext, "INVALID_COLLECTION_ID")

@@ -7,6 +7,7 @@ import (
 
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 
+	"github.com/ONSdigital/dp-files-api/aws"
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/store"
 
@@ -30,6 +31,7 @@ type Service struct {
 	MongoClient    mongo.Client
 	KafkaProducer  kafka.IProducer
 	AuthMiddleware auth.Middleware
+	S3Client       aws.S3Clienter
 }
 
 // Run the service
@@ -41,7 +43,8 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	kafkaProducer := serviceList.GetKafkaProducer()
 	hc := serviceList.GetHealthCheck()
 	authMiddleware := serviceList.GetAuthMiddleware()
-	store := store.NewStore(mongoClient.Collection(config.MetadataCollection), kafkaProducer, serviceList.GetClock(), cfg)
+	s3Client := serviceList.GetS3Clienter()
+	store := store.NewStore(mongoClient.Collection(config.MetadataCollection), kafkaProducer, serviceList.GetClock(), s3Client, cfg)
 
 	getSingleFile := api.HandleGetFileMetadata(store.GetFileMetadata)
 
@@ -88,6 +91,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		MongoClient:    mongoClient,
 		KafkaProducer:  kafkaProducer,
 		AuthMiddleware: authMiddleware,
+		S3Client:       s3Client,
 	}
 
 	if err := svc.registerCheckers(ctx, hc, cfg.IsPublishing); err != nil {
@@ -159,6 +163,11 @@ func (svc *Service) registerCheckers(ctx context.Context, hc health.Checker, isP
 		if err = hc.AddCheck("Kafka Producer", svc.KafkaProducer.Checker); err != nil {
 			hasErrors = true
 			log.Error(ctx, "error adding health for kafka producer", err)
+		}
+
+		if err = hc.AddCheck("S3 Client", svc.S3Client.Checker); err != nil {
+			hasErrors = true
+			log.Error(ctx, "error adding health for s3 client", err)
 		}
 	}
 

@@ -2,13 +2,15 @@ package steps
 
 import (
 	"context"
-	"github.com/gorilla/mux"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/mux"
 
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	authMock "github.com/ONSdigital/dp-authorisation/v2/authorisation/mock"
 
+	"github.com/ONSdigital/dp-files-api/aws"
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/health"
@@ -18,7 +20,9 @@ import (
 	"github.com/ONSdigital/dp-files-api/mongo"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 
+	s3Mock "github.com/ONSdigital/dp-files-api/aws/mock"
 	dphttp "github.com/ONSdigital/dp-net/v2/http"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 type fakeServiceContainer struct {
@@ -64,6 +68,31 @@ func (e *fakeServiceContainer) GetMongoDB() mongo.Client {
 
 func (e *fakeServiceContainer) GetClock() clock.Clock {
 	return TestClock{}
+}
+
+func (e *fakeServiceContainer) GetS3Clienter() aws.S3Clienter {
+	etag := "123456789"
+	s3Client := &s3Mock.S3ClienterMock{
+		CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+		HeadFunc:    func(key string) (*s3.HeadObjectOutput, error) { return &s3.HeadObjectOutput{ETag: &etag}, nil },
+	}
+	return s3Client
+	// TODO: make it work with localstack
+	/*cfg, _ := config.Get()
+	s, err := session.NewSession(&awssdk.Config{
+		Endpoint:                      awssdk.String("http://127.0.0.1:4566"), //"http://localstack:4566"
+		Region:                        awssdk.String(cfg.AwsRegion),
+		S3ForcePathStyle:              awssdk.Bool(true),
+		DisableSSL:                    awssdk.Bool(true),
+		CredentialsChainVerboseErrors: awssdk.Bool(true),
+		Credentials:                   credentials.NewStaticCredentials("test", "test", ""),
+	})
+
+	if err != nil {
+		fmt.Println("S3 ERROR: " + err.Error())
+	}
+
+	return s3client.NewClientWithSession(cfg.PrivateBucketName, s)*/
 }
 
 func (e *fakeServiceContainer) GetKafkaProducer() kafka.IProducer {
