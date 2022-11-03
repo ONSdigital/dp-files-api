@@ -37,21 +37,21 @@ services:
     volumes:
       - ./mongodb/entrypoint-initdb.d:/docker-entrypoint-initdb.d
 
-  # localstack:
-  #   image: localstack/localstack:latest
-  #   ports:
-  #     - "127.0.0.1:4566:4566"            # LocalStack Gateway
-  #     - "127.0.0.1:4510-4559:4510-4559"  # external services port range
-  #   environment:
-  #     - SERVICES=s3
-  #     - DEBUG=0
-  #     - AWS_DEFAULT_REGION=eu-west-1
-  #     - EDGE_PORT=4566
-  #     - AWS_ACCESS_KEY_ID=test
-  #     - AWS_SECRET_ACCESS_KEY=test
-  #     - USE_SSL=false
-  #   volumes:
-  #     - ./aws:/docker-entrypoint-initaws.d
-  #     - ./aws/index.html:/root/index.html
-  #     - "${TMPDIR:-/tmp}/localstack:/tmp/localstack"
-  #     - "/var/run/docker.sock:/var/run/docker.sock"
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"            # LocalStack Gateway
+      - "4510-4559:4510-4559"  # external services port range
+    environment:
+      - SERVICES=s3
+      - DEBUG=0
+      - AWS_DEFAULT_REGION=eu-west-1
+      - EDGE_PORT=4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - USE_SSL=false
+    volumes:
+      - ./aws:/docker-entrypoint-initaws.d
+      - ./aws/index.html:/root/index.html
+      - "${TMPDIR:-/tmp}/localstack:/tmp/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
