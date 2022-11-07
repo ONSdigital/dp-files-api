@@ -16,6 +16,7 @@ require (
 	github.com/ONSdigital/dp-mongodb/v3 v3.3.0
 	github.com/ONSdigital/dp-net/v2 v2.5.0-beta
 	github.com/ONSdigital/log.go/v2 v2.3.0-beta
+	github.com/aws/aws-sdk-go v1.44.75
 	github.com/cucumber/godog v0.12.5
 	github.com/gorilla/mux v1.8.0
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -32,7 +33,6 @@ require (
 	github.com/ONSdigital/dp-rchttp v1.0.0 // indirect
 	github.com/ONSdigital/go-ns v0.0.0-20210916104633-ac1c1c52327e // indirect
 	github.com/Shopify/sarama v1.30.1 // indirect
-	github.com/aws/aws-sdk-go v1.44.75 // indirect
 	github.com/chromedp/cdproto v0.0.0-20220624030920-1958475a8671 // indirect
 	github.com/chromedp/chromedp v0.8.2 // indirect
 	github.com/chromedp/sysutil v1.0.0 // indirect
