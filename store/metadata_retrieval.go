@@ -11,30 +11,32 @@ import (
 )
 
 func (store *Store) GetFileMetadata(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
-	metadata := files.StoredRegisteredMetaData{}
+	fileMetadata := files.StoredRegisteredMetaData{}
 
-	err := store.metadataCollection.FindOne(ctx, bson.M{fieldPath: path}, &metadata)
+	err := store.metadataCollection.FindOne(ctx, bson.M{fieldPath: path}, &fileMetadata)
 	if err != nil {
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			log.Error(ctx, "file metadata not found", err, log.Data{"path": path})
-			return metadata, ErrFileNotRegistered
+			return fileMetadata, ErrFileNotRegistered
 		}
-		return metadata, err
+		return fileMetadata, err
 	}
 
-	// pre-check to avoid fetching collection if it's not necessary
-	if metadata.CollectionID == nil || metadata.State != StateUploaded {
-		return metadata, nil
+	// pre-check to avoid fetching collection metadata if it's not necessary
+	if fileMetadata.CollectionID == nil || fileMetadata.State != StateUploaded {
+		return fileMetadata, nil
 	}
 
-	collection, err := store.GetCollection(ctx, *metadata.CollectionID)
+	// if the collection is published, get its metadata
+	collectionPublishedMetadata, err := store.GetCollectionPublishedMetadata(ctx, *fileMetadata.CollectionID)
 	if err != nil {
-		return metadata, nil
+		return fileMetadata, nil
 	}
 
-	store.PatchMetadataWithCollectionInfo(&metadata, &collection)
+	// we got the collection published metadata, so apply them to the file
+	store.PatchFilePublishMetadata(&fileMetadata, &collectionPublishedMetadata)
 
-	return metadata, nil
+	return fileMetadata, nil
 }
 
 func (store *Store) GetFilesMetadata(ctx context.Context, collectionID string) ([]files.StoredRegisteredMetaData, error) {
@@ -44,19 +46,21 @@ func (store *Store) GetFilesMetadata(ctx context.Context, collectionID string) (
 		return nil, err
 	}
 
-	collection, err := store.GetCollection(ctx, collectionID)
+	// if the collection is published, get its metadata
+	collection, err := store.GetCollectionPublishedMetadata(ctx, collectionID)
 	if err != nil {
 		return files, nil
 	}
 
+	// we got the collection published metadata, so apply them to all the files in the collection
 	for i := 0; i < len(files); i++ {
-		store.PatchMetadataWithCollectionInfo(&files[i], &collection)
+		store.PatchFilePublishMetadata(&files[i], &collection)
 	}
 
 	return files, nil
 }
 
-func (store *Store) GetCollection(ctx context.Context, id string) (files.StoredCollection, error) {
+func (store *Store) GetCollectionPublishedMetadata(ctx context.Context, id string) (files.StoredCollection, error) {
 	collection := files.StoredCollection{}
 	err := store.collectionsCollection.FindOne(ctx, bson.M{fieldID: id}, &collection)
 	if err != nil {
@@ -67,8 +71,10 @@ func (store *Store) GetCollection(ctx context.Context, id string) (files.StoredC
 }
 
 // For the optimisation purposes, we store the Florence collection publishing information in a separate DB collection.
+// This makes the collection publishing instantaneous by removing a need to update the publish state of all the files
+// in the collection, which takes a very long time for large collections.
 // Because of this, we need to patch the file metadata in a specific case documented below.
-func (store *Store) PatchMetadataWithCollectionInfo(metadata *files.StoredRegisteredMetaData, collection *files.StoredCollection) {
+func (store *Store) PatchFilePublishMetadata(metadata *files.StoredRegisteredMetaData, collection *files.StoredCollection) {
 	if metadata == nil || collection == nil {
 		return
 	}

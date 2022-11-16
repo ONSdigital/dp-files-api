@@ -79,7 +79,7 @@ func (suite *StoreSuite) TestGetFileMetadataCollectionError() {
 	logEvent := suite.logInterceptor.GetLogEvent()
 
 	suite.Equal("collection metadata not found", logEvent)
-	suite.EqualError(err, "collection error")
+	suite.NoError(err)
 	suite.Exactly(expectedMetadata, actualMetadata)
 }
 
@@ -220,9 +220,10 @@ func (suite *StoreSuite) TestGetFilesMetadataFindError() {
 }
 
 func (suite *StoreSuite) TestGetFilesMetadataCollectionError() {
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
 	metadataColl := mock.MongoCollectionMock{
 		FindFunc: CollectionFindReturnsMetadataOnFilter(
-			[]files.StoredRegisteredMetaData{},
+			[]files.StoredRegisteredMetaData{metadata},
 			bson.M{"collection_id": suite.defaultCollectionID},
 		),
 	}
@@ -235,8 +236,8 @@ func (suite *StoreSuite) TestGetFilesMetadataCollectionError() {
 
 	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID)
 
-	suite.EqualError(err, "collection error")
-	suite.Nil(actualMetadata)
+	suite.NoError(err)
+	suite.Exactly([]files.StoredRegisteredMetaData{metadata}, actualMetadata)
 }
 
 func (suite *StoreSuite) TestPatchMetadataNilMetadata() {
@@ -245,7 +246,7 @@ func (suite *StoreSuite) TestPatchMetadataNilMetadata() {
 	var metadata *files.StoredRegisteredMetaData
 	collection := &files.StoredCollection{}
 
-	subject.PatchMetadataWithCollectionInfo(metadata, collection)
+	subject.PatchFilePublishMetadata(metadata, collection)
 	suite.Nil(metadata)
 }
 
@@ -260,7 +261,7 @@ func (suite *StoreSuite) TestPatchMetadataNilCollection() {
 	}
 	metadataExpected := metadata
 
-	subject.PatchMetadataWithCollectionInfo(&metadata, nil)
+	subject.PatchFilePublishMetadata(&metadata, nil)
 	suite.Exactly(metadataExpected, metadata)
 }
 
@@ -278,7 +279,7 @@ func (suite *StoreSuite) TestPatchMetadataNilCollectionID() {
 
 	metadataExpected := metadata
 
-	subject.PatchMetadataWithCollectionInfo(&metadata, collection)
+	subject.PatchFilePublishMetadata(&metadata, collection)
 	suite.Exactly(metadataExpected, metadata)
 }
 
@@ -298,7 +299,7 @@ func (suite *StoreSuite) TestPatchMetadataCollectionIDMismatch() {
 
 	metadataExpected := metadata
 
-	subject.PatchMetadataWithCollectionInfo(&metadata, collection)
+	subject.PatchFilePublishMetadata(&metadata, collection)
 	suite.Exactly(metadataExpected, metadata)
 }
 
@@ -318,7 +319,7 @@ func (suite *StoreSuite) TestPatchMetadataBadState() {
 
 	metadataExpected := metadata
 
-	subject.PatchMetadataWithCollectionInfo(&metadata, collection)
+	subject.PatchFilePublishMetadata(&metadata, collection)
 	suite.Exactly(metadataExpected, metadata)
 }
 
@@ -337,7 +338,7 @@ func (suite *StoreSuite) TestPatchMetadataBadCollectionState() {
 
 	metadataExpected := metadata
 
-	subject.PatchMetadataWithCollectionInfo(&metadata, collection)
+	subject.PatchFilePublishMetadata(&metadata, collection)
 	suite.Exactly(metadataExpected, metadata)
 }
 
@@ -367,6 +368,6 @@ func (suite *StoreSuite) TestPatchMetadataSuccess() {
 		LastModified: lastModified,
 	}
 
-	subject.PatchMetadataWithCollectionInfo(&metadata, collection)
+	subject.PatchFilePublishMetadata(&metadata, collection)
 	suite.Exactly(metadataExpected, metadata)
 }
