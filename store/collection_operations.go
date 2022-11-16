@@ -19,7 +19,7 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 	metadata := files.StoredRegisteredMetaData{}
 	logdata := log.Data{"path": path}
 
-	if err := store.mongoCollection.FindOne(ctx, bson.M{"path": path}, &metadata); err != nil {
+	if err := store.metadataCollection.FindOne(ctx, bson.M{"path": path}, &metadata); err != nil {
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			log.Error(ctx, "update collection ID: attempted to operate on unregistered file", err, logdata)
 			return ErrFileNotRegistered
@@ -36,7 +36,7 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 
 	//check to see if collectionID exists and is not-published
 	m := files.StoredRegisteredMetaData{}
-	if err := store.mongoCollection.FindOne(ctx, bson.M{fieldCollectionID: collectionID}, &m); err != nil && !errors.Is(err, mongodriver.ErrNoDocumentFound) {
+	if err := store.metadataCollection.FindOne(ctx, bson.M{fieldCollectionID: collectionID}, &m); err != nil && !errors.Is(err, mongodriver.ErrNoDocumentFound) {
 		log.Error(ctx, "update collection ID: caught db error", err, logdata)
 		return err
 	}
@@ -45,7 +45,7 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 		return ErrCollectionAlreadyPublished
 	}
 
-	_, err := store.mongoCollection.Update(
+	_, err := store.metadataCollection.Update(
 		ctx,
 		bson.M{"path": path},
 		bson.D{
@@ -81,9 +81,9 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 	}
 
 	now := store.clock.GetCurrentTime()
-	_, err = store.mongoCollection.UpdateMany(
+	_, err = store.collectionsCollection.Upsert(
 		ctx,
-		bson.M{fieldCollectionID: collectionID},
+		bson.M{fieldID: collectionID},
 		bson.D{
 			{"$set", bson.D{
 				{fieldState, StatePublished},
@@ -91,7 +91,7 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 				{fieldPublishedAt, now}}},
 		})
 	if err != nil {
-		log.Error(ctx, fmt.Sprintf("failed to change files to %s state", StatePublished), err, logdata)
+		log.Error(ctx, fmt.Sprintf("failed to change collection %v to %s state", collectionID, StatePublished), err, logdata)
 		return err
 	}
 
@@ -105,7 +105,7 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 func (store *Store) IsCollectionEmpty(ctx context.Context, collectionID string) (bool, error) {
 	metadata := files.StoredRegisteredMetaData{}
 
-	err := store.mongoCollection.FindOne(ctx, bson.M{fieldCollectionID: collectionID}, &metadata)
+	err := store.metadataCollection.FindOne(ctx, bson.M{fieldCollectionID: collectionID}, &metadata)
 	if err != nil {
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			return true, nil
@@ -119,7 +119,7 @@ func (store *Store) IsCollectionEmpty(ctx context.Context, collectionID string) 
 func (store *Store) IsCollectionUploaded(ctx context.Context, collectionID string) (bool, error) {
 	metadata := files.StoredRegisteredMetaData{}
 
-	err := store.mongoCollection.FindOne(ctx, bson.M{"$and": []bson.M{
+	err := store.metadataCollection.FindOne(ctx, bson.M{"$and": []bson.M{
 		{fieldCollectionID: collectionID},
 		{fieldState: bson.M{"$ne": StateUploaded}},
 	}}, &metadata)
@@ -135,7 +135,7 @@ func (store *Store) IsCollectionUploaded(ctx context.Context, collectionID strin
 
 func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID string) {
 	// ignoring err as this would have been done previously
-	totalCount, _ := store.mongoCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
+	totalCount, _ := store.metadataCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
 	log.Info(ctx, "notify collection published start", log.Data{"collection_id": collectionID, "total_files": totalCount})
 	// balance the number of batches Vs batch size
 	batch_size := store.cfg.MinBatchSize
@@ -149,7 +149,7 @@ func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID 
 	wg.Add(num_batches)
 	for i := 0; i < num_batches; i++ {
 		offset := i * batch_size
-		cursor, err := store.mongoCollection.FindCursor(ctx, bson.M{fieldCollectionID: collectionID}, mongodriver.Offset(offset))
+		cursor, err := store.metadataCollection.FindCursor(ctx, bson.M{fieldCollectionID: collectionID}, mongodriver.Offset(offset))
 		if err != nil {
 			wg.Done()
 			log.Error(ctx, "BatchSendKafkaMessages: failed to query collection", err, log.Data{"collection_id": collectionID})

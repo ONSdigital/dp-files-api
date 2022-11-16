@@ -1,6 +1,7 @@
 package store
 
 const (
+	fieldID                = "id"
 	fieldPath              = "path"
 	fieldCollectionID      = "collection_id"
 	fieldEtag              = "etag"

@@ -44,7 +44,14 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	hc := serviceList.GetHealthCheck()
 	authMiddleware := serviceList.GetAuthMiddleware()
 	s3Client := serviceList.GetS3Clienter()
-	store := store.NewStore(mongoClient.Collection(config.MetadataCollection), kafkaProducer, serviceList.GetClock(), s3Client, cfg)
+	store := store.NewStore(
+		mongoClient.Collection(config.MetadataCollection),
+		mongoClient.Collection(config.CollectionsCollection),
+		kafkaProducer,
+		serviceList.GetClock(),
+		s3Client,
+		cfg,
+	)
 
 	getSingleFile := api.HandleGetFileMetadata(store.GetFileMetadata)
 
