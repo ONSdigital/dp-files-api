@@ -29,7 +29,7 @@ func (store *Store) GetFileMetadata(ctx context.Context, path string) (files.Sto
 
 	collection, err := store.GetCollection(ctx, *metadata.CollectionID)
 	if err != nil {
-		return metadata, err
+		return metadata, nil
 	}
 
 	store.PatchMetadataWithCollectionInfo(&metadata, &collection)
@@ -46,7 +46,7 @@ func (store *Store) GetFilesMetadata(ctx context.Context, collectionID string) (
 
 	collection, err := store.GetCollection(ctx, collectionID)
 	if err != nil {
-		return nil, err
+		return files, nil
 	}
 
 	for i := 0; i < len(files); i++ {
@@ -61,6 +61,7 @@ func (store *Store) GetCollection(ctx context.Context, id string) (files.StoredC
 	err := store.collectionsCollection.FindOne(ctx, bson.M{fieldID: id}, &collection)
 	if err != nil {
 		log.Error(ctx, "collection metadata not found", err, log.Data{"id": id})
+		return files.StoredCollection{}, err
 	}
 	return collection, err
 }

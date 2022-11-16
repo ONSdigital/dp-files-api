@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 type GetFilesMetadata func(ctx context.Context, collectionID string) ([]files.StoredRegisteredMetaData, error)
@@ -23,6 +24,7 @@ func HandlerGetFilesMetadata(getFilesMetadata GetFilesMetadata) http.HandlerFunc
 
 		fm, err := getFilesMetadata(req.Context(), collectionID)
 		if err != nil {
+			log.Error(req.Context(), "file metadata fetch failed", err, log.Data{"collection": collectionID})
 			handleError(w, err)
 			return
 		}

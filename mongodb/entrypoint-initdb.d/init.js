@@ -1,7 +1,7 @@
 var databases = [
     {
         name: "files",
-        collections: ["metadata"]
+        collections: ["metadata", "collections"]
     }
 ];
 

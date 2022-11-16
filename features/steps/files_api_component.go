@@ -78,6 +78,15 @@ func (d *FilesApiComponent) Reset() {
 			Options: options.Index().SetUnique(true),
 		},
 	)
+	d.mongoClient.Database("files").Collection("collections").Drop(ctx)
+	d.mongoClient.Database("files").CreateCollection(ctx, "collections")
+	d.mongoClient.Database("files").Collection("collections").Indexes().CreateOne(
+		ctx,
+		mongo.IndexModel{
+			Keys:    bson.D{{"id", 1}},
+			Options: options.Index().SetUnique(true),
+		},
+	)
 	d.isPublishing = true
 }
 
