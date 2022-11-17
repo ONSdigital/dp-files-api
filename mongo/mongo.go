@@ -34,7 +34,11 @@ func New(cfg config.MongoConfig) (m *Mongo, err error) {
 	}
 
 	databaseCollectionBuilder := map[mongohealth.Database][]mongohealth.Collection{
-		mongohealth.Database(m.Database): {mongohealth.Collection(m.ActualCollectionName(config.MetadataCollection))}}
+		mongohealth.Database(m.Database): {
+			mongohealth.Collection(m.ActualCollectionName(config.MetadataCollection)),
+			mongohealth.Collection(m.ActualCollectionName(config.CollectionsCollection)),
+		},
+	}
 	m.healthClient = mongohealth.NewClientWithCollections(m.conn, databaseCollectionBuilder)
 
 	return m, nil

@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -161,18 +163,15 @@ func CollectionFindSetsResultsReturnsValueAndNil(metadataBytes []byte, value int
 	}
 }
 
-func CollectionFindSetsResultAndReturns1IfCollectionIDMatchesFilter(metadataBytes []byte) CollectionFindFunc {
+func CollectionFindReturnsMetadataOnFilter(metadata []files.StoredRegisteredMetaData, expectedFilter interface{}) CollectionFindFunc {
 	return func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
-		result := files.StoredRegisteredMetaData{}
-		bson.Unmarshal(metadataBytes, &result)
-
-		resultPointer := results.(*[]files.StoredRegisteredMetaData)
-
-		if filter.(primitive.M)["collection_id"] == *result.CollectionID {
-			*resultPointer = []files.StoredRegisteredMetaData{result}
+		if !reflect.DeepEqual(filter, expectedFilter) {
+			return 0, fmt.Errorf("filter %#v doesn't match expected %#v", filter, expectedFilter)
 		}
 
-		return 1, nil
+		resultPointer := results.(*[]files.StoredRegisteredMetaData)
+		*resultPointer = metadata
+		return len(metadata), nil
 	}
 }
 
@@ -267,6 +266,18 @@ func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegis
 		DecryptedAt:       &decryptedAt,
 		State:             store.StateDecrypted,
 		Etag:              "1234567",
+	}
+}
+
+func (suite *StoreSuite) generatePublishedCollectionInfo(collectionID string) files.StoredCollection {
+	lastModified := suite.generateTestTime(10)
+	publishedAt := suite.generateTestTime(11)
+
+	return files.StoredCollection{
+		ID:           collectionID,
+		LastModified: lastModified,
+		PublishedAt:  &publishedAt,
+		State:        store.StatePublished,
 	}
 }
 

@@ -46,7 +46,10 @@ type KafkaConfig struct {
 
 var cfg *Config
 
-const MetadataCollection = "MetadataCollection"
+const (
+	MetadataCollection    = "MetadataCollection"
+	CollectionsCollection = "CollectionsCollection"
+)
 
 // Get returns the default config with any modifications through environment
 // variables
@@ -67,9 +70,12 @@ func Get() (*Config, error) {
 		MaxNumBatches:              5,
 		MinBatchSize:               20,
 		MongoConfig: MongoConfig{
-			ClusterEndpoint:               "localhost:27017",
-			Database:                      "files",
-			Collections:                   map[string]string{MetadataCollection: "metadata"},
+			ClusterEndpoint: "localhost:27017",
+			Database:        "files",
+			Collections: map[string]string{
+				MetadataCollection:    "metadata",
+				CollectionsCollection: "collections",
+			},
 			IsStrongReadConcernEnabled:    false,
 			IsWriteConcernMajorityEnabled: true,
 			ConnectTimeout:                5 * time.Second,

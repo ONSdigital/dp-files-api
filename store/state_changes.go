@@ -28,7 +28,7 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 	//check to see if collectionID exists and is not-published
 	if metaData.CollectionID != nil {
 		m := files.StoredRegisteredMetaData{}
-		if err := store.mongoCollection.FindOne(ctx, bson.M{fieldCollectionID: *metaData.CollectionID}, &m); err != nil && !errors.Is(err, mongodriver.ErrNoDocumentFound) {
+		if err := store.metadataCollection.FindOne(ctx, bson.M{fieldCollectionID: *metaData.CollectionID}, &m); err != nil && !errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			log.Error(ctx, "register file upload: caught db error", err, logdata)
 			return err
 		}
@@ -42,7 +42,7 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 	metaData.LastModified = store.clock.GetCurrentTime()
 	metaData.State = StateCreated
 
-	if _, err := store.mongoCollection.Insert(ctx, metaData); err != nil {
+	if _, err := store.metadataCollection.Insert(ctx, metaData); err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			log.Error(ctx, "file upload already registered", err, logdata)
 			return ErrDuplicateFile
@@ -65,7 +65,7 @@ func (store *Store) MarkFileDecrypted(ctx context.Context, metaData files.FileEt
 
 func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 	m := files.StoredRegisteredMetaData{}
-	if err := store.mongoCollection.FindOne(ctx, bson.M{fieldPath: path}, &m); err != nil {
+	if err := store.metadataCollection.FindOne(ctx, bson.M{fieldPath: path}, &m); err != nil {
 		logdata := log.Data{"path": path}
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			log.Error(ctx, "mark file as published: attempted to operate on unregistered file", err, logdata)
@@ -94,7 +94,7 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 	}
 
 	now := store.clock.GetCurrentTime()
-	_, err := store.mongoCollection.Update(
+	_, err := store.metadataCollection.Update(
 		ctx,
 		bson.M{fieldPath: path},
 		bson.D{
@@ -117,7 +117,7 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 
 func (store *Store) updateStatus(ctx context.Context, path, etag, toState, expectedCurrentState, timestampField string) error {
 	metadata := files.StoredRegisteredMetaData{}
-	if err := store.mongoCollection.FindOne(ctx, bson.M{fieldPath: path}, &metadata); err != nil {
+	if err := store.metadataCollection.FindOne(ctx, bson.M{fieldPath: path}, &metadata); err != nil {
 		logdata := log.Data{"path": path}
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			log.Error(ctx, "mark file as decrypted: attempted to operate on unregistered file", err, logdata)
@@ -147,7 +147,7 @@ func (store *Store) updateStatus(ctx context.Context, path, etag, toState, expec
 	}
 
 	now := store.clock.GetCurrentTime()
-	_, err := store.mongoCollection.Update(
+	_, err := store.metadataCollection.Update(
 		ctx,
 		bson.M{fieldPath: path},
 		bson.D{

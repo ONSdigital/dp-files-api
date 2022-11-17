@@ -2,7 +2,9 @@ package steps
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"strconv"
 	"time"
 
@@ -306,8 +308,30 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 
 	expectedMetaData := keyValues.(*ExpectedMetaDataDecrypted)
 
+	_ = c.ApiFeature.IGet(fmt.Sprintf("/files/%s", expectedMetaData.Path))
+	responseBody := c.ApiFeature.HttpResponse.Body
+	body, _ := ioutil.ReadAll(responseBody)
+	assert.NoError(c.ApiFeature, json.Unmarshal(body, &metaData))
+
+	dbMetadata := files.StoredRegisteredMetaData{}
 	res := c.mongoClient.Database("files").Collection("metadata").FindOne(ctx, bson.M{"path": expectedMetaData.Path})
-	assert.NoError(c.ApiFeature, res.Decode(&metaData))
+	assert.NoError(c.ApiFeature, res.Decode(&dbMetadata))
+
+	metaData.CreatedAt = dbMetadata.CreatedAt
+	metaData.LastModified = dbMetadata.LastModified
+	metaData.PublishedAt = dbMetadata.PublishedAt
+	metaData.DecryptedAt = dbMetadata.DecryptedAt
+
+	if metaData.CollectionID != nil && metaData.State == store.StatePublished {
+		dbCollection := files.StoredCollection{}
+		res = c.mongoClient.Database("files").Collection("collections").FindOne(ctx, bson.M{"id": *metaData.CollectionID})
+		_ = res.Decode(&dbCollection)
+
+		if dbCollection.State == store.StatePublished {
+			metaData.LastModified = dbCollection.LastModified
+			metaData.PublishedAt = dbCollection.PublishedAt
+		}
+	}
 
 	isPublishable, _ := strconv.ParseBool(expectedMetaData.IsPublishable)
 	sizeInBytes, _ := strconv.ParseUint(expectedMetaData.SizeInBytes, 10, 64)
@@ -323,7 +347,7 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 	assert.Equal(c.ApiFeature, expectedMetaData.CreatedAt, metaData.CreatedAt.Format(time.RFC3339), "CREATED AT")
 	assert.Equal(c.ApiFeature, expectedMetaData.LastModified, metaData.LastModified.Format(time.RFC3339), "LAST MODIFIED")
 	if expectedMetaData.PublishedAt != "" {
-		assert.Equal(c.ApiFeature, expectedMetaData.PublishedAt, metaData.PublishedAt.Format(time.RFC3339), "DECRYPTED AT")
+		assert.Equal(c.ApiFeature, expectedMetaData.PublishedAt, metaData.PublishedAt.Format(time.RFC3339), "PUBLISHED AT")
 	}
 	if expectedMetaData.DecryptedAt != "" {
 		assert.Equal(c.ApiFeature, expectedMetaData.DecryptedAt, metaData.DecryptedAt.Format(time.RFC3339), "DECRYPTED AT")

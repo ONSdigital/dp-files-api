@@ -22,6 +22,13 @@ type StoredRegisteredMetaData struct {
 	Etag              string     `bson:"etag" json:"etag"`
 }
 
+type StoredCollection struct {
+	ID           string     `bson:"id" json:"id"`
+	State        string     `bson:"state" json:"state"`
+	LastModified time.Time  `bson:"last_modified" json:"-"`
+	PublishedAt  *time.Time `bson:"published_at,omitempty" json:"-"`
+}
+
 type FileEtagChange struct {
 	Path string
 	Etag string

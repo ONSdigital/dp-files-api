@@ -26,7 +26,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDFindReturnsErrNoDocumentFound() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateCollectionID(suite.defaultContext, suite.path, suite.defaultCollectionID)
 
@@ -48,7 +48,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDFindReturnsUnspecifiedError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateCollectionID(suite.defaultContext, "", suite.defaultCollectionID)
 
@@ -71,7 +71,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDCollectionIDAlreadySet() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateCollectionID(suite.defaultContext, suite.path, suite.defaultCollectionID)
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -95,7 +95,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDUpdateReturnsError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateCollectionID(suite.defaultContext, suite.path, suite.defaultCollectionID)
 
@@ -115,7 +115,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDUpdateSuccess() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionContainsOneUploadedFileWithNoCollectionID, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionContainsOneUploadedFileWithNoCollectionID, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateCollectionID(suite.defaultContext, suite.path, suite.defaultCollectionID)
 
@@ -133,7 +133,7 @@ func (suite *StoreSuite) TestMarkCollectionPublishedCollectionEmptyCheckReturnsE
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsError, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsError, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -153,7 +153,7 @@ func (suite *StoreSuite) TestMarkCollectionPublishedCollectionEmpty() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsError, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsError, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -173,7 +173,7 @@ func (suite *StoreSuite) TestMarkCollectionPublishedWhenFileExistsInStateOtherTh
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -198,7 +198,7 @@ func (suite *StoreSuite) TestMarkCollectionPublishedCollectionUploadedCheckRetur
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsError, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsError, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -214,22 +214,26 @@ func (suite *StoreSuite) TestMarkCollectionPublishedPersistenceFailure() {
 	defer suite.logInterceptor.Stop()
 
 	expectedError := errors.New("an error occurred")
-	collection := mock.MongoCollectionMock{
+	metadataColl := mock.MongoCollectionMock{
 		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
 			{CollectionFindOneSucceeds(), 1},                                   // there are some files in the collection
 			{CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound), 1}, // all of them are UPLOADED
 		}),
-		UpdateManyFunc: CollectionUpdateManyReturnsNilAndError(expectedError),
+	}
+	collectionColl := mock.MongoCollectionMock{
+		UpsertFunc: func(ctx context.Context, selector, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+			return nil, expectedError
+		},
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
 
-	suite.Equal("failed to change files to PUBLISHED state", logEvent)
+	suite.Equal("failed to change collection 123456 to PUBLISHED state", logEvent)
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
 }
@@ -238,24 +242,28 @@ func (suite *StoreSuite) TestMarkCollectionPublishedFindCalled() {
 
 	expectedError := errors.New("an error occurred")
 
-	collection := mock.MongoCollectionMock{
+	metadataColl := mock.MongoCollectionMock{
 		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
 			{CollectionFindOneSucceeds(), 1},                                   // there are some files in the collection
 			{CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound), 1}, // all of them are UPLOADED
 		}),
 		CountFunc:      CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout(),
-		UpdateManyFunc: CollectionUpdateManyReturnsNilAndNil(),
 		FindCursorFunc: CollectionFindCursorReturnsCursorAndError(nil, expectedError),
+	}
+	collectionColl := mock.MongoCollectionMock{
+		UpsertFunc: func(ctx context.Context, selector, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+			return nil, nil
+		},
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
 	suite.NoError(err)
 	suite.Eventually(func() bool {
-		return len(collection.FindCursorCalls()) == 1
+		return len(metadataColl.FindCursorCalls()) == 1
 	}, time.Second, 10*time.Millisecond)
 }
 
@@ -270,7 +278,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedFindErrored() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -312,7 +320,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedPersistenceSuccess() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -361,7 +369,7 @@ func (suite *StoreSuite) TestBatchingWithLargeNumberOfFiles() {
 		},
 	}
 
-	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -402,7 +410,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedKafkaErrorDoesNotFailOpera
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -433,7 +441,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedDecodeErrorDoesNotFailOper
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 

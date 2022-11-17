@@ -3,8 +3,9 @@ package store_test
 import (
 	"context"
 	"flag"
-	"github.com/ONSdigital/dp-files-api/store"
 	"testing"
+
+	"github.com/ONSdigital/dp-files-api/store"
 
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/features/steps"
@@ -46,7 +47,7 @@ func (s *StoreIntegrationTest) SetupTest() {
 	client.Database("files").Collection("metadata").Drop(s.ctx)
 
 	cfg, _ := config.Get()
-	s.store = store.NewStore(s.mc.Collection(config.MetadataCollection), &kafkatest.IProducerMock{}, steps.TestClock{}, nil, cfg)
+	s.store = store.NewStore(s.mc.Collection(config.MetadataCollection), s.mc.Collection(config.CollectionsCollection), &kafkatest.IProducerMock{}, steps.TestClock{}, nil, cfg)
 }
 
 func TestStoreIntegration(t *testing.T) {
