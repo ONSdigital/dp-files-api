@@ -27,7 +27,7 @@ func (store *Store) GetFileMetadata(ctx context.Context, path string) (files.Sto
 		return fileMetadata, nil
 	}
 
-	// if the collection is published, get its metadata
+	// get the collection metadata, and if they're not present, return the file unchanged
 	collectionPublishedMetadata, err := store.GetCollectionPublishedMetadata(ctx, *fileMetadata.CollectionID)
 	if err != nil {
 		return fileMetadata, nil
@@ -46,7 +46,7 @@ func (store *Store) GetFilesMetadata(ctx context.Context, collectionID string) (
 		return nil, err
 	}
 
-	// if the collection is published, get its metadata
+	// get the collection metadata, and if they're not present, return the files unchanged
 	collection, err := store.GetCollectionPublishedMetadata(ctx, collectionID)
 	if err != nil {
 		return files, nil
