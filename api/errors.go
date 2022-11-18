@@ -35,7 +35,7 @@ func handleError(w http.ResponseWriter, err error) {
 	case store.ErrFileNotInCreatedState,
 		store.ErrFileNotInUploadedState,
 		store.ErrCollectionIDNotSet,
-		store.ErrFileNotInPublishedState,
+		store.ErrFileStateMismatch,
 		store.ErrEtagMismatchWhilePublishing:
 		writeError(w, buildErrors(err, "FileStateError"), http.StatusConflict)
 	case store.ErrNoFilesInCollection:

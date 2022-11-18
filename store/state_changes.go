@@ -9,7 +9,6 @@ import (
 
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
-	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/ONSdigital/log.go/v2/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -27,12 +26,12 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 
 	//check to see if collectionID exists and is not-published
 	if metaData.CollectionID != nil {
-		m := files.StoredRegisteredMetaData{}
-		if err := store.metadataCollection.FindOne(ctx, bson.M{fieldCollectionID: *metaData.CollectionID}, &m); err != nil && !errors.Is(err, mongodriver.ErrNoDocumentFound) {
+		published, err := store.IsCollectionPublished(ctx, *metaData.CollectionID)
+		if err != nil {
 			log.Error(ctx, "register file upload: caught db error", err, logdata)
 			return err
 		}
-		if m.State == StatePublished || m.State == StateDecrypted {
+		if published {
 			log.Error(ctx, fmt.Sprintf("collection with id [%s] is already published", *metaData.CollectionID), ErrCollectionAlreadyPublished, logdata)
 			return ErrCollectionAlreadyPublished
 		}
@@ -56,45 +55,46 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 }
 
 func (store *Store) MarkUploadComplete(ctx context.Context, metaData files.FileEtagChange) error {
-	return store.updateStatus(ctx, metaData.Path, metaData.Etag, StateUploaded, StateCreated, fieldUploadCompletedAt)
+	return store.updateFileState(ctx, metaData.Path, metaData.Etag, StateUploaded, StateCreated, fieldUploadCompletedAt)
 }
 
 func (store *Store) MarkFileDecrypted(ctx context.Context, metaData files.FileEtagChange) error {
-	return store.updateStatus(ctx, metaData.Path, metaData.Etag, StateDecrypted, StatePublished, fieldDecryptedAt)
+	return store.updateFileState(ctx, metaData.Path, metaData.Etag, StateDecrypted, StatePublished, fieldDecryptedAt)
 }
 
 func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
-	m := files.StoredRegisteredMetaData{}
-	if err := store.metadataCollection.FindOne(ctx, bson.M{fieldPath: path}, &m); err != nil {
-		logdata := log.Data{"path": path}
-		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+	logdata := log.Data{"path": path}
+
+	m, err := store.GetFileMetadata(ctx, path)
+	if err != nil {
+		if errors.Is(err, ErrFileNotRegistered) {
 			log.Error(ctx, "mark file as published: attempted to operate on unregistered file", err, logdata)
 			return ErrFileNotRegistered
 		}
-
-		log.Error(ctx, "failed finding metadata to mark file as published", err, logdata)
+		log.Error(ctx, "mark file as published: failed finding file metadata", err, logdata)
 		return err
 	}
+	logdata["metadata"] = m
 
 	if m.CollectionID == nil {
-		log.Error(ctx, "file had no collection id", ErrCollectionIDNotSet, log.Data{"metadata": m})
+		log.Error(ctx, "file had no collection id", ErrCollectionIDNotSet, logdata)
 		return ErrCollectionIDNotSet
 	}
 
 	if m.State != StateUploaded {
 		log.Error(ctx, fmt.Sprintf("mark file published: file was not in state %s", StateUploaded),
-			ErrFileNotInUploadedState, log.Data{"path": path, "current_state": m.State})
+			ErrFileNotInUploadedState, logdata)
 		return ErrFileNotInUploadedState
 	}
 
 	if m.IsPublishable != true {
 		log.Error(ctx, "mark file published: file not set as publishable",
-			ErrFileIsNotPublishable, log.Data{"path": path, "is_publishable": m.IsPublishable})
+			ErrFileIsNotPublishable, logdata)
 		return ErrFileIsNotPublishable
 	}
 
 	now := store.clock.GetCurrentTime()
-	_, err := store.metadataCollection.Update(
+	_, err = store.metadataCollection.Update(
 		ctx,
 		bson.M{fieldPath: path},
 		bson.D{
@@ -115,23 +115,27 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 	})
 }
 
-func (store *Store) updateStatus(ctx context.Context, path, etag, toState, expectedCurrentState, timestampField string) error {
-	metadata := files.StoredRegisteredMetaData{}
-	if err := store.metadataCollection.FindOne(ctx, bson.M{fieldPath: path}, &metadata); err != nil {
-		logdata := log.Data{"path": path}
-		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
-			log.Error(ctx, "mark file as decrypted: attempted to operate on unregistered file", err, logdata)
-			return ErrFileNotRegistered
-		}
-
-		log.Error(ctx, "failed finding metadata to mark file as decrypted", err, logdata)
-		return err
+func (store *Store) updateFileState(ctx context.Context, path, etag, toState, expectedCurrentState, timestampField string) error {
+	logdata := log.Data{
+		"path":                 path,
+		"expectedCurrentState": expectedCurrentState,
+		"toState":              toState,
 	}
 
+	metadata, err := store.GetFileMetadata(ctx, path)
+	if err != nil {
+		if errors.Is(err, ErrFileNotRegistered) {
+			log.Error(ctx, "update file state: attempted to operate on unregistered file", err, logdata)
+			return ErrFileNotRegistered
+		}
+		log.Error(ctx, "update file state: failed finding file metadata", err, logdata)
+		return err
+	}
+	logdata["actualCurrentState"] = metadata.State
+
 	if metadata.State != expectedCurrentState {
-		log.Error(ctx, fmt.Sprintf("mark file decrypted: file was not in state %s", StateCreated),
-			ErrFileNotInPublishedState, log.Data{"path": path, "current_state": metadata.State})
-		return ErrFileNotInPublishedState
+		log.Error(ctx, "update file state: state mismatch", ErrFileStateMismatch, logdata)
+		return ErrFileStateMismatch
 	}
 	// while publishing check that you are publishing the correct/expected version of the file
 	if toState == StateDecrypted {
@@ -147,7 +151,7 @@ func (store *Store) updateStatus(ctx context.Context, path, etag, toState, expec
 	}
 
 	now := store.clock.GetCurrentTime()
-	_, err := store.metadataCollection.Update(
+	_, err = store.metadataCollection.Update(
 		ctx,
 		bson.M{fieldPath: path},
 		bson.D{

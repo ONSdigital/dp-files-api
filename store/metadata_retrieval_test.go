@@ -78,7 +78,7 @@ func (suite *StoreSuite) TestGetFileMetadataCollectionError() {
 
 	logEvent := suite.logInterceptor.GetLogEvent()
 
-	suite.Equal("collection metadata not found", logEvent)
+	suite.Equal("collection metadata fetch error", logEvent)
 	suite.NoError(err)
 	suite.Exactly(expectedMetadata, actualMetadata)
 }

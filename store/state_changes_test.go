@@ -52,9 +52,14 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		InsertFunc:  CollectionInsertReturnsNilAndError(expectedError),
 	}
+	emptyCollection := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&alwaysFindsExistingCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&alwaysFindsExistingCollection, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -105,9 +110,14 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertReturnsError() {
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		InsertFunc:  CollectionInsertReturnsNilAndError(expectedError),
 	}
+	emptyCollection := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsZero, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -129,9 +139,14 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertSucceeds() {
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		InsertFunc:  CollectionInsertReturnsNilAndNil(),
 	}
+	emptyCollection := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsZero, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -150,9 +165,9 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
 		currentState string
 		expectedErr  error
 	}{
-		{store.StateUploaded, store.ErrFileNotInPublishedState},
-		{store.StatePublished, store.ErrFileNotInPublishedState},
-		{store.StateDecrypted, store.ErrFileNotInPublishedState},
+		{store.StateUploaded, store.ErrFileStateMismatch},
+		{store.StatePublished, store.ErrFileStateMismatch},
+		{store.StateDecrypted, store.ErrFileStateMismatch},
 	}
 
 	for _, test := range tests {
@@ -163,14 +178,19 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
 		collectionWithUploadedFile := mock.MongoCollectionMock{
 			FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		}
+		emptyCollection := mock.MongoCollectionMock{
+			FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+				return mongodriver.ErrNoDocumentFound
+			},
+		}
 
 		cfg, _ := config.Get()
-		subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+		subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 		err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
-		logEvent := suite.logInterceptor.GetLogEvent()
+		logEvents := suite.logInterceptor.GetLogEvents("update file state: state mismatch")
 
-		suite.Equal("mark file decrypted: file was not in state CREATED", logEvent)
+		suite.Equal(1, len(logEvents))
 		suite.Error(err)
 		suite.ErrorIs(err, test.expectedErr, "the actual err was %v", err)
 	}
@@ -187,14 +207,19 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenFileNotExists() {
 	collectionWithUploadedFile := mock.MongoCollectionMock{
 		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
 	}
+	emptyCollection := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
-	logEvent := suite.logInterceptor.GetLogEvent()
+	logEvents := suite.logInterceptor.GetLogEvents("update file state: attempted to operate on unregistered file")
 
-	suite.Equal("mark file as decrypted: attempted to operate on unregistered file", logEvent)
+	suite.Equal(1, len(logEvents))
 	suite.Error(err)
 	suite.ErrorIs(err, store.ErrFileNotRegistered, "the metadata looked for was %v", metadata)
 }
@@ -247,9 +272,9 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenNotInCreatedState() {
 		currentState string
 		expectedErr  error
 	}{
-		{store.StateCreated, store.ErrFileNotInPublishedState},
-		{store.StateUploaded, store.ErrFileNotInPublishedState},
-		{store.StateDecrypted, store.ErrFileNotInPublishedState},
+		{store.StateCreated, store.ErrFileStateMismatch},
+		{store.StateUploaded, store.ErrFileStateMismatch},
+		{store.StateDecrypted, store.ErrFileStateMismatch},
 	}
 
 	for _, test := range tests {
@@ -260,14 +285,19 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenNotInCreatedState() {
 		collectionWithUploadedFile := mock.MongoCollectionMock{
 			FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		}
+		emptyCollection := mock.MongoCollectionMock{
+			FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+				return mongodriver.ErrNoDocumentFound
+			},
+		}
 
 		cfg, _ := config.Get()
-		subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+		subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 		err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
 
-		logEvent := suite.logInterceptor.GetLogEvent()
+		logEvents := suite.logInterceptor.GetLogEvents("update file state: state mismatch")
 
-		suite.Equal("mark file decrypted: file was not in state CREATED", logEvent)
+		suite.Equal(1, len(logEvents))
 		suite.Error(err)
 		suite.ErrorIs(err, test.expectedErr, "the actual err was %v", err)
 	}
@@ -289,9 +319,10 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenFileNotExists() {
 	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
 
-	logEvent := suite.logInterceptor.GetLogEvent()
+	logEvents := suite.logInterceptor.GetLogEvents("update file state: attempted to operate on unregistered file")
 
-	suite.Equal("mark file as decrypted: attempted to operate on unregistered file", logEvent)
+	suite.Equal(1, len(logEvents))
+
 	suite.Error(err)
 	suite.ErrorIs(err, store.ErrFileNotRegistered, "the metadata looked for was %v", metadata)
 }
@@ -378,9 +409,9 @@ func (suite *StoreSuite) TestMarkFilePublishedFindReturnsErrNoDocumentFound() {
 	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
-	logEvent := suite.logInterceptor.GetLogEvent()
+	logEvents := suite.logInterceptor.GetLogEvents("mark file as published: attempted to operate on unregistered file")
 
-	suite.Equal("mark file as published: attempted to operate on unregistered file", logEvent)
+	suite.Equal(1, len(logEvents))
 	suite.Error(err)
 	suite.ErrorIs(err, store.ErrFileNotRegistered)
 }
@@ -401,7 +432,7 @@ func (suite *StoreSuite) TestMarkFilePublishedFindReturnsUnspecifiedError() {
 
 	logEvent := suite.logInterceptor.GetLogEvent()
 
-	suite.Equal("failed finding metadata to mark file as published", logEvent)
+	suite.Equal("mark file as published: failed finding file metadata", logEvent)
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
 }
@@ -471,9 +502,14 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateReturnsError() {
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
 	}
+	emptyCollection := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
@@ -491,13 +527,18 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaReturnsError() {
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		UpdateFunc:  CollectionUpdateReturnsNilAndNil(),
 	}
+	emptyCollection := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+	}
 
 	kafkaMock := kafkatest.IProducerMock{
 		SendFunc: KafkaSendReturnsError(expectedError),
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &kafkaMock, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
@@ -515,13 +556,18 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaDoesNotReturnError() {
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		UpdateFunc:  CollectionUpdateReturnsNilAndNil(),
 	}
+	emptyCollection := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+	}
 
 	kafkaMock := kafkatest.IProducerMock{
 		SendFunc: KafkaSendReturnsNil(),
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &kafkaMock, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 

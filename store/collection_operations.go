@@ -15,6 +15,33 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+func (store *Store) IsCollectionPublished(ctx context.Context, collectionID string) (bool, error) {
+	metadata := files.StoredRegisteredMetaData{}
+	err := store.metadataCollection.FindOne(ctx, bson.M{fieldCollectionID: collectionID}, &metadata)
+	if err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			return false, nil
+		}
+		return false, fmt.Errorf("collection published check: %w", err)
+	}
+	if metadata.State == StatePublished || metadata.State == StateDecrypted {
+		return true, nil
+	}
+	if metadata.State == StateUploaded {
+		coll, err := store.GetCollectionPublishedMetadata(ctx, collectionID)
+		if err != nil {
+			if errors.Is(err, ErrCollectionMetadataNotRegistered) {
+				return false, nil
+			}
+			return false, fmt.Errorf("collection published check: %w", err)
+		}
+		if coll.State == StatePublished {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID string) error {
 	metadata := files.StoredRegisteredMetaData{}
 	logdata := log.Data{"path": path}
@@ -35,17 +62,17 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 	}
 
 	//check to see if collectionID exists and is not-published
-	m := files.StoredRegisteredMetaData{}
-	if err := store.metadataCollection.FindOne(ctx, bson.M{fieldCollectionID: collectionID}, &m); err != nil && !errors.Is(err, mongodriver.ErrNoDocumentFound) {
+	published, err := store.IsCollectionPublished(ctx, collectionID)
+	if err != nil {
 		log.Error(ctx, "update collection ID: caught db error", err, logdata)
 		return err
 	}
-	if m.State == StatePublished || m.State == StateDecrypted {
+	if published {
 		log.Error(ctx, fmt.Sprintf("collection with id [%s] is already published", collectionID), ErrCollectionAlreadyPublished, logdata)
 		return ErrCollectionAlreadyPublished
 	}
 
-	_, err := store.metadataCollection.Update(
+	_, err = store.metadataCollection.Update(
 		ctx,
 		bson.M{"path": path},
 		bson.D{
@@ -117,9 +144,16 @@ func (store *Store) IsCollectionEmpty(ctx context.Context, collectionID string) 
 }
 
 func (store *Store) IsCollectionUploaded(ctx context.Context, collectionID string) (bool, error) {
-	metadata := files.StoredRegisteredMetaData{}
+	published, err := store.IsCollectionPublished(ctx, collectionID)
+	if err != nil {
+		return false, err
+	}
+	if published {
+		return false, nil
+	}
 
-	err := store.metadataCollection.FindOne(ctx, bson.M{"$and": []bson.M{
+	metadata := files.StoredRegisteredMetaData{}
+	err = store.metadataCollection.FindOne(ctx, bson.M{"$and": []bson.M{
 		{fieldCollectionID: collectionID},
 		{fieldState: bson.M{"$ne": StateUploaded}},
 	}}, &metadata)

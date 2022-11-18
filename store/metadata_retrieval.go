@@ -64,7 +64,10 @@ func (store *Store) GetCollectionPublishedMetadata(ctx context.Context, id strin
 	collection := files.StoredCollection{}
 	err := store.collectionsCollection.FindOne(ctx, bson.M{fieldID: id}, &collection)
 	if err != nil {
-		log.Error(ctx, "collection metadata not found", err, log.Data{"id": id})
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			return files.StoredCollection{}, ErrCollectionMetadataNotRegistered
+		}
+		log.Error(ctx, "collection metadata fetch error", err, log.Data{"id": id})
 		return files.StoredCollection{}, err
 	}
 	return collection, err
