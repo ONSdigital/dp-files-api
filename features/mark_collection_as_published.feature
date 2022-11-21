@@ -134,7 +134,7 @@ Feature: Publishing file to Kafka from a collection ID
   Scenario: Publishing file for a collection that does not exists
     Given I am an authorised user
     When I publish the collection "1234-asdfg-54321-qwerty"
-    Then the HTTP status code should be "404"
+    Then the HTTP status code should be "201"
 
   Scenario: The one where the user is not authorised to publish a collection
     Given I am not an authorised user
