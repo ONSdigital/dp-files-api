@@ -352,7 +352,7 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenUpdateReturnsError() {
 	suite.Error(err)
 }
 
-/*func (suite *StoreSuite) TestMarkFileDecryptedEtagMismatch() {
+func (suite *StoreSuite) TestMarkFileDecryptedEtagMismatch() {
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StatePublished
@@ -373,7 +373,7 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenUpdateReturnsError() {
 	err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.ErrorIs(err, store.ErrEtagMismatchWhilePublishing, "the actual err was %v", err)
-}*/
+}
 
 func (suite *StoreSuite) TestMarkFileDecryptedSucceeds() {
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
