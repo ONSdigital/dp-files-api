@@ -642,7 +642,7 @@ func (suite *StoreSuite) TestIsCollectionPublishedCollectionError() {
 
 	suite.False(published)
 	suite.Error(err)
-	suite.EqualError(err, "collection published check: an error occurred")
+	suite.EqualError(err, "collection published check (collections-db): an error occurred")
 }
 
 func (suite *StoreSuite) TestIsCollectionPublishedCollectionPublished() {
