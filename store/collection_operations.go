@@ -33,7 +33,7 @@ func (store *Store) IsCollectionPublished(ctx context.Context, collectionID stri
 			if errors.Is(err, ErrCollectionMetadataNotRegistered) {
 				return false, nil
 			}
-			return false, fmt.Errorf("collection published check: %w", err)
+			return false, fmt.Errorf("collection published check (collections-db): %w", err)
 		}
 		if coll.State == StatePublished {
 			return true, nil
