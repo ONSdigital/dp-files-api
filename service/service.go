@@ -57,7 +57,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 
 	const filesURI = "/files/{path:.*}"
 	if cfg.IsPublishing {
-		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload)
+		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload, cfg.MongoConfig.QueryTimeout)
 		getMultipleFiles := api.HandlerGetFilesMetadata(store.GetFilesMetadata)
 		collectionPublished := api.HandleMarkCollectionPublished(store.MarkCollectionPublished)
 

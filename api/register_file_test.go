@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ONSdigital/dp-files-api/api"
 	"github.com/ONSdigital/dp-files-api/files"
@@ -34,7 +35,7 @@ func TestFileMetaDataCreationUnsuccessful(t *testing.T) {
 		return errors.New("it's all gone very wrong")
 	}
 
-	h := api.HandlerRegisterUploadStarted(errFunc)
+	h := api.HandlerRegisterUploadStarted(errFunc, time.Duration(time.Second*5))
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
@@ -60,7 +61,7 @@ func TestJsonDecodingMetaDataCreation(t *testing.T) {
 		return errors.New("it's all gone very wrong")
 	}
 
-	h := api.HandlerRegisterUploadStarted(errFunc)
+	h := api.HandlerRegisterUploadStarted(errFunc, time.Duration(time.Second*5))
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -114,7 +115,7 @@ func TestValidationMetaDataCreation(t *testing.T) {
 
 			errFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error { return nil }
 
-			h := api.HandlerRegisterUploadStarted(errFunc)
+			h := api.HandlerRegisterUploadStarted(errFunc, time.Duration(time.Second*5))
 			h.ServeHTTP(rec, req)
 
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -134,7 +135,7 @@ func TestCollectionIDOmittedFromBodyDoesNotRaiseError(t *testing.T) {
 	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 		assert.Nil(t, metaData.CollectionID)
 		return nil
-	})
+	}, time.Duration(time.Second*5))
 
 	h.ServeHTTP(rec, req)
 
@@ -150,7 +151,7 @@ func TestCollectionIDInBodyDoesNotRaiseError(t *testing.T) {
 	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 		assert.Equal(t, collectionID, *metaData.CollectionID)
 		return nil
-	})
+	}, time.Duration(time.Second*5))
 
 	h.ServeHTTP(rec, req)
 
