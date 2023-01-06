@@ -107,18 +107,8 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 		return ErrFileNotInUploadedState
 	}
 
-	now := store.clock.GetCurrentTime()
-	_, err = store.collectionsCollection.Upsert(
-		ctx,
-		bson.M{fieldID: collectionID},
-		bson.D{
-			{"$set", bson.D{
-				{fieldState, StatePublished},
-				{fieldLastModified, now},
-				{fieldPublishedAt, now}}},
-		})
+	err = store.updateCollectionState(ctx, collectionID, StatePublished)
 	if err != nil {
-		log.Error(ctx, fmt.Sprintf("failed to change collection %v to %s state", collectionID, StatePublished), err, logdata)
 		return err
 	}
 
@@ -126,6 +116,33 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 	newCtx := request.WithRequestId(context.Background(), requestID)
 	go store.NotifyCollectionPublished(newCtx, collectionID)
 
+	return nil
+}
+
+func (store *Store) updateCollectionState(ctx context.Context, collectionID string, state string) error {
+	logdata := log.Data{"collection_id": collectionID, "state": state}
+
+	now := store.clock.GetCurrentTime()
+
+	fields := bson.D{
+		{fieldState, state},
+		{fieldLastModified, now},
+	}
+
+	if state == StatePublished {
+		fields = append(fields, bson.E{fieldPublishedAt, now})
+	}
+
+	_, err := store.collectionsCollection.Upsert(
+		ctx,
+		bson.M{fieldID: collectionID},
+		bson.D{
+			{"$set", fields},
+		})
+	if err != nil {
+		log.Error(ctx, fmt.Sprintf("failed to change collection %v to %s state", collectionID, state), err, logdata)
+		return err
+	}
 	return nil
 }
 
