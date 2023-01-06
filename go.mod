@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-files-api
 
-go 1.18
+go 1.19
 
 // We are not using `github.com/gorilla/sessions` and there is a non-CVE vulnerability found.
 // So, to avoid 'sonatype-2021-4899' non-CVE Vulnerability
