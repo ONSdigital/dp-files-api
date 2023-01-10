@@ -8,36 +8,53 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/ONSdigital/dp-net/v2/request"
 	"github.com/ONSdigital/log.go/v2/log"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func (store *Store) IsCollectionPublished(ctx context.Context, collectionID string) (bool, error) {
-	metadata := files.StoredRegisteredMetaData{}
-	err := store.metadataCollection.FindOne(ctx, bson.M{fieldCollectionID: collectionID}, &metadata)
+	coll, err := store.GetCollectionPublishedMetadata(ctx, collectionID)
 	if err != nil {
-		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
-			return false, nil
+		// If there's no record of collection being published in collections DB, fall back
+		// to the older method that checks the file statuses (if all files in the collection are marked
+		// as published, we consider the collection published).
+		if errors.Is(err, ErrCollectionMetadataNotRegistered) {
+			return store.AreAllFilesPublished(ctx, collectionID)
 		}
+		// we've hit an unexpected error
 		return false, fmt.Errorf("collection published check: %w", err)
 	}
-	if metadata.State == StatePublished || metadata.State == StateDecrypted {
+	if coll.State == StatePublished {
 		return true, nil
 	}
-	if metadata.State == StateUploaded {
-		coll, err := store.GetCollectionPublishedMetadata(ctx, collectionID)
-		if err != nil {
-			if errors.Is(err, ErrCollectionMetadataNotRegistered) {
-				return false, nil
-			}
-			return false, fmt.Errorf("collection published check (collections-db): %w", err)
-		}
-		if coll.State == StatePublished {
+	return false, nil
+}
+
+func (store *Store) AreAllFilesPublished(ctx context.Context, collectionID string) (bool, error) {
+	empty, err := store.IsCollectionEmpty(ctx, collectionID)
+	if err != nil {
+		return false, fmt.Errorf("AreAllFilesPublished empty collection check: %w", err)
+	}
+	if empty {
+		return false, nil
+	}
+
+	metadata := files.StoredRegisteredMetaData{}
+	err = store.metadataCollection.FindOne(ctx, bson.M{"$and": []bson.M{
+		{fieldCollectionID: collectionID},
+		{fieldState: bson.M{"$ne": StatePublished}},
+		{fieldState: bson.M{"$ne": StateDecrypted}},
+	}}, &metadata)
+	if err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			return true, nil
 		}
+		return false, fmt.Errorf("AreAllFilesPublished check: %w", err)
 	}
 	return false, nil
 }
@@ -141,6 +158,24 @@ func (store *Store) updateCollectionState(ctx context.Context, collectionID stri
 		})
 	if err != nil {
 		log.Error(ctx, fmt.Sprintf("failed to change collection %v to %s state", collectionID, state), err, logdata)
+		return err
+	}
+	return nil
+}
+func (store *Store) registerCollection(ctx context.Context, collectionID string) error {
+	logdata := log.Data{"collection_id": collectionID}
+	now := store.clock.GetCurrentTime()
+	collection := files.StoredCollection{
+		ID:           collectionID,
+		State:        StateCreated,
+		LastModified: now,
+	}
+	if _, err := store.collectionsCollection.Insert(ctx, collection); err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			log.Info(ctx, "collection already registered", logdata)
+			return nil
+		}
+		log.Error(ctx, "failed to insert collection record", err, log.Data{"collection": config.CollectionsCollection, "record": collection})
 		return err
 	}
 	return nil

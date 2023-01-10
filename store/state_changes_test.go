@@ -17,25 +17,47 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+func (suite *StoreSuite) TestRegisterFileUploadCollectionPublishedCheckError() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata.State = store.StatePublished
+
+	expectedError := errors.New("collection fetch error")
+	collCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(expectedError),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(nil, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
+
+	suite.Equal(true, suite.logInterceptor.IsEventPresent("collection published check error"))
+	suite.ErrorIs(err, expectedError)
+}
+
 func (suite *StoreSuite) TestRegisterFileUploadWhenCollectionAlreadyPublished() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
 	metadata.State = store.StatePublished
-	metadataBytes, _ := bson.Marshal(metadata)
 
-	alwaysFindsExistingCollection := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	coll, _ := bson.Marshal(files.StoredCollection{
+		State: store.StatePublished,
+	})
+	collCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(coll), // collection is PUBLISHED
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&alwaysFindsExistingCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(nil, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
 
-	suite.Equal("collection with id [123456] is already published", logEvent)
+	suite.Equal("collection is already published", logEvent)
 	suite.ErrorIs(err, store.ErrCollectionAlreadyPublished)
 }
 
@@ -89,9 +111,25 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFileDoesNotAlreadyExist() {
 			return nil, nil
 		},
 	}
+	coll, _ := bson.Marshal(files.StoredCollection{
+		State: store.StateUploaded,
+	})
+	collCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(coll), // collection is not PUBLISHED
+		InsertFunc: func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
+			actualCollection := document.(files.StoredCollection)
+			testCurrentTime := suite.defaultClock.GetCurrentTime()
+
+			suite.Equal(store.StateCreated, actualCollection.State)
+			suite.Equal(testCurrentTime, actualCollection.LastModified)
+			suite.Equal(suite.defaultCollectionID, actualCollection.ID)
+
+			return nil, nil
+		},
+	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsZero, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsZero, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.NoError(err)
@@ -143,6 +181,7 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertSucceeds() {
 		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
 			return mongodriver.ErrNoDocumentFound
 		},
+		InsertFunc: CollectionInsertReturnsNilAndNil(),
 	}
 
 	cfg, _ := config.Get()
@@ -153,6 +192,35 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertSucceeds() {
 
 	suite.Equal("registering new file upload", logEvent)
 	suite.NoError(err)
+}
+
+func (suite *StoreSuite) TestRegisterFileUploadRegisterCollectionFails() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata.State = store.StateUploaded
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	collectionCountReturnsZero := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+		InsertFunc:  CollectionInsertReturnsNilAndNil(),
+	}
+	expectedError := errors.New("collection insert error")
+	emptyCollection := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+		InsertFunc: CollectionInsertReturnsNilAndError(expectedError),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
+
+	suite.Equal(true, suite.logInterceptor.IsEventPresent("failed to register collection"))
+	suite.Error(err)
+	suite.ErrorIs(err, expectedError)
 }
 
 func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
