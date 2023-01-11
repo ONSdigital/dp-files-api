@@ -325,6 +325,21 @@ func (l *LogInterceptor) GetLogEvents(eventName string) map[int]map[string]inter
 	return retVal
 }
 
+func (l *LogInterceptor) IsEventPresent(eventName string) bool {
+	logResult, _ := ioutil.ReadAll(l.logBuffer)
+	logz := strings.Split(string(logResult), "\n")
+	for _, line := range logz {
+		logOut := make(map[string]interface{})
+		json.Unmarshal([]byte(line), &logOut)
+		evt, ok := logOut["event"]
+		if ok && evt.(string) == eventName {
+			return true
+		}
+	}
+
+	return false
+}
+
 func NewLogInterceptor() LogInterceptor {
 	return LogInterceptor{
 		logBuffer:                     &bytes.Buffer{},

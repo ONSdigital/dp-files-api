@@ -26,19 +26,20 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 
 	//check to see if collectionID exists and is not-published
 	if metaData.CollectionID != nil {
+		logdata["collection_id"] = *metaData.CollectionID
 		published, err := store.IsCollectionPublished(ctx, *metaData.CollectionID)
 		if err != nil {
-			log.Error(ctx, "register file upload: caught db error", err, logdata)
+			log.Error(ctx, "collection published check error", err, logdata)
 			return err
 		}
 		if published {
-			log.Error(ctx, fmt.Sprintf("collection with id [%s] is already published", *metaData.CollectionID), ErrCollectionAlreadyPublished, logdata)
+			log.Error(ctx, "collection is already published", ErrCollectionAlreadyPublished, logdata)
 			return ErrCollectionAlreadyPublished
 		}
 	}
-
-	metaData.CreatedAt = store.clock.GetCurrentTime()
-	metaData.LastModified = store.clock.GetCurrentTime()
+	now := store.clock.GetCurrentTime()
+	metaData.CreatedAt = now
+	metaData.LastModified = now
 	metaData.State = StateCreated
 
 	if _, err := store.metadataCollection.Insert(ctx, metaData); err != nil {
@@ -48,6 +49,13 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 		}
 		log.Error(ctx, "failed to insert metadata", err, log.Data{"collection": config.MetadataCollection, "metadata": metaData})
 		return err
+	}
+	if metaData.CollectionID != nil {
+		err := store.registerCollection(ctx, *metaData.CollectionID)
+		if err != nil {
+			log.Error(ctx, "failed to register collection", err, logdata)
+			return err
+		}
 	}
 
 	log.Info(ctx, "registering new file upload", logdata)
