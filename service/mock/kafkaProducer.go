@@ -18,38 +18,44 @@ var _ service.OurProducer = &OurProducerMock{}
 
 // OurProducerMock is a mock implementation of service.OurProducer.
 //
-// 	func TestSomethingThatUsesOurProducer(t *testing.T) {
+//	func TestSomethingThatUsesOurProducer(t *testing.T) {
 //
-// 		// make and configure a mocked service.OurProducer
-// 		mockedOurProducer := &OurProducerMock{
-// 			ChannelsFunc: func() *kafka.ProducerChannels {
-// 				panic("mock out the Channels method")
-// 			},
-// 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
-// 				panic("mock out the Checker method")
-// 			},
-// 			CloseFunc: func(ctx context.Context) error {
-// 				panic("mock out the Close method")
-// 			},
-// 			InitialiseFunc: func(ctx context.Context) error {
-// 				panic("mock out the Initialise method")
-// 			},
-// 			IsInitialisedFunc: func() bool {
-// 				panic("mock out the IsInitialised method")
-// 			},
-// 			LogErrorsFunc: func(ctx context.Context)  {
-// 				panic("mock out the LogErrors method")
-// 			},
-// 			SendFunc: func(schema *avro.Schema, event interface{}) error {
-// 				panic("mock out the Send method")
-// 			},
-// 		}
+//		// make and configure a mocked service.OurProducer
+//		mockedOurProducer := &OurProducerMock{
+//			AddHeaderFunc: func(key string, value string)  {
+//				panic("mock out the AddHeader method")
+//			},
+//			ChannelsFunc: func() *kafka.ProducerChannels {
+//				panic("mock out the Channels method")
+//			},
+//			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+//				panic("mock out the Checker method")
+//			},
+//			CloseFunc: func(ctx context.Context) error {
+//				panic("mock out the Close method")
+//			},
+//			InitialiseFunc: func(ctx context.Context) error {
+//				panic("mock out the Initialise method")
+//			},
+//			IsInitialisedFunc: func() bool {
+//				panic("mock out the IsInitialised method")
+//			},
+//			LogErrorsFunc: func(ctx context.Context)  {
+//				panic("mock out the LogErrors method")
+//			},
+//			SendFunc: func(schema *avro.Schema, event interface{}) error {
+//				panic("mock out the Send method")
+//			},
+//		}
 //
-// 		// use mockedOurProducer in code that requires service.OurProducer
-// 		// and then make assertions.
+//		// use mockedOurProducer in code that requires service.OurProducer
+//		// and then make assertions.
 //
-// 	}
+//	}
 type OurProducerMock struct {
+	// AddHeaderFunc mocks the AddHeader method.
+	AddHeaderFunc func(key string, value string)
+
 	// ChannelsFunc mocks the Channels method.
 	ChannelsFunc func() *kafka.ProducerChannels
 
@@ -73,6 +79,13 @@ type OurProducerMock struct {
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// AddHeader holds details about calls to the AddHeader method.
+		AddHeader []struct {
+			// Key is the key argument value.
+			Key string
+			// Value is the value argument value.
+			Value string
+		}
 		// Channels holds details about calls to the Channels method.
 		Channels []struct {
 		}
@@ -109,6 +122,7 @@ type OurProducerMock struct {
 			Event interface{}
 		}
 	}
+	lockAddHeader     sync.RWMutex
 	lockChannels      sync.RWMutex
 	lockChecker       sync.RWMutex
 	lockClose         sync.RWMutex
@@ -116,6 +130,42 @@ type OurProducerMock struct {
 	lockIsInitialised sync.RWMutex
 	lockLogErrors     sync.RWMutex
 	lockSend          sync.RWMutex
+}
+
+// AddHeader calls AddHeaderFunc.
+func (mock *OurProducerMock) AddHeader(key string, value string) {
+	if mock.AddHeaderFunc == nil {
+		panic("OurProducerMock.AddHeaderFunc: method is nil but OurProducer.AddHeader was just called")
+	}
+	callInfo := struct {
+		Key   string
+		Value string
+	}{
+		Key:   key,
+		Value: value,
+	}
+	mock.lockAddHeader.Lock()
+	mock.calls.AddHeader = append(mock.calls.AddHeader, callInfo)
+	mock.lockAddHeader.Unlock()
+	mock.AddHeaderFunc(key, value)
+}
+
+// AddHeaderCalls gets all the calls that were made to AddHeader.
+// Check the length with:
+//
+//	len(mockedOurProducer.AddHeaderCalls())
+func (mock *OurProducerMock) AddHeaderCalls() []struct {
+	Key   string
+	Value string
+} {
+	var calls []struct {
+		Key   string
+		Value string
+	}
+	mock.lockAddHeader.RLock()
+	calls = mock.calls.AddHeader
+	mock.lockAddHeader.RUnlock()
+	return calls
 }
 
 // Channels calls ChannelsFunc.
@@ -133,7 +183,8 @@ func (mock *OurProducerMock) Channels() *kafka.ProducerChannels {
 
 // ChannelsCalls gets all the calls that were made to Channels.
 // Check the length with:
-//     len(mockedOurProducer.ChannelsCalls())
+//
+//	len(mockedOurProducer.ChannelsCalls())
 func (mock *OurProducerMock) ChannelsCalls() []struct {
 } {
 	var calls []struct {
@@ -164,7 +215,8 @@ func (mock *OurProducerMock) Checker(ctx context.Context, state *healthcheck.Che
 
 // CheckerCalls gets all the calls that were made to Checker.
 // Check the length with:
-//     len(mockedOurProducer.CheckerCalls())
+//
+//	len(mockedOurProducer.CheckerCalls())
 func (mock *OurProducerMock) CheckerCalls() []struct {
 	Ctx   context.Context
 	State *healthcheck.CheckState
@@ -197,7 +249,8 @@ func (mock *OurProducerMock) Close(ctx context.Context) error {
 
 // CloseCalls gets all the calls that were made to Close.
 // Check the length with:
-//     len(mockedOurProducer.CloseCalls())
+//
+//	len(mockedOurProducer.CloseCalls())
 func (mock *OurProducerMock) CloseCalls() []struct {
 	Ctx context.Context
 } {
@@ -228,7 +281,8 @@ func (mock *OurProducerMock) Initialise(ctx context.Context) error {
 
 // InitialiseCalls gets all the calls that were made to Initialise.
 // Check the length with:
-//     len(mockedOurProducer.InitialiseCalls())
+//
+//	len(mockedOurProducer.InitialiseCalls())
 func (mock *OurProducerMock) InitialiseCalls() []struct {
 	Ctx context.Context
 } {
@@ -256,7 +310,8 @@ func (mock *OurProducerMock) IsInitialised() bool {
 
 // IsInitialisedCalls gets all the calls that were made to IsInitialised.
 // Check the length with:
-//     len(mockedOurProducer.IsInitialisedCalls())
+//
+//	len(mockedOurProducer.IsInitialisedCalls())
 func (mock *OurProducerMock) IsInitialisedCalls() []struct {
 } {
 	var calls []struct {
@@ -285,7 +340,8 @@ func (mock *OurProducerMock) LogErrors(ctx context.Context) {
 
 // LogErrorsCalls gets all the calls that were made to LogErrors.
 // Check the length with:
-//     len(mockedOurProducer.LogErrorsCalls())
+//
+//	len(mockedOurProducer.LogErrorsCalls())
 func (mock *OurProducerMock) LogErrorsCalls() []struct {
 	Ctx context.Context
 } {
@@ -318,7 +374,8 @@ func (mock *OurProducerMock) Send(schema *avro.Schema, event interface{}) error 
 
 // SendCalls gets all the calls that were made to Send.
 // Check the length with:
-//     len(mockedOurProducer.SendCalls())
+//
+//	len(mockedOurProducer.SendCalls())
 func (mock *OurProducerMock) SendCalls() []struct {
 	Schema *avro.Schema
 	Event  interface{}
