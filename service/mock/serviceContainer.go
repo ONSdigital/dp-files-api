@@ -22,40 +22,40 @@ var _ service.ServiceContainer = &ServiceContainerMock{}
 
 // ServiceContainerMock is a mock implementation of service.ServiceContainer.
 //
-// 	func TestSomethingThatUsesServiceContainer(t *testing.T) {
+//	func TestSomethingThatUsesServiceContainer(t *testing.T) {
 //
-// 		// make and configure a mocked service.ServiceContainer
-// 		mockedServiceContainer := &ServiceContainerMock{
-// 			GetAuthMiddlewareFunc: func() auth.Middleware {
-// 				panic("mock out the GetAuthMiddleware method")
-// 			},
-// 			GetClockFunc: func() clock.Clock {
-// 				panic("mock out the GetClock method")
-// 			},
-// 			GetHTTPServerFunc: func() files.HTTPServer {
-// 				panic("mock out the GetHTTPServer method")
-// 			},
-// 			GetHealthCheckFunc: func() health.Checker {
-// 				panic("mock out the GetHealthCheck method")
-// 			},
-// 			GetKafkaProducerFunc: func() kafka.IProducer {
-// 				panic("mock out the GetKafkaProducer method")
-// 			},
-// 			GetMongoDBFunc: func() mongo.Client {
-// 				panic("mock out the GetMongoDB method")
-// 			},
-// 			GetS3ClienterFunc: func() aws.S3Clienter {
-// 				panic("mock out the GetS3Clienter method")
-// 			},
-// 			ShutdownFunc: func(ctx context.Context) error {
-// 				panic("mock out the Shutdown method")
-// 			},
-// 		}
+//		// make and configure a mocked service.ServiceContainer
+//		mockedServiceContainer := &ServiceContainerMock{
+//			GetAuthMiddlewareFunc: func() auth.Middleware {
+//				panic("mock out the GetAuthMiddleware method")
+//			},
+//			GetClockFunc: func() clock.Clock {
+//				panic("mock out the GetClock method")
+//			},
+//			GetHTTPServerFunc: func() files.HTTPServer {
+//				panic("mock out the GetHTTPServer method")
+//			},
+//			GetHealthCheckFunc: func() health.Checker {
+//				panic("mock out the GetHealthCheck method")
+//			},
+//			GetKafkaProducerFunc: func() kafka.IProducer {
+//				panic("mock out the GetKafkaProducer method")
+//			},
+//			GetMongoDBFunc: func() mongo.Client {
+//				panic("mock out the GetMongoDB method")
+//			},
+//			GetS3ClienterFunc: func() aws.S3Clienter {
+//				panic("mock out the GetS3Clienter method")
+//			},
+//			ShutdownFunc: func(ctx context.Context) error {
+//				panic("mock out the Shutdown method")
+//			},
+//		}
 //
-// 		// use mockedServiceContainer in code that requires service.ServiceContainer
-// 		// and then make assertions.
+//		// use mockedServiceContainer in code that requires service.ServiceContainer
+//		// and then make assertions.
 //
-// 	}
+//	}
 type ServiceContainerMock struct {
 	// GetAuthMiddlewareFunc mocks the GetAuthMiddleware method.
 	GetAuthMiddlewareFunc func() auth.Middleware
@@ -135,7 +135,8 @@ func (mock *ServiceContainerMock) GetAuthMiddleware() auth.Middleware {
 
 // GetAuthMiddlewareCalls gets all the calls that were made to GetAuthMiddleware.
 // Check the length with:
-//     len(mockedServiceContainer.GetAuthMiddlewareCalls())
+//
+//	len(mockedServiceContainer.GetAuthMiddlewareCalls())
 func (mock *ServiceContainerMock) GetAuthMiddlewareCalls() []struct {
 } {
 	var calls []struct {
@@ -161,7 +162,8 @@ func (mock *ServiceContainerMock) GetClock() clock.Clock {
 
 // GetClockCalls gets all the calls that were made to GetClock.
 // Check the length with:
-//     len(mockedServiceContainer.GetClockCalls())
+//
+//	len(mockedServiceContainer.GetClockCalls())
 func (mock *ServiceContainerMock) GetClockCalls() []struct {
 } {
 	var calls []struct {
@@ -187,7 +189,8 @@ func (mock *ServiceContainerMock) GetHTTPServer() files.HTTPServer {
 
 // GetHTTPServerCalls gets all the calls that were made to GetHTTPServer.
 // Check the length with:
-//     len(mockedServiceContainer.GetHTTPServerCalls())
+//
+//	len(mockedServiceContainer.GetHTTPServerCalls())
 func (mock *ServiceContainerMock) GetHTTPServerCalls() []struct {
 } {
 	var calls []struct {
@@ -213,7 +216,8 @@ func (mock *ServiceContainerMock) GetHealthCheck() health.Checker {
 
 // GetHealthCheckCalls gets all the calls that were made to GetHealthCheck.
 // Check the length with:
-//     len(mockedServiceContainer.GetHealthCheckCalls())
+//
+//	len(mockedServiceContainer.GetHealthCheckCalls())
 func (mock *ServiceContainerMock) GetHealthCheckCalls() []struct {
 } {
 	var calls []struct {
@@ -239,7 +243,8 @@ func (mock *ServiceContainerMock) GetKafkaProducer() kafka.IProducer {
 
 // GetKafkaProducerCalls gets all the calls that were made to GetKafkaProducer.
 // Check the length with:
-//     len(mockedServiceContainer.GetKafkaProducerCalls())
+//
+//	len(mockedServiceContainer.GetKafkaProducerCalls())
 func (mock *ServiceContainerMock) GetKafkaProducerCalls() []struct {
 } {
 	var calls []struct {
@@ -265,7 +270,8 @@ func (mock *ServiceContainerMock) GetMongoDB() mongo.Client {
 
 // GetMongoDBCalls gets all the calls that were made to GetMongoDB.
 // Check the length with:
-//     len(mockedServiceContainer.GetMongoDBCalls())
+//
+//	len(mockedServiceContainer.GetMongoDBCalls())
 func (mock *ServiceContainerMock) GetMongoDBCalls() []struct {
 } {
 	var calls []struct {
@@ -291,7 +297,8 @@ func (mock *ServiceContainerMock) GetS3Clienter() aws.S3Clienter {
 
 // GetS3ClienterCalls gets all the calls that were made to GetS3Clienter.
 // Check the length with:
-//     len(mockedServiceContainer.GetS3ClienterCalls())
+//
+//	len(mockedServiceContainer.GetS3ClienterCalls())
 func (mock *ServiceContainerMock) GetS3ClienterCalls() []struct {
 } {
 	var calls []struct {
@@ -320,7 +327,8 @@ func (mock *ServiceContainerMock) Shutdown(ctx context.Context) error {
 
 // ShutdownCalls gets all the calls that were made to Shutdown.
 // Check the length with:
-//     len(mockedServiceContainer.ShutdownCalls())
+//
+//	len(mockedServiceContainer.ShutdownCalls())
 func (mock *ServiceContainerMock) ShutdownCalls() []struct {
 	Ctx context.Context
 } {
