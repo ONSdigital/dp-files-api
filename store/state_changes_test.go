@@ -4,15 +4,12 @@ import (
 	"context"
 	"errors"
 
-	s3Mock "github.com/ONSdigital/dp-files-api/aws/mock"
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/mongo/mock"
 	"github.com/ONSdigital/dp-files-api/store"
-	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
-	"github.com/aws/aws-sdk-go/service/s3"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -235,7 +232,6 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
 	}{
 		{store.StateUploaded, store.ErrFileStateMismatch},
 		{store.StatePublished, store.ErrFileStateMismatch},
-		{store.StateDecrypted, store.ErrFileStateMismatch},
 	}
 
 	for _, test := range tests {
@@ -330,141 +326,6 @@ func (suite *StoreSuite) TestMarkUploadCompleteSucceeds() {
 	suite.NoError(err)
 }
 
-func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenNotInCreatedState() {
-	suite.logInterceptor.Start()
-	defer suite.logInterceptor.Stop()
-
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
-
-	tests := []struct {
-		currentState string
-		expectedErr  error
-	}{
-		{store.StateCreated, store.ErrFileStateMismatch},
-		{store.StateUploaded, store.ErrFileStateMismatch},
-		{store.StateDecrypted, store.ErrFileStateMismatch},
-	}
-
-	for _, test := range tests {
-		metadata.State = test.currentState
-
-		metadataBytes, _ := bson.Marshal(metadata)
-
-		collectionWithUploadedFile := mock.MongoCollectionMock{
-			FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
-		}
-		emptyCollection := mock.MongoCollectionMock{
-			FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
-				return mongodriver.ErrNoDocumentFound
-			},
-		}
-
-		cfg, _ := config.Get()
-		subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
-		err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
-
-		logEvents := suite.logInterceptor.GetLogEvents("update file state: state mismatch")
-
-		suite.Equal(1, len(logEvents))
-		suite.Error(err)
-		suite.ErrorIs(err, test.expectedErr, "the actual err was %v", err)
-	}
-}
-
-func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenFileNotExists() {
-	suite.logInterceptor.Start()
-	defer suite.logInterceptor.Stop()
-
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
-
-	metadata.State = store.StatePublished
-
-	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
-	}
-
-	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
-	err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
-
-	logEvents := suite.logInterceptor.GetLogEvents("update file state: attempted to operate on unregistered file")
-
-	suite.Equal(1, len(logEvents))
-
-	suite.Error(err)
-	suite.ErrorIs(err, store.ErrFileNotRegistered, "the metadata looked for was %v", metadata)
-}
-
-func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenUpdateReturnsError() {
-
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
-	metadata.State = store.StatePublished
-	metadata.Etag = "test-etag"
-	metadataBytes, _ := bson.Marshal(metadata)
-
-	expectedError := errors.New("an error occurred")
-
-	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
-		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
-	}
-	s3Client := &s3Mock.S3ClienterMock{
-		CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-		HeadFunc:    func(key string) (*s3.HeadObjectOutput, error) { return &s3.HeadObjectOutput{ETag: &metadata.Etag}, nil },
-	}
-
-	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
-	err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
-
-	suite.Error(err)
-}
-
-func (suite *StoreSuite) TestMarkFileDecryptedEtagMismatch() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
-
-	metadata.State = store.StatePublished
-	metadataBytes, _ := bson.Marshal(metadata)
-	wrongEtag := "test123-etag"
-
-	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
-		UpdateFunc:  CollectionUpdateReturnsNilAndNil(),
-	}
-	s3Client := &s3Mock.S3ClienterMock{
-		CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-		HeadFunc:    func(key string) (*s3.HeadObjectOutput, error) { return &s3.HeadObjectOutput{ETag: &wrongEtag}, nil },
-	}
-
-	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
-	err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
-
-	suite.ErrorIs(err, store.ErrEtagMismatchWhilePublishing, "the actual err was %v", err)
-}
-
-func (suite *StoreSuite) TestMarkFileDecryptedSucceeds() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
-
-	metadata.State = store.StatePublished
-	metadataBytes, _ := bson.Marshal(metadata)
-
-	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
-		UpdateFunc:  CollectionUpdateReturnsNilAndNil(),
-	}
-	s3Client := &s3Mock.S3ClienterMock{
-		CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-		HeadFunc:    func(key string) (*s3.HeadObjectOutput, error) { return &s3.HeadObjectOutput{ETag: &metadata.Etag}, nil },
-	}
-
-	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
-	err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
-
-	suite.NoError(err)
-}
-
 func (suite *StoreSuite) TestMarkFilePublishedFindReturnsErrNoDocumentFound() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
@@ -533,7 +394,6 @@ func (suite *StoreSuite) TestMarkFilePublishedStateUploaded() {
 	defer suite.logInterceptor.Stop()
 
 	notUploadedStates := []string{
-		store.StateDecrypted,
 		store.StateCreated,
 		store.StatePublished,
 	}

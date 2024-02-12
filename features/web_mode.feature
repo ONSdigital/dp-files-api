@@ -42,25 +42,6 @@ Feature: Web mode restrictions
     When I publish the collection "1234-asdfg-54321-qwerty"
     Then the HTTP status code should be "403"
 
-  Scenario: The one where I try to mark the file as decrypted
-    Given the file upload "images/meme.jpg" has been published with:
-      | Path              | images/meme.jpg                                                           |
-      | IsPublishable     | true                                                                      |
-      | CollectionID      | 1234-asdfg-54321-qwerty                                                   |
-      | Title             | The latest Meme                                                           |
-      | SizeInBytes       | 14794                                                                     |
-      | Type              | image/jpeg                                                                |
-      | Licence           | OGL v3                                                                    |
-      | LicenceUrl        | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
-      | CreatedAt         | 2021-10-21T15:13:14Z                                                      |
-      | UploadCompletedAt | 2021-10-21T15:14:14Z                                                      |
-      | LastModified      | 2021-10-21T15:13:14Z                                                      |
-      | PublishedAt       | 2021-10-21T15:13:14Z                                                      |
-      | Etag              | 123456789                                                                 |
-      | State             | PUBLISHED                                                                 |
-    When the file "images/meme.jpg" is marked as decrypted with etag "987654321"
-    Then the HTTP status code should be "403"
-
   Scenario: The one where I try to get a file
     Given the file upload "images/meme.jpg" has been registered with:
       | IsPublishable | true                                                                      |

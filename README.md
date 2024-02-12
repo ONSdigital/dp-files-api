@@ -20,9 +20,6 @@ It is also to publish all files in a collection in one call by PATCHING /collect
 reduce the number of API calls required to publish a large collection.
 Currently, most calls to a publish file will come from the [Zebedee Publisher](https://github.com/ONSdigital/zebedee/blob/ff5d1a23b2bba50dc1ed67b10fbc213972f9ad21/zebedee-cms/src/main/java/com/github/onsdigital/zebedee/model/publishing/Publisher.java#L153)
 
-When a file is published this API sends a message via Kafka to the [Static File Publisher](https://github.com/ONSdigital/dp-static-file-publisher)
-that permanently decrypts the file and inform this API that the file is now decrypted via an HTTP call.
-
 ### REST API
 
 The api is fully documented in [Swagger Docs](swagger.yaml)
@@ -42,7 +39,7 @@ where it is not already sent or change the `state` of a file.
 | type           | mimetype of the file, e.g. "text/csv", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"     |
 | licence        | Freetext name of the licence under which the file is made available                                            |
 | licence_url    | URL to the license                                                                                             |
-| state          | State of the file - CREATED, UPLOADED, PUBLISHED, DECRYPTED                                                    |
+| state          | State of the file - CREATED, UPLOADED, PUBLISHED                                                    |
 | etag           | Cyrptographic hash of the file content                                                                         |
 
 #### Additional Metadata
@@ -55,7 +52,6 @@ Additional timestamp data about the file is stored in the database but not expos
 | last_modified       |
 | upload_completed_at |
 | published_at        |
-| decrypted_at        |
 
 
 ### File States
@@ -64,22 +60,21 @@ Additional timestamp data about the file is stored in the database but not expos
 |-----------|-----------------------------------------------------------------------------------------------------------------------------|
 | CREATED   | File upload has started and the metadata has been provide to this API                                                       |
 | UPLOADED  | File upload has been completed. The etag for the final file has been provided                                               |
-| PUBLISHED | The file has been published (it is available to the public, but is not yet permently decrypted)                             |
-| DECRYPTED | The file has been permanently decrypted and moved to the public bucket for storage. The public files etag has been provided |
+| PUBLISHED | The file has been published. It is available to the public                                                                  |
 
 ```
 
 
- Start     ┌──────────────┐ File      ┌──────────────┐ File       ┌───────────────┐ File       ┌───────────────┐
- Upload    │              │ Uploaded  │              │ Published  │               │ Decrypted  │               │
-      ────►│   CREATED    ├──────────►│   UPLOADED   ├───────────►│   PUBLISHED   ├───────────►│   DECRYPTED   │
-           │              │           │              │            │               │            │               │
-           └──────────────┘           └──────────────┘            └───────────────┘            └───────────────┘
-             File is in a               File is ready               File is available           File is available
-             unusable                   for review &                for public download         for public download
-             state                      approval                    The stored encrypted        directly from S3
-             Can resume upoad           Can be pre-viewed           version is decrypted        where it is stored
-                                                                    on-demand                   unencrypted
+ Start     ┌──────────────┐ File      ┌──────────────┐ File       ┌───────────────┐
+ Upload    │              │ Uploaded  │              │ Published  │               │
+      ────►│   CREATED    ├──────────►│   UPLOADED   ├───────────►│   PUBLISHED   │
+           │              │           │              │            │               │
+           └──────────────┘           └──────────────┘            └───────────────┘
+             File is in a               File is ready               File is available
+             unusable                   for review &                for public download
+             state                      approval
+             Can resume upoad           Can be pre-viewed
+
 
 ```
 

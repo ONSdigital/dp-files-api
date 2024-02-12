@@ -18,7 +18,6 @@ const (
 	StateCreated   = "CREATED"
 	StateUploaded  = "UPLOADED"
 	StatePublished = "PUBLISHED"
-	StateDecrypted = "DECRYPTED"
 )
 
 func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
@@ -64,10 +63,6 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 
 func (store *Store) MarkUploadComplete(ctx context.Context, metaData files.FileEtagChange) error {
 	return store.updateFileState(ctx, metaData.Path, metaData.Etag, StateUploaded, StateCreated, fieldUploadCompletedAt)
-}
-
-func (store *Store) MarkFileDecrypted(ctx context.Context, metaData files.FileEtagChange) error {
-	return store.updateFileState(ctx, metaData.Path, metaData.Etag, StateDecrypted, StatePublished, fieldDecryptedAt)
 }
 
 func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
@@ -146,7 +141,7 @@ func (store *Store) updateFileState(ctx context.Context, path, etag, toState, ex
 		return ErrFileStateMismatch
 	}
 	// while publishing check that you are publishing the correct/expected version of the file
-	if toState == StateDecrypted {
+	if toState == StatePublished {
 		head, err := store.s3client.Head(metadata.Path)
 		if err != nil {
 			log.Error(ctx, fmt.Sprintf("Failed trying to get head data for %s from bucket %s", metadata.Path, store.cfg.PrivateBucketName), err)
