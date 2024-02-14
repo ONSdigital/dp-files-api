@@ -20,6 +20,8 @@ It is also to publish all files in a collection in one call by PATCHING /collect
 reduce the number of API calls required to publish a large collection.
 Currently, most calls to a publish file will come from the [Zebedee Publisher](https://github.com/ONSdigital/zebedee/blob/ff5d1a23b2bba50dc1ed67b10fbc213972f9ad21/zebedee-cms/src/main/java/com/github/onsdigital/zebedee/model/publishing/Publisher.java#L153)
 
+When a file is published this API sends a message via Kafka to the [Static File Publisher](https://github.com/ONSdigital/dp-static-file-publisher)
+
 ### REST API
 
 The api is fully documented in [Swagger Docs](swagger.yaml)
