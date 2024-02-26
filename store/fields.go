@@ -9,5 +9,5 @@ const (
 	fieldLastModified      = "last_modified"
 	fieldPublishedAt       = "published_at"
 	fieldUploadCompletedAt = "upload_completed_at"
-	fieldDecryptedAt       = "decrypted_at"
+	fieldMovedAt           = "moved_at"
 )

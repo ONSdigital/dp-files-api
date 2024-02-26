@@ -14,7 +14,7 @@ import (
 type PatchRequestHandlers struct {
 	UploadComplete   http.HandlerFunc
 	Published        http.HandlerFunc
-	Decrypted        http.HandlerFunc
+	Moved        http.HandlerFunc
 	CollectionUpdate http.HandlerFunc
 }
 
@@ -41,8 +41,8 @@ func PatchRequestToHandler(handlers PatchRequestHandlers) http.HandlerFunc {
 			handlers.UploadComplete.ServeHTTP(w, req)
 		case store.StatePublished:
 			handlers.Published.ServeHTTP(w, req)
-		case store.StateDecrypted:
-			handlers.Decrypted.ServeHTTP(w, req)
+		case store.StateMoved:
+			handlers.Moved.ServeHTTP(w, req)
 		default:
 			log.Error(req.Context(), "InvalidStateChange", errors.New("invalid state change"), log.Data{"state": *stateMetaData.State})
 			writeError(w, buildErrors(errors.New("invalid state change"), "InvalidStateChange"), http.StatusBadRequest)

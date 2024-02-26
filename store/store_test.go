@@ -248,7 +248,7 @@ func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegis
 	lastModified := suite.generateTestTime(2)
 	uploadCompletedAt := suite.generateTestTime(3)
 	publishedAt := suite.generateTestTime(4)
-	decryptedAt := suite.generateTestTime(5)
+	movedAt := suite.generateTestTime(5)
 
 	return files.StoredRegisteredMetaData{
 		Path:              suite.path,
@@ -263,8 +263,8 @@ func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegis
 		LastModified:      lastModified,
 		UploadCompletedAt: &uploadCompletedAt,
 		PublishedAt:       &publishedAt,
-		DecryptedAt:       &decryptedAt,
-		State:             store.StateDecrypted,
+		MovedAt:           &movedAt,
+		State:             store.StateMoved,
 		Etag:              "1234567",
 	}
 }

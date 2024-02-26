@@ -69,7 +69,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		patchRequestHandlers := api.PatchRequestHandlers{
 			UploadComplete:   authMiddleware.Require("static-files:update", api.HandleMarkUploadComplete(store.MarkUploadComplete)),
 			Published:        authMiddleware.Require("static-files:update", api.HandleMarkFilePublished(store.MarkFilePublished)),
-			Decrypted:        authMiddleware.Require("static-files:update", api.HandleMarkFileDecrypted(store.MarkFileDecrypted)),
+			Moved:        authMiddleware.Require("static-files:update", api.HandleMarkFileMoved(store.MarkFileMoved)),
 			CollectionUpdate: authMiddleware.Require("static-files:update", api.HandlerUpdateCollectionID(store.UpdateCollectionID)),
 		}
 

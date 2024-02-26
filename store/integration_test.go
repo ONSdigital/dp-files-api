@@ -76,7 +76,7 @@ func (s *StoreIntegrationTest) TestOptionalFieldsExcluded() {
 
 	s.Nil(out.UploadCompletedAt)
 	s.Nil(out.PublishedAt)
-	s.Nil(out.DecryptedAt)
+	s.Nil(out.MovedAt)
 	s.Nil(out.CollectionID)
 }
 

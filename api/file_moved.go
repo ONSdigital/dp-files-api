@@ -10,9 +10,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type MarkDecryptionComplete func(ctx context.Context, change files.FileEtagChange) error
+type MarkMovementComplete func(ctx context.Context, change files.FileEtagChange) error
 
-func HandleMarkFileDecrypted(markDecryptionComplete MarkDecryptionComplete) http.HandlerFunc {
+func HandleMarkFileMoved(markMovementComplete MarkMovementComplete) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		m := EtagChange{}
 		if err := json.NewDecoder(req.Body).Decode(&m); err != nil {
@@ -20,7 +20,7 @@ func HandleMarkFileDecrypted(markDecryptionComplete MarkDecryptionComplete) http
 			return
 		}
 
-		if err := markDecryptionComplete(req.Context(), generateFileEtagChange(m, mux.Vars(req)["path"])); err != nil {
+		if err := markMovementComplete(req.Context(), generateFileEtagChange(m, mux.Vars(req)["path"])); err != nil {
 			handleError(w, err)
 			return
 		}

@@ -309,7 +309,7 @@ func (suite *StoreSuite) TestPatchMetadataBadState() {
 	collectionID := "coll1"
 	metadata := files.StoredRegisteredMetaData{
 		Path:         "path1",
-		State:        store.StateDecrypted,
+		State:        store.StateMoved,
 		CollectionID: &collectionID,
 	}
 	collection := &files.StoredCollection{

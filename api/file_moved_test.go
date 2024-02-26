@@ -14,11 +14,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDecryptedHandlerHandlesInvalidJSONContent(t *testing.T) {
+func TestMovedHandlerHandlesInvalidJSONContent(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader("<json>invalid</json>"))
 
-	h := api.HandleMarkFileDecrypted(func(ctx context.Context, change files.FileEtagChange) error {
+	h := api.HandleMarkFileMoved(func(ctx context.Context, change files.FileEtagChange) error {
 		return nil
 	})
 
@@ -29,11 +29,11 @@ func TestDecryptedHandlerHandlesInvalidJSONContent(t *testing.T) {
 	assert.Contains(t, string(response), "BadJsonEncoding")
 }
 
-func TestDecryptedHandlerHandlesUnexpectedPublishingError(t *testing.T) {
+func TestMovedHandlerHandlesUnexpectedPublishingError(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader(`{"path": "dir/file.txt"}`))
 
-	h := api.HandleMarkFileDecrypted(func(ctx context.Context, change files.FileEtagChange) error {
+	h := api.HandleMarkFileMoved(func(ctx context.Context, change files.FileEtagChange) error {
 		return errors.New("broken")
 	})
 

@@ -235,7 +235,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
 	}{
 		{store.StateUploaded, store.ErrFileStateMismatch},
 		{store.StatePublished, store.ErrFileStateMismatch},
-		{store.StateDecrypted, store.ErrFileStateMismatch},
+		{store.StateMoved, store.ErrFileStateMismatch},
 	}
 
 	for _, test := range tests {
@@ -330,7 +330,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteSucceeds() {
 	suite.NoError(err)
 }
 
-func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenNotInCreatedState() {
+func (suite *StoreSuite) TestMarkFileMovedFailsWhenNotInCreatedState() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
@@ -342,7 +342,7 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenNotInCreatedState() {
 	}{
 		{store.StateCreated, store.ErrFileStateMismatch},
 		{store.StateUploaded, store.ErrFileStateMismatch},
-		{store.StateDecrypted, store.ErrFileStateMismatch},
+		{store.StateMoved, store.ErrFileStateMismatch},
 	}
 
 	for _, test := range tests {
@@ -361,7 +361,7 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenNotInCreatedState() {
 
 		cfg, _ := config.Get()
 		subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
-		err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
+		err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 		logEvents := suite.logInterceptor.GetLogEvents("update file state: state mismatch")
 
@@ -371,7 +371,7 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenNotInCreatedState() {
 	}
 }
 
-func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenFileNotExists() {
+func (suite *StoreSuite) TestMarkFileMovedFailsWhenFileNotExists() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
@@ -385,7 +385,7 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenFileNotExists() {
 
 	cfg, _ := config.Get()
 	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
-	err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
+	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	logEvents := suite.logInterceptor.GetLogEvents("update file state: attempted to operate on unregistered file")
 
@@ -395,7 +395,7 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenFileNotExists() {
 	suite.ErrorIs(err, store.ErrFileNotRegistered, "the metadata looked for was %v", metadata)
 }
 
-func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenUpdateReturnsError() {
+func (suite *StoreSuite) TestMarkFileMovedFailsWhenUpdateReturnsError() {
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
 	metadata.State = store.StatePublished
@@ -415,12 +415,12 @@ func (suite *StoreSuite) TestMarkFileDecryptedFailsWhenUpdateReturnsError() {
 
 	cfg, _ := config.Get()
 	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
-	err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
+	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.Error(err)
 }
 
-func (suite *StoreSuite) TestMarkFileDecryptedEtagMismatch() {
+func (suite *StoreSuite) TestMarkFileMovedEtagMismatch() {
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StatePublished
@@ -438,12 +438,12 @@ func (suite *StoreSuite) TestMarkFileDecryptedEtagMismatch() {
 
 	cfg, _ := config.Get()
 	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
-	err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
+	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.ErrorIs(err, store.ErrEtagMismatchWhilePublishing, "the actual err was %v", err)
 }
 
-func (suite *StoreSuite) TestMarkFileDecryptedSucceeds() {
+func (suite *StoreSuite) TestMarkFileMovedSucceeds() {
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StatePublished
@@ -460,7 +460,7 @@ func (suite *StoreSuite) TestMarkFileDecryptedSucceeds() {
 
 	cfg, _ := config.Get()
 	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
-	err := subject.MarkFileDecrypted(suite.defaultContext, suite.etagReference(metadata))
+	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.NoError(err)
 }
@@ -533,7 +533,7 @@ func (suite *StoreSuite) TestMarkFilePublishedStateUploaded() {
 	defer suite.logInterceptor.Stop()
 
 	notUploadedStates := []string{
-		store.StateDecrypted,
+		store.StateMoved,
 		store.StateCreated,
 		store.StatePublished,
 	}

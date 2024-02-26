@@ -48,7 +48,7 @@ func (store *Store) AreAllFilesPublished(ctx context.Context, collectionID strin
 	err = store.metadataCollection.FindOne(ctx, bson.M{"$and": []bson.M{
 		{fieldCollectionID: collectionID},
 		{fieldState: bson.M{"$ne": StatePublished}},
-		{fieldState: bson.M{"$ne": StateDecrypted}},
+		{fieldState: bson.M{"$ne": StateMoved}},
 	}}, &metadata)
 	if err != nil {
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {

@@ -33,7 +33,7 @@ func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the file upload "([^"]*)" has been completed with:$`, c.theFileUploadHasBeenCompletedWith)
 	ctx.Step(`^the file upload "([^"]*)" is marked as complete with the etag "([^"]*)"$`, c.theFileUploadIsMarkedAsCompleteWithTheEtag)
 	ctx.Step(`^the file "([^"]*)" is marked as published$`, c.theFileIsMarkedAsPublished)
-	ctx.Step(`^the file "([^"]*)" is marked as decrypted with etag "([^"]*)"$`, c.theFileIsMarkedAsDecrypted)
+	ctx.Step(`^the file "([^"]*)" is marked as moved with etag "([^"]*)"$`, c.theFileIsMarkedAsMoved)
 	ctx.Step(`^the following document entry should be look like:$`, c.theFollowingDocumentEntryShouldBeLookLike)
 	ctx.Step(`^the file upload "([^"]*)" has not been registered$`, c.theFileUploadHasNotBeenRegistered)
 	ctx.Step(`^the file metadata is requested for the file "([^"]*)"$`, c.theFileMetadataIsRequested)
@@ -88,9 +88,9 @@ type ExpectedMetaDataPublished struct {
 	PublishedAt string
 }
 
-type ExpectedMetaDataDecrypted struct {
+type ExpectedMetaDataMoved struct {
 	ExpectedMetaDataPublished
-	DecryptedAt string
+	MovedAt string
 }
 
 func (c *FilesApiComponent) theFileHasNotBeenRegistered(arg1 string) error {
@@ -268,8 +268,8 @@ func (c *FilesApiComponent) theFileUploadHasNotBeenRegistered(path string) error
 	return c.ApiFeature.StepError()
 }
 
-func (c *FilesApiComponent) theFileIsMarkedAsDecrypted(path, etag string) error {
-	json := fmt.Sprintf(`{"etag": "%s", "state": "%s"}`, etag, store.StateDecrypted)
+func (c *FilesApiComponent) theFileIsMarkedAsMoved(path, etag string) error {
+	json := fmt.Sprintf(`{"etag": "%s", "state": "%s"}`, etag, store.StateMoved)
 	return c.ApiFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
 }
 
@@ -301,12 +301,12 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 	metaData := files.StoredRegisteredMetaData{}
 
 	assist := assistdog.NewDefault()
-	keyValues, err := assist.CreateInstance(&ExpectedMetaDataDecrypted{}, table)
+	keyValues, err := assist.CreateInstance(&ExpectedMetaDataMoved{}, table)
 	if err != nil {
 		return err
 	}
 
-	expectedMetaData := keyValues.(*ExpectedMetaDataDecrypted)
+	expectedMetaData := keyValues.(*ExpectedMetaDataMoved)
 
 	_ = c.ApiFeature.IGet(fmt.Sprintf("/files/%s", expectedMetaData.Path))
 	responseBody := c.ApiFeature.HttpResponse.Body
@@ -320,7 +320,7 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 	metaData.CreatedAt = dbMetadata.CreatedAt
 	metaData.LastModified = dbMetadata.LastModified
 	metaData.PublishedAt = dbMetadata.PublishedAt
-	metaData.DecryptedAt = dbMetadata.DecryptedAt
+	metaData.MovedAt = dbMetadata.MovedAt
 
 	if metaData.CollectionID != nil && metaData.State == store.StatePublished {
 		dbCollection := files.StoredCollection{}
@@ -349,8 +349,8 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 	if expectedMetaData.PublishedAt != "" {
 		assert.Equal(c.ApiFeature, expectedMetaData.PublishedAt, metaData.PublishedAt.Format(time.RFC3339), "PUBLISHED AT")
 	}
-	if expectedMetaData.DecryptedAt != "" {
-		assert.Equal(c.ApiFeature, expectedMetaData.DecryptedAt, metaData.DecryptedAt.Format(time.RFC3339), "DECRYPTED AT")
+	if expectedMetaData.MovedAt != "" {
+		assert.Equal(c.ApiFeature, expectedMetaData.MovedAt, metaData.MovedAt.Format(time.RFC3339), "MOVED AT")
 	}
 
 	return c.ApiFeature.StepError()
