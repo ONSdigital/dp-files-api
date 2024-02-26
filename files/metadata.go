@@ -17,7 +17,6 @@ type StoredRegisteredMetaData struct {
 	LastModified      time.Time  `bson:"last_modified" json:"-"`
 	UploadCompletedAt *time.Time `bson:"upload_completed_at,omitempty" json:"-"`
 	PublishedAt       *time.Time `bson:"published_at,omitempty" json:"-"`
-	DecryptedAt       *time.Time `bson:"decrypted_at,omitempty" json:"-"`
 	State             string     `bson:"state" json:"state"`
 	Etag              string     `bson:"etag" json:"etag"`
 }
