@@ -57,6 +57,8 @@ func (d *FilesApiComponent) Initialiser() (http.Handler, error) {
 	cfg.IsPublishing = d.isPublishing
 	d.svc, _ = service.Run(context.Background(), d.svcList, d.errChan, cfg, r)
 
+	time.Sleep(30 * time.Second)
+
 	return d.DpHttpServer.Handler, nil
 }
 
