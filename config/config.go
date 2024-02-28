@@ -60,7 +60,7 @@ func Get() (*Config, error) {
 
 	cfg = &Config{
 		BindAddr:                   "localhost:26900",
-		AwsRegion:                  "eu-west-1",
+		AwsRegion:                  "eu-west-2",
 		PrivateBucketName:          "testing",
 		LocalstackHost:             "http://127.0.0.1:4566", //"http://localstack:4566"
 		GracefulShutdownTimeout:    5 * time.Second,

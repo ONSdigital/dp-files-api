@@ -1,12 +1,14 @@
 module github.com/ONSdigital/dp-files-api
 
-go 1.19
+go 1.21
 
 // We are not using `github.com/gorilla/sessions` and there is a non-CVE vulnerability found.
 // So, to avoid 'sonatype-2021-4899' non-CVE Vulnerability
 exclude github.com/gorilla/sessions v1.2.1
 
 replace github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
+
+replace google.golang.org/grpc => google.golang.org/grpc v1.58.3
 
 require (
 	github.com/ONSdigital/dp-authorisation/v2 v2.25.1
