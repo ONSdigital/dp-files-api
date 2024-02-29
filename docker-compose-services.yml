@@ -1,8 +1,8 @@
-version: "3"
+version: "3.3"
 
 services:
   zookeeper:
-    image: 'bitnami/zookeeper:latest'
+    image: 'bitnami/zookeeper:3.7.2'
     restart: unless-stopped
     ports:
       - '2181:2181'
@@ -10,7 +10,7 @@ services:
       ALLOW_ANONYMOUS_LOGIN: 'yes'
 
   kafka:
-    image: 'bitnami/kafka:latest'
+    image: 'bitnami/kafka:3.5.1'
     restart: unless-stopped
     ports:
       - '9092:9092'
@@ -38,19 +38,19 @@ services:
       - ./mongodb/entrypoint-initdb.d:/docker-entrypoint-initdb.d
 
   localstack:
-    image: localstack/localstack:latest
+    image: localstack/localstack:2.2.0
     ports:
       - "4566:4566"            # LocalStack Gateway
     environment:
       - SERVICES=s3
       - DEBUG=0
-      - AWS_DEFAULT_REGION=eu-west-1
+      - AWS_DEFAULT_REGION=eu-west-2
       - EDGE_PORT=4566
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
       - USE_SSL=false
     volumes:
-      - ./aws:/docker-entrypoint-initaws.d
+      - ./aws:/etc/localstack/init/ready.d/
       - ./aws/index.html:/root/index.html
       - "${TMPDIR:-/tmp}/localstack:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"

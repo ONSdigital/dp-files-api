@@ -23,7 +23,7 @@ func TestConfig(t *testing.T) {
 
 			Convey("Then the values should be set to the expected defaults", func() {
 				So(testCfg.BindAddr, ShouldEqual, "localhost:26900")
-				So(testCfg.AwsRegion, ShouldEqual, "eu-west-1")
+				So(testCfg.AwsRegion, ShouldEqual, "eu-west-2")
 				So(testCfg.PrivateBucketName, ShouldEqual, "testing")
 				So(testCfg.LocalstackHost, ShouldEqual, "http://127.0.0.1:4566")
 				So(testCfg.GracefulShutdownTimeout, ShouldEqual, 5*time.Second)

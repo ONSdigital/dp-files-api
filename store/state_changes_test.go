@@ -420,6 +420,7 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenUpdateReturnsError() {
 	suite.Error(err)
 }
 
+// here?
 func (suite *StoreSuite) TestMarkFileMovedEtagMismatch() {
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
 

@@ -1,5 +1,5 @@
 job "dp-files-api" {
-  datacenters = ["eu-west-1"]
+  datacenters = ["eu-west-2"]
   region      = "eu"
   type        = "service"
 
@@ -30,7 +30,7 @@ job "dp-files-api" {
       driver = "docker"
 
       artifact {
-        source = "s3::https://s3-eu-west-1.amazonaws.com/{{DEPLOYMENT_BUCKET}}/dp-files-api/{{PROFILE}}/{{RELEASE}}.tar.gz"
+        source = "s3::https://s3-eu-west-2.amazonaws.com/{{DEPLOYMENT_BUCKET}}/dp-files-api/{{PROFILE}}/{{RELEASE}}.tar.gz"
       }
 
       config {
@@ -94,7 +94,7 @@ job "dp-files-api" {
       driver = "docker"
 
       artifact {
-        source = "s3::https://s3-eu-west-1.amazonaws.com/{{DEPLOYMENT_BUCKET}}/dp-files-api/{{PROFILE}}/{{RELEASE}}.tar.gz"
+        source = "s3::https://s3-eu-west-2.amazonaws.com/{{DEPLOYMENT_BUCKET}}/dp-files-api/{{PROFILE}}/{{RELEASE}}.tar.gz"
       }
 
       config {

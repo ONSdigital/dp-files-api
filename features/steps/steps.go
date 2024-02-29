@@ -14,7 +14,7 @@ import (
 	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"github.com/ONSdigital/dp-kafka/v3/avro"
 
-	"github.com/cucumber/messages-go/v16"
+	messages "github.com/cucumber/messages/go/v21"
 
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/cucumber/godog"
@@ -309,7 +309,7 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 	expectedMetaData := keyValues.(*ExpectedMetaDataMoved)
 
 	_ = c.ApiFeature.IGet(fmt.Sprintf("/files/%s", expectedMetaData.Path))
-	responseBody := c.ApiFeature.HttpResponse.Body
+	responseBody := c.ApiFeature.HTTPResponse.Body
 	body, _ := ioutil.ReadAll(responseBody)
 	assert.NoError(c.ApiFeature, json.Unmarshal(body, &metaData))
 

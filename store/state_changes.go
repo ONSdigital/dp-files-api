@@ -18,7 +18,7 @@ const (
 	StateCreated   = "CREATED"
 	StateUploaded  = "UPLOADED"
 	StatePublished = "PUBLISHED"
-	StateMoved = "MOVED"
+	StateMoved     = "MOVED"
 )
 
 func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
