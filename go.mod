@@ -6,19 +6,24 @@ go 1.21
 // So, to avoid 'sonatype-2021-4899' non-CVE Vulnerability
 exclude github.com/gorilla/sessions v1.2.1
 
-replace github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
-
-replace github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
+replace (
+	github.com/cucumber/messages/go/v21 => github.com/cucumber/messages/go/v24 v24.0.1
+	// to fix: [CVE-2021-3121] CWE-129: Improper Validation of Array Index
+	github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
+	github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
+	// to fix: [CVE-2024-24786] CWE-835: Loop with Unreachable Exit Condition ('Infinite Loop')
+	google.golang.org/protobuf => google.golang.org/protobuf v1.33.0
+)
 
 require (
 	github.com/ONSdigital/dp-authorisation/v2 v2.31.2
-	github.com/ONSdigital/dp-component-test v0.10.0
+	github.com/ONSdigital/dp-component-test v0.11.0
 	github.com/ONSdigital/dp-healthcheck v1.6.3
 	github.com/ONSdigital/dp-kafka/v3 v3.10.0
 	github.com/ONSdigital/dp-mongodb/v3 v3.7.0
 	github.com/ONSdigital/dp-net/v2 v2.11.2
 	github.com/ONSdigital/log.go/v2 v2.4.3
-	github.com/aws/aws-sdk-go v1.50.28
+	github.com/aws/aws-sdk-go v1.51.0
 	github.com/cucumber/godog v0.14.0
 	github.com/cucumber/messages/go/v21 v21.0.1
 	github.com/gorilla/mux v1.8.1
@@ -70,7 +75,7 @@ require (
 )
 
 require (
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.258.0 // indirect
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.260.0 // indirect
 	github.com/ONSdigital/dp-mongodb-in-memory v1.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.16.0 // indirect
@@ -106,8 +111,8 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/leodido/go-urn v1.4.0 // indirect
-	golang.org/x/crypto v0.20.0 // indirect
-	golang.org/x/net v0.21.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/net v0.22.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 )
