@@ -3,11 +3,17 @@ package service
 import (
 	"context"
 	"errors"
+
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
+	"github.com/ONSdigital/dp-files-api/aws"
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/v2/http"
+	dps3 "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/log.go/v2/log"
+	awssdk "github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/gorilla/mux"
 
 	"github.com/ONSdigital/dp-files-api/config"
@@ -28,6 +34,7 @@ type ExternalServiceList struct {
 	healthChecker  health.Checker
 	authMiddleware auth.Middleware
 	kafkaProducer  kafka.IProducer
+	s3Client       aws.S3Clienter
 	router         *mux.Router
 }
 
@@ -62,10 +69,38 @@ func (e *ExternalServiceList) setup() error {
 		return err
 	}
 
+	if err := e.createS3(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (e *ExternalServiceList) createAuthMiddleware() (err error)  {
+func (e *ExternalServiceList) createS3() (err error) {
+	if e.cfg.LocalstackHost != "" {
+		s, err := session.NewSession(&awssdk.Config{
+			Endpoint:         awssdk.String(e.cfg.LocalstackHost),
+			Region:           awssdk.String(e.cfg.AwsRegion),
+			S3ForcePathStyle: awssdk.Bool(true),
+			Credentials:      credentials.NewStaticCredentials("test", "test", ""),
+		})
+
+		if err != nil {
+			return err
+		}
+		e.s3Client = dps3.NewClientWithSession(e.cfg.PrivateBucketName, s)
+		return nil
+	}
+
+	s3Client, err := dps3.NewClient(e.cfg.AwsRegion, e.cfg.PrivateBucketName)
+	if err != nil {
+		return err
+	}
+	e.s3Client = s3Client
+	return nil
+}
+
+func (e *ExternalServiceList) createAuthMiddleware() (err error) {
 	e.authMiddleware, err = auth.NewFeatureFlaggedMiddleware(context.Background(), &e.cfg.AuthConfig, nil)
 
 	return
@@ -148,6 +183,10 @@ func (e *ExternalServiceList) GetKafkaProducer() kafka.IProducer {
 
 func (e *ExternalServiceList) GetAuthMiddleware() auth.Middleware {
 	return e.authMiddleware
+}
+
+func (e *ExternalServiceList) GetS3Clienter() aws.S3Clienter {
+	return e.s3Client
 }
 
 func (e *ExternalServiceList) Shutdown(ctx context.Context) error {

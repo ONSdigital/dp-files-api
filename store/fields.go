@@ -1,6 +1,7 @@
 package store
 
 const (
+	fieldID                = "id"
 	fieldPath              = "path"
 	fieldCollectionID      = "collection_id"
 	fieldEtag              = "etag"
@@ -8,5 +9,5 @@ const (
 	fieldLastModified      = "last_modified"
 	fieldPublishedAt       = "published_at"
 	fieldUploadCompletedAt = "upload_completed_at"
-	fieldDecryptedAt       = "decrypted_at"
+	fieldMovedAt           = "moved_at"
 )

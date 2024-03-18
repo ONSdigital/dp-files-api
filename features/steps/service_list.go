@@ -2,13 +2,16 @@ package steps
 
 import (
 	"context"
-	"github.com/gorilla/mux"
+	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/mux"
 
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	authMock "github.com/ONSdigital/dp-authorisation/v2/authorisation/mock"
 
+	"github.com/ONSdigital/dp-files-api/aws"
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/health"
@@ -19,6 +22,10 @@ import (
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 
 	dphttp "github.com/ONSdigital/dp-net/v2/http"
+	dps3 "github.com/ONSdigital/dp-s3/v2"
+	awssdk "github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 type fakeServiceContainer struct {
@@ -64,6 +71,24 @@ func (e *fakeServiceContainer) GetMongoDB() mongo.Client {
 
 func (e *fakeServiceContainer) GetClock() clock.Clock {
 	return TestClock{}
+}
+
+func (e *fakeServiceContainer) GetS3Clienter() aws.S3Clienter {
+	cfg, _ := config.Get()
+	s, err := session.NewSession(&awssdk.Config{
+		Endpoint:                      awssdk.String("http://localstack:4566"), //"http://localstack:4566"
+		Region:                        awssdk.String(cfg.AwsRegion),
+		S3ForcePathStyle:              awssdk.Bool(true),
+		DisableSSL:                    awssdk.Bool(true),
+		CredentialsChainVerboseErrors: awssdk.Bool(true),
+		Credentials:                   credentials.NewStaticCredentials("test", "test", ""),
+	})
+
+	if err != nil {
+		fmt.Println("S3 ERROR: " + err.Error())
+	}
+
+	return dps3.NewClientWithSession(cfg.PrivateBucketName, s)
 }
 
 func (e *fakeServiceContainer) GetKafkaProducer() kafka.IProducer {

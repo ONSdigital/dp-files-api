@@ -21,7 +21,7 @@ reduce the number of API calls required to publish a large collection.
 Currently, most calls to a publish file will come from the [Zebedee Publisher](https://github.com/ONSdigital/zebedee/blob/ff5d1a23b2bba50dc1ed67b10fbc213972f9ad21/zebedee-cms/src/main/java/com/github/onsdigital/zebedee/model/publishing/Publisher.java#L153)
 
 When a file is published this API sends a message via Kafka to the [Static File Publisher](https://github.com/ONSdigital/dp-static-file-publisher)
-that permanently decrypts the file and inform this API that the file is now decrypted via an HTTP call.
+that permanently moves the file and inform this API that the file is now moved via an HTTP call.
 
 ### REST API
 
@@ -38,11 +38,11 @@ where it is not already sent or change the `state` of a file.
 | is_publishable | This field currently is ignored and has no affect, the file will be published if a publish update is sent!     |
 | collection_id  | Optional during upload, must be set for the file to be published                                               |
 | title          | Optional                                                                                                       |
-| size_in_bytes  | The size of the file (unencrypted)                                                                             |
+| size_in_bytes  | The size of the file                                                                                           |
 | type           | mimetype of the file, e.g. "text/csv", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"     |
 | licence        | Freetext name of the licence under which the file is made available                                            |
 | licence_url    | URL to the license                                                                                             |
-| state          | State of the file - CREATED, UPLOADED, PUBLISHED, DECRYPTED                                                    |
+| state          | State of the file - CREATED, UPLOADED, PUBLISHED, MOVED                                                    |
 | etag           | Cyrptographic hash of the file content                                                                         |
 
 #### Additional Metadata
@@ -55,7 +55,7 @@ Additional timestamp data about the file is stored in the database but not expos
 | last_modified       |
 | upload_completed_at |
 | published_at        |
-| decrypted_at        |
+| moved_at        |
 
 
 ### File States
@@ -64,22 +64,21 @@ Additional timestamp data about the file is stored in the database but not expos
 |-----------|-----------------------------------------------------------------------------------------------------------------------------|
 | CREATED   | File upload has started and the metadata has been provide to this API                                                       |
 | UPLOADED  | File upload has been completed. The etag for the final file has been provided                                               |
-| PUBLISHED | The file has been published (it is available to the public, but is not yet permently decrypted)                             |
-| DECRYPTED | The file has been permanently decrypted and moved to the public bucket for storage. The public files etag has been provided |
+| PUBLISHED | The file has been published (it is available to the public, but is not yet permently moved)                             |
+| MOVED | The file has been permanently moved and moved to the public bucket for storage. The public files etag has been provided |
 
 ```
 
 
  Start     ┌──────────────┐ File      ┌──────────────┐ File       ┌───────────────┐ File       ┌───────────────┐
- Upload    │              │ Uploaded  │              │ Published  │               │ Decrypted  │               │
-      ────►│   CREATED    ├──────────►│   UPLOADED   ├───────────►│   PUBLISHED   ├───────────►│   DECRYPTED   │
+ Upload    │              │ Uploaded  │              │ Published  │               │ Moved      │               │
+      ────►│   CREATED    ├──────────►│   UPLOADED   ├───────────►│   PUBLISHED   ├───────────►│     MOVED     │
            │              │           │              │            │               │            │               │
            └──────────────┘           └──────────────┘            └───────────────┘            └───────────────┘
              File is in a               File is ready               File is available           File is available
              unusable                   for review &                for public download         for public download
-             state                      approval                    The stored encrypted        directly from S3
-             Can resume upoad           Can be pre-viewed           version is decrypted        where it is stored
-                                                                    on-demand                   unencrypted
+             state                      approval                    The stored version          directly from S3
+             Can resume upoad           Can be pre-viewed           is moved on-demand          where it is stored                 
 
 ```
 

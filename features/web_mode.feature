@@ -42,7 +42,7 @@ Feature: Web mode restrictions
     When I publish the collection "1234-asdfg-54321-qwerty"
     Then the HTTP status code should be "403"
 
-  Scenario: The one where I try to mark the file as decrypted
+  Scenario: The one where I try to mark the file as moved
     Given the file upload "images/meme.jpg" has been published with:
       | Path              | images/meme.jpg                                                           |
       | IsPublishable     | true                                                                      |
@@ -58,7 +58,7 @@ Feature: Web mode restrictions
       | PublishedAt       | 2021-10-21T15:13:14Z                                                      |
       | Etag              | 123456789                                                                 |
       | State             | PUBLISHED                                                                 |
-    When the file "images/meme.jpg" is marked as decrypted with etag "987654321"
+    When the file "images/meme.jpg" is marked as moved with etag "987654321"
     Then the HTTP status code should be "403"
 
   Scenario: The one where I try to get a file

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/go-playground/validator"
 
@@ -23,7 +24,7 @@ type RegisterMetadata struct {
 	LicenceUrl    string  `json:"licence_url" validate:"required"`
 }
 
-func HandlerRegisterUploadStarted(register RegisterFileUpload) http.HandlerFunc {
+func HandlerRegisterUploadStarted(register RegisterFileUpload, deadlineDuration time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		rm, err := getRegisterMetadataFromRequest(req)
 		if err != nil {
@@ -36,7 +37,10 @@ func HandlerRegisterUploadStarted(register RegisterFileUpload) http.HandlerFunc 
 			return
 		}
 
-		if err := register(req.Context(), generateStoredRegisterMetaData(rm)); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), deadlineDuration)
+		defer cancel()
+
+		if err := register(ctx, generateStoredRegisterMetaData(rm)); err != nil {
 			handleError(w, err)
 			return
 		}

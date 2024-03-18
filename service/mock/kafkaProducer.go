@@ -118,6 +118,11 @@ type OurProducerMock struct {
 	lockSend          sync.RWMutex
 }
 
+
+func (mock *OurProducerMock) AddHeader(key string, value string) {
+	// mock
+}
+
 // Channels calls ChannelsFunc.
 func (mock *OurProducerMock) Channels() *kafka.ProducerChannels {
 	if mock.ChannelsFunc == nil {

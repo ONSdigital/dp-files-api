@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -161,18 +163,15 @@ func CollectionFindSetsResultsReturnsValueAndNil(metadataBytes []byte, value int
 	}
 }
 
-func CollectionFindSetsResultAndReturns1IfCollectionIDMatchesFilter(metadataBytes []byte) CollectionFindFunc {
+func CollectionFindReturnsMetadataOnFilter(metadata []files.StoredRegisteredMetaData, expectedFilter interface{}) CollectionFindFunc {
 	return func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
-		result := files.StoredRegisteredMetaData{}
-		bson.Unmarshal(metadataBytes, &result)
-
-		resultPointer := results.(*[]files.StoredRegisteredMetaData)
-
-		if filter.(primitive.M)["collection_id"] == *result.CollectionID {
-			*resultPointer = []files.StoredRegisteredMetaData{result}
+		if !reflect.DeepEqual(filter, expectedFilter) {
+			return 0, fmt.Errorf("filter %#v doesn't match expected %#v", filter, expectedFilter)
 		}
 
-		return 1, nil
+		resultPointer := results.(*[]files.StoredRegisteredMetaData)
+		*resultPointer = metadata
+		return len(metadata), nil
 	}
 }
 
@@ -249,7 +248,7 @@ func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegis
 	lastModified := suite.generateTestTime(2)
 	uploadCompletedAt := suite.generateTestTime(3)
 	publishedAt := suite.generateTestTime(4)
-	decryptedAt := suite.generateTestTime(5)
+	movedAt := suite.generateTestTime(5)
 
 	return files.StoredRegisteredMetaData{
 		Path:              suite.path,
@@ -264,9 +263,21 @@ func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegis
 		LastModified:      lastModified,
 		UploadCompletedAt: &uploadCompletedAt,
 		PublishedAt:       &publishedAt,
-		DecryptedAt:       &decryptedAt,
-		State:             store.StateDecrypted,
+		MovedAt:           &movedAt,
+		State:             store.StateMoved,
 		Etag:              "1234567",
+	}
+}
+
+func (suite *StoreSuite) generatePublishedCollectionInfo(collectionID string) files.StoredCollection {
+	lastModified := suite.generateTestTime(10)
+	publishedAt := suite.generateTestTime(11)
+
+	return files.StoredCollection{
+		ID:           collectionID,
+		LastModified: lastModified,
+		PublishedAt:  &publishedAt,
+		State:        store.StatePublished,
 	}
 }
 
@@ -312,6 +323,21 @@ func (l *LogInterceptor) GetLogEvents(eventName string) map[int]map[string]inter
 	}
 
 	return retVal
+}
+
+func (l *LogInterceptor) IsEventPresent(eventName string) bool {
+	logResult, _ := ioutil.ReadAll(l.logBuffer)
+	logz := strings.Split(string(logResult), "\n")
+	for _, line := range logz {
+		logOut := make(map[string]interface{})
+		json.Unmarshal([]byte(line), &logOut)
+		evt, ok := logOut["event"]
+		if ok && evt.(string) == eventName {
+			return true
+		}
+	}
+
+	return false
 }
 
 func NewLogInterceptor() LogInterceptor {

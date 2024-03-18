@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 
+	"github.com/ONSdigital/dp-files-api/aws"
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/health"
@@ -25,5 +27,6 @@ type ServiceContainer interface {
 	GetClock() clock.Clock
 	GetKafkaProducer() kafka.IProducer
 	GetAuthMiddleware() auth.Middleware
+	GetS3Clienter() aws.S3Clienter
 	Shutdown(ctx context.Context) error
 }

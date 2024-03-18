@@ -9,6 +9,8 @@ import (
 
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	authMock "github.com/ONSdigital/dp-authorisation/v2/authorisation/mock"
+	"github.com/ONSdigital/dp-files-api/aws"
+	s3Mock "github.com/ONSdigital/dp-files-api/aws/mock"
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
@@ -22,6 +24,7 @@ import (
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	kafka "github.com/ONSdigital/dp-kafka/v3"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
@@ -50,6 +53,10 @@ func TestClose(t *testing.T) {
 				return handlerFunc
 			},
 		}
+		s3Client := &s3Mock.S3ClienterMock{
+			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+			HeadFunc:    func(key string) (*s3.HeadObjectOutput, error) { return &s3.HeadObjectOutput{}, nil },
+		}
 
 		serviceList := &mock.ServiceContainerMock{
 			GetMongoDBFunc:        func() mongo.Client { return m },
@@ -58,6 +65,7 @@ func TestClose(t *testing.T) {
 			GetHealthCheckFunc:    func() health.Checker { return hc },
 			GetKafkaProducerFunc:  func() kafka.IProducer { return km },
 			GetAuthMiddlewareFunc: func() auth.Middleware { return am },
+			GetS3ClienterFunc:     func() aws.S3Clienter { return s3Client },
 		}
 		svcErrors := make(chan error, 1)
 
@@ -71,11 +79,12 @@ func TestClose(t *testing.T) {
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 4)
+			assert.Len(t, registerHealthChecks, 5)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
 			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
 			assert.Equal(t, registerHealthChecks[2].Name, "jwt keys state health check")
 			assert.Equal(t, registerHealthChecks[3].Name, "Kafka Producer")
+			assert.Equal(t, registerHealthChecks[4].Name, "S3 Client")
 			assert.NoError(t, svc.Close(ctx, 2*time.Second))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})
@@ -85,11 +94,12 @@ func TestClose(t *testing.T) {
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 4)
+			assert.Len(t, registerHealthChecks, 5)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
 			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
 			assert.Equal(t, registerHealthChecks[2].Name, "jwt keys state health check")
 			assert.Equal(t, registerHealthChecks[3].Name, "Kafka Producer")
+			assert.Equal(t, registerHealthChecks[4].Name, "S3 Client")
 			assert.Error(t, svc.Close(ctx, 2*time.Second))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})
@@ -102,11 +112,12 @@ func TestClose(t *testing.T) {
 
 			registerHealthChecks := hc.AddCheckCalls()
 
-			assert.Len(t, registerHealthChecks, 4)
+			assert.Len(t, registerHealthChecks, 5)
 			assert.Equal(t, registerHealthChecks[0].Name, "Mongo DB")
 			assert.Equal(t, registerHealthChecks[1].Name, "Authorization Middleware")
 			assert.Equal(t, registerHealthChecks[2].Name, "jwt keys state health check")
 			assert.Equal(t, registerHealthChecks[3].Name, "Kafka Producer")
+			assert.Equal(t, registerHealthChecks[4].Name, "S3 Client")
 			assert.Error(t, svc.Close(ctx, 100*time.Millisecond))
 			assert.Len(t, serviceList.ShutdownCalls(), 1)
 		})
@@ -128,6 +139,11 @@ func TestClose(t *testing.T) {
 
 		am := &authMock.MiddlewareMock{}
 
+		s3Client := &s3Mock.S3ClienterMock{
+			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+			HeadFunc:    func(key string) (*s3.HeadObjectOutput, error) { return &s3.HeadObjectOutput{}, nil },
+		}
+
 		serviceList := &mock.ServiceContainerMock{
 			GetMongoDBFunc:        func() mongo.Client { return m },
 			GetClockFunc:          func() clock.Clock { return nil },
@@ -135,6 +151,7 @@ func TestClose(t *testing.T) {
 			GetHealthCheckFunc:    func() health.Checker { return hc },
 			GetKafkaProducerFunc:  func() kafka.IProducer { return km },
 			GetAuthMiddlewareFunc: func() auth.Middleware { return am },
+			GetS3ClienterFunc:     func() aws.S3Clienter { return s3Client },
 		}
 		svcErrors := make(chan error, 1)
 

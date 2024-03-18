@@ -6,6 +6,7 @@ package mock
 import (
 	"context"
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
+	"github.com/ONSdigital/dp-files-api/aws"
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/health"
@@ -43,6 +44,9 @@ var _ service.ServiceContainer = &ServiceContainerMock{}
 // 			GetMongoDBFunc: func() mongo.Client {
 // 				panic("mock out the GetMongoDB method")
 // 			},
+// 			GetS3ClienterFunc: func() aws.S3Clienter {
+// 				panic("mock out the GetS3Clienter method")
+// 			},
 // 			ShutdownFunc: func(ctx context.Context) error {
 // 				panic("mock out the Shutdown method")
 // 			},
@@ -71,6 +75,9 @@ type ServiceContainerMock struct {
 	// GetMongoDBFunc mocks the GetMongoDB method.
 	GetMongoDBFunc func() mongo.Client
 
+	// GetS3ClienterFunc mocks the GetS3Clienter method.
+	GetS3ClienterFunc func() aws.S3Clienter
+
 	// ShutdownFunc mocks the Shutdown method.
 	ShutdownFunc func(ctx context.Context) error
 
@@ -94,6 +101,9 @@ type ServiceContainerMock struct {
 		// GetMongoDB holds details about calls to the GetMongoDB method.
 		GetMongoDB []struct {
 		}
+		// GetS3Clienter holds details about calls to the GetS3Clienter method.
+		GetS3Clienter []struct {
+		}
 		// Shutdown holds details about calls to the Shutdown method.
 		Shutdown []struct {
 			// Ctx is the ctx argument value.
@@ -106,6 +116,7 @@ type ServiceContainerMock struct {
 	lockGetHealthCheck    sync.RWMutex
 	lockGetKafkaProducer  sync.RWMutex
 	lockGetMongoDB        sync.RWMutex
+	lockGetS3Clienter     sync.RWMutex
 	lockShutdown          sync.RWMutex
 }
 
@@ -262,6 +273,32 @@ func (mock *ServiceContainerMock) GetMongoDBCalls() []struct {
 	mock.lockGetMongoDB.RLock()
 	calls = mock.calls.GetMongoDB
 	mock.lockGetMongoDB.RUnlock()
+	return calls
+}
+
+// GetS3Clienter calls GetS3ClienterFunc.
+func (mock *ServiceContainerMock) GetS3Clienter() aws.S3Clienter {
+	if mock.GetS3ClienterFunc == nil {
+		panic("ServiceContainerMock.GetS3ClienterFunc: method is nil but ServiceContainer.GetS3Clienter was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockGetS3Clienter.Lock()
+	mock.calls.GetS3Clienter = append(mock.calls.GetS3Clienter, callInfo)
+	mock.lockGetS3Clienter.Unlock()
+	return mock.GetS3ClienterFunc()
+}
+
+// GetS3ClienterCalls gets all the calls that were made to GetS3Clienter.
+// Check the length with:
+//     len(mockedServiceContainer.GetS3ClienterCalls())
+func (mock *ServiceContainerMock) GetS3ClienterCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockGetS3Clienter.RLock()
+	calls = mock.calls.GetS3Clienter
+	mock.lockGetS3Clienter.RUnlock()
 	return calls
 }
 

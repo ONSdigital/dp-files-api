@@ -26,7 +26,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDFindReturnsErrNoDocumentFound() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateCollectionID(suite.defaultContext, suite.path, suite.defaultCollectionID)
 
@@ -48,7 +48,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDFindReturnsUnspecifiedError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateCollectionID(suite.defaultContext, "", suite.defaultCollectionID)
 
@@ -71,7 +71,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDCollectionIDAlreadySet() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateCollectionID(suite.defaultContext, suite.path, suite.defaultCollectionID)
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -79,6 +79,66 @@ func (suite *StoreSuite) TestUpdateCollectionIDCollectionIDAlreadySet() {
 	suite.Equal("update collection ID: collection ID already set", logEvent)
 	suite.Error(err)
 	suite.ErrorIs(err, store.ErrCollectionIDAlreadySet)
+}
+
+func (suite *StoreSuite) TestUpdateCollectionIDCollectionCheckFail() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := suite.generateMetadata("")
+	metadata.State = store.StateUploaded
+	metadata.CollectionID = nil
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	expectedError := errors.New("an error occurred")
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
+			{CollectionFindOneSetsResultAndReturnsNil(metadataBytes), 1},
+		}),
+	}
+	collCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(expectedError),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.UpdateCollectionID(suite.defaultContext, suite.path, suite.defaultCollectionID)
+
+	suite.Equal(true, suite.logInterceptor.IsEventPresent("update collection ID: caught db error"))
+	suite.Error(err)
+	suite.ErrorIs(err, expectedError)
+}
+
+func (suite *StoreSuite) TestUpdateCollectionIDCollectionAlreadyPublished() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := suite.generateMetadata("")
+	metadata.State = store.StatePublished
+	metadata.CollectionID = nil
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+	coll, _ := bson.Marshal(files.StoredCollection{
+		State: store.StatePublished,
+	})
+	collCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(coll), // collection is PUBLISHED
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.UpdateCollectionID(suite.defaultContext, suite.path, suite.defaultCollectionID)
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("collection with id [123456] is already published", logEvent)
+	suite.Error(err)
+	suite.ErrorIs(err, store.ErrCollectionAlreadyPublished)
 }
 
 func (suite *StoreSuite) TestUpdateCollectionIDUpdateReturnsError() {
@@ -93,9 +153,14 @@ func (suite *StoreSuite) TestUpdateCollectionIDUpdateReturnsError() {
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
 	}
+	emptyCollection := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateCollectionID(suite.defaultContext, suite.path, suite.defaultCollectionID)
 
@@ -113,9 +178,14 @@ func (suite *StoreSuite) TestUpdateCollectionIDUpdateSuccess() {
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		UpdateFunc:  CollectionUpdateReturnsNilAndNil(),
 	}
+	emptyCollection := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionContainsOneUploadedFileWithNoCollectionID, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collectionContainsOneUploadedFileWithNoCollectionID, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateCollectionID(suite.defaultContext, suite.path, suite.defaultCollectionID)
 
@@ -133,7 +203,7 @@ func (suite *StoreSuite) TestMarkCollectionPublishedCollectionEmptyCheckReturnsE
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsError, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collectionCountReturnsError, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -153,7 +223,7 @@ func (suite *StoreSuite) TestMarkCollectionPublishedCollectionEmpty() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsError, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collectionCountReturnsError, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -171,9 +241,12 @@ func (suite *StoreSuite) TestMarkCollectionPublishedWhenFileExistsInStateOtherTh
 	collection := mock.MongoCollectionMock{
 		FindOneFunc: CollectionFindOneSucceeds(), // there are some files in the collection
 	}
+	collCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSucceeds(), // collection is not PUBLISHED
+	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collection, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -196,9 +269,12 @@ func (suite *StoreSuite) TestMarkCollectionPublishedCollectionUploadedCheckRetur
 			{CollectionFindOneReturnsError(expectedError), 1}, // but UPLOADED check fails
 		}),
 	}
+	collCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSucceeds(), // collection is not PUBLISHED
+	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsError, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collectionCountReturnsError, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -208,28 +284,67 @@ func (suite *StoreSuite) TestMarkCollectionPublishedCollectionUploadedCheckRetur
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
 }
+func (suite *StoreSuite) TestMarkCollectionPublishedCollectionPublishedCheckReturnsTrue() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := files.StoredRegisteredMetaData{
+		State: store.StateUploaded,
+	}
+	metadataBytes, _ := bson.Marshal(metadata)
+	collection := files.StoredCollection{
+		State: store.StatePublished,
+	}
+	collectionBytes, _ := bson.Marshal(collection)
+
+	collectionCountReturnsError := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
+			{CollectionFindOneSucceeds(), 1},                             // there are some files in the collection
+			{CollectionFindOneSetsResultAndReturnsNil(metadataBytes), 1}, // but the collection is PUBLISHED
+		}),
+	}
+
+	collCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(collectionBytes), // but the collection is PUBLISHED
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionCountReturnsError, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.MarkCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("collection uploaded check fail", logEvent)
+	suite.Error(err)
+	suite.ErrorIs(err, store.ErrFileNotInUploadedState)
+}
 
 func (suite *StoreSuite) TestMarkCollectionPublishedPersistenceFailure() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
 	expectedError := errors.New("an error occurred")
-	collection := mock.MongoCollectionMock{
+	metadataColl := mock.MongoCollectionMock{
 		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
 			{CollectionFindOneSucceeds(), 1},                                   // there are some files in the collection
-			{CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound), 1}, // all of them are UPLOADED
+			{CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound), 2}, // all of them are UPLOADED
 		}),
-		UpdateManyFunc: CollectionUpdateManyReturnsNilAndError(expectedError),
 	}
-
+	collectionColl := mock.MongoCollectionMock{
+		UpsertFunc: func(ctx context.Context, selector, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+			return nil, expectedError
+		},
+		FindOneFunc: CollectionFindOneSucceeds(), // collection is not PUBLISHED
+	}
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
 
-	suite.Equal("failed to change files to PUBLISHED state", logEvent)
+	suite.Equal("failed to change collection 123456 to PUBLISHED state", logEvent)
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
 }
@@ -238,24 +353,29 @@ func (suite *StoreSuite) TestMarkCollectionPublishedFindCalled() {
 
 	expectedError := errors.New("an error occurred")
 
-	collection := mock.MongoCollectionMock{
+	metadataColl := mock.MongoCollectionMock{
 		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
 			{CollectionFindOneSucceeds(), 1},                                   // there are some files in the collection
-			{CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound), 1}, // all of them are UPLOADED
+			{CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound), 2}, // all of them are UPLOADED
 		}),
 		CountFunc:      CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout(),
-		UpdateManyFunc: CollectionUpdateManyReturnsNilAndNil(),
 		FindCursorFunc: CollectionFindCursorReturnsCursorAndError(nil, expectedError),
+	}
+	collectionColl := mock.MongoCollectionMock{
+		UpsertFunc: func(ctx context.Context, selector, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+			return nil, nil
+		},
+		FindOneFunc: CollectionFindOneSucceeds(), // collection is not PUBLISHED
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
 	suite.NoError(err)
 	suite.Eventually(func() bool {
-		return len(collection.FindCursorCalls()) == 1
+		return len(metadataColl.FindCursorCalls()) == 1
 	}, time.Second, 10*time.Millisecond)
 }
 
@@ -270,7 +390,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedFindErrored() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &suite.defaultKafkaProducer, suite.defaultClock, cfg)
+	subject := store.NewStore(&collection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -312,7 +432,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedPersistenceSuccess() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock, cfg)
+	subject := store.NewStore(&collection, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -361,7 +481,7 @@ func (suite *StoreSuite) TestBatchingWithLargeNumberOfFiles() {
 		},
 	}
 
-	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock, cfg)
+	subject := store.NewStore(&collection, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -402,7 +522,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedKafkaErrorDoesNotFailOpera
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock, cfg)
+	subject := store.NewStore(&collection, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -433,7 +553,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedDecodeErrorDoesNotFailOper
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, &kafkaMock, suite.defaultClock, cfg)
+	subject := store.NewStore(&collection, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
@@ -442,4 +562,157 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedDecodeErrorDoesNotFailOper
 	suite.Equal(0, len(kafkaMock.SendCalls()))
 	suite.Equal(1, len(cursor.ErrCalls()))
 	suite.Equal(1, len(cursor.CloseCalls()))
+}
+
+func (suite *StoreSuite) TestIsCollectionPublishedNoMetadata() {
+	emptyCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&emptyCollection, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	published, err := subject.IsCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
+
+	suite.False(published)
+	suite.NoError(err)
+}
+
+func (suite *StoreSuite) TestIsCollectionPublishedMetadataError() {
+	expectedError := errors.New("an error occurred")
+	erroringCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(expectedError),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(nil, &erroringCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	published, err := subject.IsCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
+
+	suite.False(published)
+	suite.Error(err)
+	suite.EqualError(err, "collection published check: an error occurred")
+}
+
+func (suite *StoreSuite) TestIsCollectionPublishedMetadataPublished() {
+	metadata := files.StoredRegisteredMetaData{
+		State: store.StatePublished,
+	}
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
+			{CollectionFindOneSetsResultAndReturnsNil(metadataBytes), 1},       // collection not empty
+			{CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound), 1}, // no files found that weren't published
+		}),
+	}
+	collCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(store.ErrCollectionMetadataNotRegistered),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	published, err := subject.IsCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
+
+	suite.True(published)
+	suite.NoError(err)
+}
+
+func (suite *StoreSuite) TestIsCollectionPublishedNoCollectionAllFilesNotPublished() {
+	metadata := files.StoredRegisteredMetaData{
+		State: store.StateUploaded,
+	}
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+	collCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(store.ErrCollectionMetadataNotRegistered),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	published, err := subject.IsCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
+
+	suite.False(published)
+	suite.NoError(err)
+}
+
+func (suite *StoreSuite) TestIsCollectionPublishedCollectionError() {
+	metadata := files.StoredRegisteredMetaData{
+		State: store.StateUploaded,
+	}
+	metadataBytes, _ := bson.Marshal(metadata)
+	expectedError := errors.New("an error occurred")
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+	collCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(expectedError),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	published, err := subject.IsCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
+
+	suite.False(published)
+	suite.Error(err)
+	suite.EqualError(err, "collection published check: an error occurred")
+}
+
+func (suite *StoreSuite) TestIsCollectionPublishedCollectionPublished() {
+	metadata := files.StoredRegisteredMetaData{
+		State: store.StateUploaded,
+	}
+	metadataBytes, _ := bson.Marshal(metadata)
+	collection := files.StoredCollection{
+		State: store.StatePublished,
+	}
+	collectionBytes, _ := bson.Marshal(collection)
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+	collCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(collectionBytes),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	published, err := subject.IsCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
+
+	suite.True(published)
+	suite.NoError(err)
+}
+
+func (suite *StoreSuite) TestIsCollectionPublishedCollectionNotPublished() {
+	metadata := files.StoredRegisteredMetaData{
+		State: store.StateUploaded,
+	}
+	metadataBytes, _ := bson.Marshal(metadata)
+	collection := files.StoredCollection{
+		State: "",
+	}
+	collectionBytes, _ := bson.Marshal(collection)
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+	collCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(collectionBytes),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	published, err := subject.IsCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
+
+	suite.False(published)
+	suite.NoError(err)
 }

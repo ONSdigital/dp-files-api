@@ -270,7 +270,7 @@ definitions:
     properties:
       state:
         type: string
-        description: "New state for the file: UPLOADED, PUBLISHED or DECRYPTED"
+        description: "New state for the file: UPLOADED, PUBLISHED or MOVED"
         example: "UPLOADED"
       etag:
         type: string

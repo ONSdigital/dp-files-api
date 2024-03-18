@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/ONSdigital/dp-files-api/store"
 	"github.com/gorilla/mux"
 )
 
@@ -13,7 +14,7 @@ func HandleMarkCollectionPublished(markCollectionPublished MarkCollectionPublish
 	return func(w http.ResponseWriter, req *http.Request) {
 		collectionID := mux.Vars(req)["collectionID"]
 
-		if err := markCollectionPublished(req.Context(), collectionID); err != nil {
+		if err := markCollectionPublished(req.Context(), collectionID); err != nil && err != store.ErrNoFilesInCollection {
 			handleError(w, err)
 			return
 		}
