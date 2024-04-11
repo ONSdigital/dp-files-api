@@ -22,6 +22,19 @@ import (
 	"github.com/pkg/errors"
 )
 
+//	@title			dp-files-api
+//	@version		1.0.0
+//	@description	Digital Publishing API for handling file metadata.
+
+//	@license.name	Open Government Licence v3.0
+//	@license.url	http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+
+//	@host		    localhost:26900
+//  @schemes		http
+//  @basePath		/
+
+//  @tag.name       private
+
 // Service contains all the configs, server and clients to run the API
 type Service struct {
 	Server         files.HTTPServer

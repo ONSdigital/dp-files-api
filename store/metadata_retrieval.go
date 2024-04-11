@@ -39,6 +39,16 @@ func (store *Store) GetFileMetadata(ctx context.Context, path string) (files.Sto
 	return fileMetadata, nil
 }
 
+// GetFilesMetadata godoc
+// @Description  GETs metadata for a file
+// @Tags         File upload started
+// @Produce      json
+// @Success      200
+// @Failure      400
+// @Failure      403
+// @Failure      404
+// @Failure      500
+// @Router       /files [get]
 func (store *Store) GetFilesMetadata(ctx context.Context, collectionID string) ([]files.StoredRegisteredMetaData, error) {
 	files := make([]files.StoredRegisteredMetaData, 0)
 	_, err := store.metadataCollection.Find(ctx, bson.M{fieldCollectionID: collectionID}, &files)

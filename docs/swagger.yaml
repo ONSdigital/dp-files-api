@@ -1,0 +1,123 @@
+basePath: /
+definitions:
+  store.ChangeFileState:
+    properties:
+      etag:
+        type: string
+      state:
+        type: string
+    required:
+    - etag
+    - state
+    type: object
+host: localhost:26900
+info:
+  contact: {}
+  description: Digital Publishing API for handling file metadata.
+  license:
+    name: Open Government Licence v3.0
+    url: http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+  title: dp-files-api
+  version: 1.0.0
+paths:
+  /files:
+    get:
+      description: GETs metadata for a file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+      - File upload started
+    post:
+      description: POSTs metadata for a file when an upload has started.
+      parameters:
+      - in: formData
+        name: collection_id
+        type: string
+      - in: formData
+        name: etag
+        type: string
+      - in: formData
+        name: is_publishable
+        type: boolean
+      - in: formData
+        name: licence
+        type: string
+      - in: formData
+        name: licence_url
+        type: string
+      - in: formData
+        name: path
+        type: string
+      - in: formData
+        name: size_in_bytes
+        type: integer
+      - in: formData
+        name: state
+        type: string
+      - in: formData
+        name: title
+        type: string
+      - in: formData
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+      - File upload started
+  /files/{filepath}:
+    patch:
+      description: PATCH metadata state for a file, (i.e. when an upload has completed).
+      parameters:
+      - description: Filepath of required file
+        in: path
+        name: file_path
+        required: true
+        type: string
+      - description: Change the state of a file in the metadata
+        in: body
+        name: patch_file
+        required: true
+        schema:
+          $ref: '#/definitions/store.ChangeFileState'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+        "403":
+          description: Forbidden
+        "409":
+          description: Conflict
+        "500":
+          description: Internal Server Error
+      tags:
+      - Patch metadata state
+schemes:
+- http
+swagger: "2.0"
+tags:
+- name: private

@@ -101,6 +101,23 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 	return err
 }
 
+type ChangeFileState struct {
+	State	string	`schema:"state" validate:"required"`
+	Etag	string	`schema:"etag" validate:"required"`
+}
+
+// GetFilesMetadata godoc
+// @Description  PATCH metadata state for a file, (i.e. when an upload has completed).
+// @Tags         Patch metadata state
+// @Produce      json
+// @Param	 	 file_path path string true "Filepath of required file"
+// @Param	 	 patch_file body ChangeFileState true "Change the state of a file in the metadata"
+// @Success      201
+// @Failure      400
+// @Failure      403
+// @Failure      409
+// @Failure      500
+// @Router       /files/{filepath} [patch]
 func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID string) error {
 	logdata := log.Data{"collection_id": collectionID}
 
