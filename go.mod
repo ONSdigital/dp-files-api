@@ -39,8 +39,6 @@ require (
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/ONSdigital/dp-permissions-api v0.24.0 // indirect
-	github.com/PuerkitoBio/purell v1.2.1 // indirect
-	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/Shopify/sarama v1.38.1 // indirect
 	github.com/chromedp/cdproto v0.0.0-20240519224452-66462be74baa // indirect
 	github.com/chromedp/chromedp v0.9.5 // indirect
@@ -81,7 +79,6 @@ require (
 	go.opentelemetry.io/otel/metric v1.26.0 // indirect
 	go.opentelemetry.io/otel/trace v1.26.0 // indirect
 	golang.org/x/tools v0.21.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 require (
