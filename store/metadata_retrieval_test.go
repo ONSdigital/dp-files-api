@@ -73,6 +73,7 @@ func (suite *StoreSuite) TestGetFileMetadataCollectionError() {
 	}
 
 	cfg, _ := config.Get()
+	cfg.IsPublishing = true
 	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	actualMetadata, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
@@ -84,31 +85,56 @@ func (suite *StoreSuite) TestGetFileMetadataCollectionError() {
 }
 
 func (suite *StoreSuite) TestGetFileMetadataWithCollectionPatching() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
-	metadata.State = store.StateUploaded
-	metadataBytes, _ := bson.Marshal(metadata)
+	suite.Run("When cfg.IsPublishing is true", func() {
+		metadata := suite.generateMetadata(suite.defaultCollectionID)
+		metadata.State = store.StateUploaded
+		metadataBytes, _ := bson.Marshal(metadata)
 
-	collection := suite.generatePublishedCollectionInfo(suite.defaultCollectionID)
-	collectionBytes, _ := bson.Marshal(collection)
+		collection := suite.generatePublishedCollectionInfo(suite.defaultCollectionID)
+		collectionBytes, _ := bson.Marshal(collection)
 
-	metadataColl := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
-	}
-	collectionColl := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(collectionBytes),
-	}
+		metadataColl := mock.MongoCollectionMock{
+			FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+		}
+		collectionColl := mock.MongoCollectionMock{
+			FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(collectionBytes),
+		}
 
-	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
-	actualMetadata, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
+		cfg, _ := config.Get()
+		cfg.IsPublishing = true
+		subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+		actualMetadata, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
-	suite.NoError(err)
-	suite.Equal(collection.State, actualMetadata.State)
-	suite.NotEqual(metadata.State, actualMetadata.State)
-	suite.Equal(collection.PublishedAt, actualMetadata.PublishedAt)
-	suite.NotEqual(metadata.PublishedAt, actualMetadata.PublishedAt)
-	suite.Equal(collection.LastModified, actualMetadata.LastModified)
-	suite.NotEqual(metadata.LastModified, actualMetadata.LastModified)
+		suite.NoError(err)
+		suite.Equal(collection.State, actualMetadata.State)
+		suite.NotEqual(metadata.State, actualMetadata.State)
+		suite.Equal(collection.PublishedAt, actualMetadata.PublishedAt)
+		suite.NotEqual(metadata.PublishedAt, actualMetadata.PublishedAt)
+		suite.Equal(collection.LastModified, actualMetadata.LastModified)
+		suite.NotEqual(metadata.LastModified, actualMetadata.LastModified)
+	})
+
+	suite.Run("When cfg.IsPublishing is false", func() {
+		metadata := suite.generateMetadata(suite.defaultCollectionID)
+		metadata.State = store.StateUploaded
+		metadataBytes, _ := bson.Marshal(metadata)
+
+		metadataColl := mock.MongoCollectionMock{
+			FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+		}
+		// Collection mock is not needed as we won't be patching the metadata
+		collectionColl := mock.MongoCollectionMock{}
+
+		cfg, _ := config.Get()
+		cfg.IsPublishing = false
+		subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+		actualMetadata, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
+
+		suite.NoError(err)
+		suite.Equal(metadata.State, actualMetadata.State)               // State should be unchanged
+		suite.Equal(metadata.PublishedAt, actualMetadata.PublishedAt)   // PublishedAt should be unchanged
+		suite.Equal(metadata.LastModified, actualMetadata.LastModified) // LastModified should be unchanged
+	})
 }
 
 func (suite *StoreSuite) TestGetFilesMetadataNoPatching() {
