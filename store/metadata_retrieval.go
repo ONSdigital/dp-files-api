@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"errors"
-
 	"github.com/ONSdigital/dp-files-api/files"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/ONSdigital/log.go/v2/log"
@@ -27,14 +26,17 @@ func (store *Store) GetFileMetadata(ctx context.Context, path string) (files.Sto
 		return fileMetadata, nil
 	}
 
-	// get the collection metadata, and if they're not present, return the file unchanged
-	collectionPublishedMetadata, err := store.GetCollectionPublishedMetadata(ctx, *fileMetadata.CollectionID)
-	if err != nil {
-		return fileMetadata, nil
-	}
+	// if we are in the publishing subnet then we patch the file metadata
+	if store.cfg.IsPublishing {
+		// get the collection metadata, and if they're not present, return the file unchanged
+		collectionPublishedMetadata, err := store.GetCollectionPublishedMetadata(ctx, *fileMetadata.CollectionID)
+		if err != nil {
+			return fileMetadata, nil
+		}
 
-	// we got the collection published metadata, so apply them to the file
-	store.PatchFilePublishMetadata(&fileMetadata, &collectionPublishedMetadata)
+		// we got the collection published metadata, so apply them to the file
+		store.PatchFilePublishMetadata(&fileMetadata, &collectionPublishedMetadata)
+	}
 
 	return fileMetadata, nil
 }
