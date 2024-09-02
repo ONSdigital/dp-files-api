@@ -21,6 +21,17 @@ const (
 	StateMoved     = "MOVED"
 )
 
+// GetFilesMetadata godoc
+// @Description  POSTs metadata for a file when an upload has started.
+// @Tags         File upload started
+// @Produce      json
+// @Param	 	 request formData files.StoredRegisteredMetaData false "StoredRegisteredMetaData"
+// @Success      200
+// @Failure      400
+// @Failure      403
+// @Failure      404
+// @Failure      500
+// @Router       /files [post]
 func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 	logdata := log.Data{"path": metaData.Path}
 

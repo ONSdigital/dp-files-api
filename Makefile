@@ -26,6 +26,10 @@ debug:
 	go build -tags 'debug' $(LDFLAGS) -o $(BINPATH)/dp-files-api
 	HUMAN_LOG=1 DEBUG=1 $(BINPATH)/dp-files-api
 
+.PHONY: generate-swagger
+generate-swagger:
+	swag i -g service/service.go
+
 .PHONY: test
 test:
 	go test -race -cover ./...
