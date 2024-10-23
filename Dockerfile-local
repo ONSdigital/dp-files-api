@@ -1,5 +1,7 @@
 FROM golang:1.21.3-bullseye as build
 
+RUN git config --global --add safe.directory /service
+
 WORKDIR /service
 CMD tail -f /dev/null
 
