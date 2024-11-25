@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"strconv"
 	"strings"
 
@@ -34,6 +35,18 @@ const (
 // @Router       /files [post]
 func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 	logdata := log.Data{"path": metaData.Path}
+
+	// don't register file upload if it is already registered
+	m := files.StoredRegisteredMetaData{}
+	errFindingMetadata := store.metadataCollection.FindOne(ctx, bson.M{fieldPath: metaData.Path}, &m)
+	if errFindingMetadata != nil && !errors.Is(errFindingMetadata, mongodriver.ErrNoDocumentFound) {
+		log.Error(ctx, "error while finding metadata", errFindingMetadata, logdata)
+		return errFindingMetadata
+	}
+	if m.State == StateUploaded {
+		log.Info(ctx, "File upload already registered: skipping registration of file metadata", logdata)
+		return nil
+	}
 
 	//check to see if collectionID exists and is not-published
 	if metaData.CollectionID != nil {
