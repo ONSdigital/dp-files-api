@@ -165,6 +165,35 @@ func (store *Store) updateFileState(ctx context.Context, path, etag, toState, ex
 	}
 	logdata["actualCurrentState"] = metadata.State
 
+	var isCollectionPublished bool
+	isCollectionPublished, err = store.IsCollectionPublished(ctx, *metadata.CollectionID) // also moved
+	if err != nil {
+		log.Error(ctx, "is collection published: caught db error", err, logdata)
+		return err
+	}
+
+	// update only timestamps if we are already in uploaded state
+	if !isCollectionPublished && metadata.State != StateMoved {
+		if toState == StateUploaded && metadata.State == StateUploaded {
+			now := store.clock.GetCurrentTime()
+			_, err = store.metadataCollection.Update(
+				ctx,
+				bson.M{fieldPath: path},
+				bson.D{
+					{"$set", bson.D{
+						{fieldEtag, etag},
+						{fieldLastModified, now},
+						{timestampField, now}}},
+				})
+			if err != nil {
+				log.Error(ctx, "error while updating file metadata", err, logdata)
+				return err
+			}
+			log.Info(ctx, "file metadata updated", logdata)
+			return nil
+		}
+	}
+
 	if metadata.State != expectedCurrentState {
 		log.Error(ctx, "update file state: state mismatch", ErrFileStateMismatch, logdata)
 		return ErrFileStateMismatch
