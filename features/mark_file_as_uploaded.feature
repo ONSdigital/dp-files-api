@@ -40,7 +40,7 @@ Feature: Mark files as uploaded
         When the file upload "images/meme.jpg" is marked as complete with the etag "123456789"
         Then the HTTP status code should be "404"
 
-    Scenario: Trying to mark an upload complete on a file that is in the wrong state
+    Scenario: Trying to mark an upload complete on a file that is already uploaded
         Given I am an authorised user
         And the file upload "images/meme.jpg" has been registered with:
             | IsPublishable | true                                                                      |
@@ -54,7 +54,7 @@ Feature: Mark files as uploaded
             | LastModified  | 2021-10-21T15:13:14Z                                                      |
             | State         | UPLOADED                                                                  |
         When the file upload "images/meme.jpg" is marked as complete with the etag "123456789"
-        Then the HTTP status code should be "409"
+        Then the HTTP status code should be "200"
 
     Scenario: The one where user is not authorised for marking upload complete
         Given I am not an authorised user
