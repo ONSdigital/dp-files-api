@@ -43,9 +43,22 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 		log.Error(ctx, "error while finding metadata", errFindingMetadata, logdata)
 		return errFindingMetadata
 	}
-	if m.State == StateUploaded {
+
+	if m.State == StateUploaded && *m.CollectionID == *metaData.CollectionID {
 		log.Info(ctx, "File upload already registered: skipping registration of file metadata", logdata)
 		return nil
+	}
+
+	// delete existing file metadata if file upload comes from a different collection
+	if m.State == StateUploaded && *m.CollectionID != *metaData.CollectionID {
+		result, err := store.metadataCollection.Delete(ctx, bson.M{fieldPath: metaData.Path})
+		if err != nil {
+			log.Error(ctx, "error while deleting metadata", err, logdata)
+			return err
+		}
+		if result.DeletedCount > 0 {
+			log.Info(ctx, "deleted existing file metadata", logdata)
+		}
 	}
 
 	//check to see if collectionID exists and is not-published
