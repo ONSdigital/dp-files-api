@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"strconv"
 	"strings"
 
@@ -34,6 +35,31 @@ const (
 // @Router       /files [post]
 func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 	logdata := log.Data{"path": metaData.Path}
+
+	// don't register file upload if it is already registered
+	m := files.StoredRegisteredMetaData{}
+	errFindingMetadata := store.metadataCollection.FindOne(ctx, bson.M{fieldPath: metaData.Path}, &m)
+	if errFindingMetadata != nil && !errors.Is(errFindingMetadata, mongodriver.ErrNoDocumentFound) {
+		log.Error(ctx, "error while finding metadata", errFindingMetadata, logdata)
+		return errFindingMetadata
+	}
+
+	if m.State == StateUploaded && *m.CollectionID == *metaData.CollectionID {
+		log.Info(ctx, "File upload already registered: skipping registration of file metadata", logdata)
+		return nil
+	}
+
+	// delete existing file metadata if file upload comes from a different collection
+	if m.State == StateUploaded && *m.CollectionID != *metaData.CollectionID {
+		result, err := store.metadataCollection.Delete(ctx, bson.M{fieldPath: metaData.Path})
+		if err != nil {
+			log.Error(ctx, "error while deleting metadata", err, logdata)
+			return err
+		}
+		if result.DeletedCount > 0 {
+			log.Info(ctx, "deleted existing file metadata", logdata)
+		}
+	}
 
 	//check to see if collectionID exists and is not-published
 	if metaData.CollectionID != nil {
@@ -151,6 +177,35 @@ func (store *Store) updateFileState(ctx context.Context, path, etag, toState, ex
 		return err
 	}
 	logdata["actualCurrentState"] = metadata.State
+
+	var isCollectionPublished bool
+	isCollectionPublished, err = store.IsCollectionPublished(ctx, *metadata.CollectionID) // also moved
+	if err != nil {
+		log.Error(ctx, "is collection published: caught db error", err, logdata)
+		return err
+	}
+
+	// update only timestamps if we are already in uploaded state
+	if !isCollectionPublished && metadata.State != StateMoved {
+		if toState == StateUploaded && metadata.State == StateUploaded {
+			now := store.clock.GetCurrentTime()
+			_, err = store.metadataCollection.Update(
+				ctx,
+				bson.M{fieldPath: path},
+				bson.D{
+					{"$set", bson.D{
+						{fieldEtag, etag},
+						{fieldLastModified, now},
+						{timestampField, now}}},
+				})
+			if err != nil {
+				log.Error(ctx, "error while updating file metadata", err, logdata)
+				return err
+			}
+			log.Info(ctx, "file metadata updated", logdata)
+			return nil
+		}
+	}
 
 	if metadata.State != expectedCurrentState {
 		log.Error(ctx, "update file state: state mismatch", ErrFileStateMismatch, logdata)

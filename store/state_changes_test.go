@@ -14,7 +14,6 @@ import (
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func (suite *StoreSuite) TestRegisterFileUploadCollectionPublishedCheckError() {
@@ -29,8 +28,13 @@ func (suite *StoreSuite) TestRegisterFileUploadCollectionPublishedCheckError() {
 		FindOneFunc: CollectionFindOneReturnsError(expectedError),
 	}
 
+	metadataCollection := mock.MongoCollectionMock{
+		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
+		FindOneFunc: CollectionFindOneSucceeds(),
+	}
+
 	cfg, _ := config.Get()
-	subject := store.NewStore(nil, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataCollection, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("collection published check error"))
@@ -51,8 +55,13 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenCollectionAlreadyPublished() 
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(coll), // collection is PUBLISHED
 	}
 
+	metadataCollection := mock.MongoCollectionMock{
+		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
+		FindOneFunc: CollectionFindOneSucceeds(),
+	}
+
 	cfg, _ := config.Get()
-	subject := store.NewStore(nil, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataCollection, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -67,12 +76,10 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
 	metadata.State = store.StateUploaded
-	expectedError := mongo.WriteError{Code: 11000}
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	alwaysFindsExistingCollection := mock.MongoCollectionMock{
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
-		InsertFunc:  CollectionInsertReturnsNilAndError(expectedError),
 	}
 	emptyCollection := mock.MongoCollectionMock{
 		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
@@ -86,8 +93,8 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 
 	logEvent := suite.logInterceptor.GetLogEvent()
 
-	suite.Equal("file upload already registered", logEvent)
-	suite.ErrorIs(err, store.ErrDuplicateFile)
+	suite.Equal("File upload already registered: skipping registration of file metadata", logEvent)
+	suite.NoError(err)
 }
 
 func (suite *StoreSuite) TestRegisterFileUploadWhenFileDoesNotAlreadyExist() {
@@ -140,7 +147,7 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertReturnsError() {
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
-	metadata.State = store.StateUploaded
+	metadata.State = store.StateCreated
 	expectedError := errors.New("error occurred")
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -170,7 +177,7 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertSucceeds() {
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
-	metadata.State = store.StateUploaded
+	metadata.State = store.StateCreated
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{
@@ -199,7 +206,7 @@ func (suite *StoreSuite) TestRegisterFileUploadRegisterCollectionFails() {
 	defer suite.logInterceptor.Stop()
 
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
-	metadata.State = store.StateUploaded
+	metadata.State = store.StateCreated
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionCountReturnsZero := mock.MongoCollectionMock{
@@ -233,7 +240,6 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
 		currentState string
 		expectedErr  error
 	}{
-		{store.StateUploaded, store.ErrFileStateMismatch},
 		{store.StatePublished, store.ErrFileStateMismatch},
 		{store.StateMoved, store.ErrFileStateMismatch},
 	}
@@ -304,8 +310,13 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenUpdateReturnsError() {
 		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
 	}
 
+	collectionsCollection := mock.MongoCollectionMock{
+		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
+		FindOneFunc: CollectionFindOneSucceeds(),
+	}
+
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.Error(err)
@@ -323,8 +334,13 @@ func (suite *StoreSuite) TestMarkUploadCompleteSucceeds() {
 		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
 	}
 
+	collectionsCollection := mock.MongoCollectionMock{
+		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
+		FindOneFunc: CollectionFindOneSucceeds(),
+	}
+
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.NoError(err)
@@ -413,8 +429,13 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenUpdateReturnsError() {
 		HeadFunc:    func(key string) (*s3.HeadObjectOutput, error) { return &s3.HeadObjectOutput{ETag: &metadata.Etag}, nil },
 	}
 
+	collectionsCollection := mock.MongoCollectionMock{
+		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
+		FindOneFunc: CollectionFindOneSucceeds(),
+	}
+
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
 	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.Error(err)
@@ -437,8 +458,13 @@ func (suite *StoreSuite) TestMarkFileMovedEtagMismatch() {
 		HeadFunc:    func(key string) (*s3.HeadObjectOutput, error) { return &s3.HeadObjectOutput{ETag: &wrongEtag}, nil },
 	}
 
+	collectionsCollection := mock.MongoCollectionMock{
+		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
+		FindOneFunc: CollectionFindOneSucceeds(),
+	}
+
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
 	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.ErrorIs(err, store.ErrEtagMismatchWhilePublishing, "the actual err was %v", err)
@@ -459,8 +485,13 @@ func (suite *StoreSuite) TestMarkFileMovedSucceeds() {
 		HeadFunc:    func(key string) (*s3.HeadObjectOutput, error) { return &s3.HeadObjectOutput{ETag: &metadata.Etag}, nil },
 	}
 
+	collectionsCollection := mock.MongoCollectionMock{
+		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
+		FindOneFunc: CollectionFindOneSucceeds(),
+	}
+
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
 	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.NoError(err)
