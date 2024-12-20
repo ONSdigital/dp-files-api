@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"strconv"
 	"strings"
+
+	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
@@ -151,6 +152,8 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 	if err != nil {
 		return err
 	}
+
+	log.Info(ctx, "file set as published - "+now.String(), logdata)
 
 	return store.kafka.Send(files.AvroSchema, &files.FilePublished{
 		Path:        m.Path,
