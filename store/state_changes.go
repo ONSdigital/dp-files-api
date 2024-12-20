@@ -153,7 +153,7 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 		return err
 	}
 
-	log.Info(ctx, "file set as published - "+now.String(), logdata)
+	log.Info(ctx, fmt.Sprintf("file set as published - %s", now.String()), logdata)
 
 	return store.kafka.Send(files.AvroSchema, &files.FilePublished{
 		Path:        m.Path,
