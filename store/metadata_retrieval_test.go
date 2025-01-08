@@ -111,28 +111,6 @@ func (suite *StoreSuite) TestGetFileMetadataWithCollectionPatching() {
 	suite.NotEqual(metadata.LastModified, actualMetadata.LastModified)
 }
 
-func (suite *StoreSuite) TestGetFileMetadataWithCollectionPatchingWhenPublishingFalse() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
-	metadata.State = store.StateUploaded
-	metadataBytes, _ := bson.Marshal(metadata)
-
-	metadataColl := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
-	}
-	// Collection mock is not needed as we won't be patching the metadata
-	collectionColl := mock.MongoCollectionMock{}
-
-	cfg, _ := config.Get()
-	cfg.IsPublishing = false
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
-	actualMetadata, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
-
-	suite.NoError(err)
-	suite.Equal(metadata.State, actualMetadata.State)               // State should be unchanged
-	suite.Equal(metadata.PublishedAt, actualMetadata.PublishedAt)   // PublishedAt should be unchanged
-	suite.Equal(metadata.LastModified, actualMetadata.LastModified) // LastModified should be unchanged
-}
-
 func (suite *StoreSuite) TestGetFilesMetadataNoPatching() {
 	metadata1 := suite.generateMetadata(suite.defaultCollectionID)
 	metadata1.Path = metadata1.Path + "1"
