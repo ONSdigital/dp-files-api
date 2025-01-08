@@ -73,7 +73,6 @@ func (suite *StoreSuite) TestGetFileMetadataCollectionError() {
 	}
 
 	cfg, _ := config.Get()
-	cfg.IsPublishing = true
 	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	actualMetadata, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
@@ -100,7 +99,6 @@ func (suite *StoreSuite) TestGetFileMetadataWithCollectionPatching() {
 	}
 
 	cfg, _ := config.Get()
-	cfg.IsPublishing = true
 	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	actualMetadata, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
