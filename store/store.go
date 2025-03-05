@@ -17,6 +17,6 @@ type Store struct {
 	cfg                   *config.Config
 }
 
-func NewStore(metadataCollection mongo.MongoCollection, collectionsCollection mongo.MongoCollection, kafkaProducer kafka.IProducer, clk clock.Clock, c aws.S3Clienter, cfg *config.Config) *Store {
+func NewStore(metadataCollection, collectionsCollection mongo.MongoCollection, kafkaProducer kafka.IProducer, clk clock.Clock, c aws.S3Clienter, cfg *config.Config) *Store {
 	return &Store{metadataCollection, collectionsCollection, kafkaProducer, clk, c, cfg}
 }

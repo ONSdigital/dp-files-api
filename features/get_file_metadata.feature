@@ -9,7 +9,7 @@ Feature: Fetching metadata for a file
       | SizeInBytes   | 14794                                                                     |
       | Type          | image/jpeg                                                                |
       | Licence       | OGL v3                                                                    |
-      | LicenceUrl    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
       | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
       | LastModified  | 2021-10-21T15:13:14Z                                                      |
       | State         | CREATED                                                                   |
@@ -39,7 +39,7 @@ Feature: Fetching metadata for a file
       | SizeInBytes   | 14794                                                                     |
       | Type          | image/jpeg                                                                |
       | Licence       | OGL v3                                                                    |
-      | LicenceUrl    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
       | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
       | LastModified  | 2021-10-21T15:13:14Z                                                      |
       | State         | CREATED                                                                   |
@@ -55,7 +55,7 @@ Feature: Fetching metadata for a file
       | SizeInBytes   | 14794                                                                     |
       | Type          | image/jpeg                                                                |
       | Licence       | OGL v3                                                                    |
-      | LicenceUrl    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
       | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
       | LastModified  | 2021-10-21T15:13:14Z                                                      |
       | State         | CREATED                                                                   |

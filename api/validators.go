@@ -1,8 +1,9 @@
 package api
 
 import (
-	"github.com/go-playground/validator"
 	"regexp"
+
+	"github.com/go-playground/validator"
 )
 
 func awsUploadKeyValidator(fl validator.FieldLevel) bool {

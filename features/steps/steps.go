@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strconv"
 	"time"
 
@@ -23,7 +23,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
+func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I am an authorised user$`, c.iAmAnAuthorisedUser)
 	ctx.Step(`^I am not an authorised user$`, c.iAmNotAnAuthorisedUser)
 	ctx.Step(`^the file upload is registered with payload:`, c.iRegisterFile)
@@ -47,20 +47,20 @@ func (c *FilesApiComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I get files in the collection "([^"]*)"$`, c.iGetFilesInTheCollection)
 }
 
-func (c *FilesApiComponent) iAmAnAuthorisedUser() error {
+func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {
 	c.isAuthorised = true
 
 	return nil
 }
 
-func (c *FilesApiComponent) iAmNotAnAuthorisedUser() error {
+func (c *FilesAPIComponent) iAmNotAnAuthorisedUser() error {
 	c.isAuthorised = false
 
 	return nil
 }
 
-func (c *FilesApiComponent) iRegisterFile(payload *godog.DocString) error {
-	return c.ApiFeature.IPostToWithBody("/files", payload)
+func (c *FilesAPIComponent) iRegisterFile(payload *godog.DocString) error {
+	return c.APIFeature.IPostToWithBody("/files", payload)
 }
 
 type ExpectedMetaData struct {
@@ -71,7 +71,7 @@ type ExpectedMetaData struct {
 	SizeInBytes   string
 	Type          string
 	Licence       string
-	LicenceUrl    string
+	LicenceURL    string
 	CreatedAt     string
 	LastModified  string
 	State         string
@@ -93,11 +93,11 @@ type ExpectedMetaDataMoved struct {
 	MovedAt string
 }
 
-func (c *FilesApiComponent) theFileHasNotBeenRegistered(arg1 string) error {
+func (c *FilesAPIComponent) theFileHasNotBeenRegistered(arg1 string) error {
 	return nil
 }
 
-func (c *FilesApiComponent) theFollowingDocumentShouldBeCreated(table *godog.Table) error {
+func (c *FilesAPIComponent) theFollowingDocumentShouldBeCreated(table *godog.Table) error {
 	ctx := context.Background()
 
 	metaData := files.StoredRegisteredMetaData{}
@@ -111,42 +111,42 @@ func (c *FilesApiComponent) theFollowingDocumentShouldBeCreated(table *godog.Tab
 	expectedMetaData := keyValues.(*ExpectedMetaData)
 
 	res := c.mongoClient.Database("files").Collection("metadata").FindOne(ctx, bson.M{"path": expectedMetaData.Path})
-	assert.NoError(c.ApiFeature, res.Decode(&metaData))
+	assert.NoError(c.APIFeature, res.Decode(&metaData))
 
 	fmt.Println("EXPECTD METADATA", expectedMetaData.CollectionID)
 
 	isPublishable, _ := strconv.ParseBool(expectedMetaData.IsPublishable)
 	sizeInBytes, _ := strconv.ParseUint(expectedMetaData.SizeInBytes, 10, 64)
-	assert.Equal(c.ApiFeature, isPublishable, metaData.IsPublishable)
+	assert.Equal(c.APIFeature, isPublishable, metaData.IsPublishable)
 	if expectedMetaData.CollectionID == "" {
-		assert.Nil(c.ApiFeature, metaData.CollectionID)
+		assert.Nil(c.APIFeature, metaData.CollectionID)
 	} else {
-		assert.Equal(c.ApiFeature, expectedMetaData.CollectionID, *metaData.CollectionID)
+		assert.Equal(c.APIFeature, expectedMetaData.CollectionID, *metaData.CollectionID)
 	}
-	assert.Equal(c.ApiFeature, expectedMetaData.Title, metaData.Title)
-	assert.Equal(c.ApiFeature, sizeInBytes, metaData.SizeInBytes)
-	assert.Equal(c.ApiFeature, expectedMetaData.Type, metaData.Type)
-	assert.Equal(c.ApiFeature, expectedMetaData.Licence, metaData.Licence)
-	assert.Equal(c.ApiFeature, expectedMetaData.LicenceUrl, metaData.LicenceUrl)
-	assert.Equal(c.ApiFeature, expectedMetaData.State, metaData.State)
-	assert.Equal(c.ApiFeature, expectedMetaData.CreatedAt, metaData.CreatedAt.Format(time.RFC3339))
-	assert.Equal(c.ApiFeature, expectedMetaData.LastModified, metaData.LastModified.Format(time.RFC3339))
+	assert.Equal(c.APIFeature, expectedMetaData.Title, metaData.Title)
+	assert.Equal(c.APIFeature, sizeInBytes, metaData.SizeInBytes)
+	assert.Equal(c.APIFeature, expectedMetaData.Type, metaData.Type)
+	assert.Equal(c.APIFeature, expectedMetaData.Licence, metaData.Licence)
+	assert.Equal(c.APIFeature, expectedMetaData.LicenceURL, metaData.LicenceURL)
+	assert.Equal(c.APIFeature, expectedMetaData.State, metaData.State)
+	assert.Equal(c.APIFeature, expectedMetaData.CreatedAt, metaData.CreatedAt.Format(time.RFC3339))
+	assert.Equal(c.APIFeature, expectedMetaData.LastModified, metaData.LastModified.Format(time.RFC3339))
 
-	return c.ApiFeature.StepError()
+	return c.APIFeature.StepError()
 }
 
-func (c *FilesApiComponent) theFileUploadHasBeenRegistered(path string) error {
+func (c *FilesAPIComponent) theFileUploadHasBeenRegistered(path string) error {
 	ctx := context.Background()
 
 	m := files.StoredRegisteredMetaData{Path: path}
 
 	_, err := c.mongoClient.Database("files").Collection("metadata").InsertOne(ctx, &m)
-	assert.NoError(c.ApiFeature, err)
+	assert.NoError(c.APIFeature, err)
 
-	return c.ApiFeature.StepError()
+	return c.APIFeature.StepError()
 }
 
-func (c *FilesApiComponent) theFileUploadHasBeenPublishedWith(path string, table *godog.Table) error {
+func (c *FilesAPIComponent) theFileUploadHasBeenPublishedWith(path string, table *godog.Table) error {
 	keyValues, err := assistdog.NewDefault().CreateInstance(&ExpectedMetaDataPublished{}, table)
 	if err != nil {
 		return err
@@ -169,7 +169,7 @@ func (c *FilesApiComponent) theFileUploadHasBeenPublishedWith(path string, table
 		SizeInBytes:       sizeInBytes,
 		Type:              data.Type,
 		Licence:           data.Licence,
-		LicenceUrl:        data.LicenceUrl,
+		LicenceURL:        data.LicenceURL,
 		State:             data.State,
 		CreatedAt:         createdAt,
 		LastModified:      lastModified,
@@ -179,12 +179,12 @@ func (c *FilesApiComponent) theFileUploadHasBeenPublishedWith(path string, table
 	}
 
 	_, err = c.mongoClient.Database("files").Collection("metadata").InsertOne(context.Background(), &m)
-	assert.NoError(c.ApiFeature, err)
+	assert.NoError(c.APIFeature, err)
 
-	return c.ApiFeature.StepError()
+	return c.APIFeature.StepError()
 }
 
-func (c *FilesApiComponent) theFileUploadHasBeenCompletedWith(path string, table *godog.Table) error {
+func (c *FilesAPIComponent) theFileUploadHasBeenCompletedWith(path string, table *godog.Table) error {
 	keyValues, err := assistdog.NewDefault().CreateInstance(&ExpectedMetaDataUploadComplete{}, table)
 	if err != nil {
 		return err
@@ -205,7 +205,7 @@ func (c *FilesApiComponent) theFileUploadHasBeenCompletedWith(path string, table
 		SizeInBytes:       sizeInBytes,
 		Type:              data.Type,
 		Licence:           data.Licence,
-		LicenceUrl:        data.LicenceUrl,
+		LicenceURL:        data.LicenceURL,
 		State:             data.State,
 		CreatedAt:         createdAt,
 		LastModified:      lastModified,
@@ -218,12 +218,12 @@ func (c *FilesApiComponent) theFileUploadHasBeenCompletedWith(path string, table
 	}
 
 	_, err = c.mongoClient.Database("files").Collection("metadata").InsertOne(context.Background(), &m)
-	assert.NoError(c.ApiFeature, err)
+	assert.NoError(c.APIFeature, err)
 
-	return c.ApiFeature.StepError()
+	return c.APIFeature.StepError()
 }
 
-func (c *FilesApiComponent) theFileUploadHasBeenRegisteredWith(path string, table *godog.Table) error {
+func (c *FilesAPIComponent) theFileUploadHasBeenRegisteredWith(path string, table *godog.Table) error {
 	keyValues, err := assistdog.NewDefault().CreateInstance(&ExpectedMetaData{}, table)
 	if err != nil {
 		return err
@@ -243,7 +243,7 @@ func (c *FilesApiComponent) theFileUploadHasBeenRegisteredWith(path string, tabl
 		SizeInBytes:   sizeInBytes,
 		Type:          data.Type,
 		Licence:       data.Licence,
-		LicenceUrl:    data.LicenceUrl,
+		LicenceURL:    data.LicenceURL,
 		State:         data.State,
 		CreatedAt:     createdAt,
 		LastModified:  lastModified,
@@ -254,48 +254,48 @@ func (c *FilesApiComponent) theFileUploadHasBeenRegisteredWith(path string, tabl
 	}
 
 	_, err = c.mongoClient.Database("files").Collection("metadata").InsertOne(context.Background(), &m)
-	assert.NoError(c.ApiFeature, err)
+	assert.NoError(c.APIFeature, err)
 
-	return c.ApiFeature.StepError()
+	return c.APIFeature.StepError()
 }
 
-func (c *FilesApiComponent) theFileUploadHasNotBeenRegistered(path string) error {
+func (c *FilesAPIComponent) theFileUploadHasNotBeenRegistered(path string) error {
 	ctx := context.Background()
 	_, err := c.mongoClient.Database("files").Collection("metadata").DeleteMany(ctx, bson.M{"path": path})
 
-	assert.NoError(c.ApiFeature, err)
+	assert.NoError(c.APIFeature, err)
 
-	return c.ApiFeature.StepError()
+	return c.APIFeature.StepError()
 }
 
-func (c *FilesApiComponent) theFileIsMarkedAsMoved(path, etag string) error {
-	json := fmt.Sprintf(`{"etag": "%s", "state": "%s"}`, etag, store.StateMoved)
-	return c.ApiFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+func (c *FilesAPIComponent) theFileIsMarkedAsMoved(path, etag string) error {
+	json := fmt.Sprintf(`{"etag": %q, "state": %q}`, etag, store.StateMoved)
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
 }
 
-func (c *FilesApiComponent) theFileIsMarkedAsPublished(path string) error {
-	json := fmt.Sprintf(`{"state": "%s"}`, store.StatePublished)
-	return c.ApiFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+func (c *FilesAPIComponent) theFileIsMarkedAsPublished(path string) error {
+	json := fmt.Sprintf(`{"state": %q}`, store.StatePublished)
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
 }
 
-func (c *FilesApiComponent) theFileUploadIsMarkedAsCompleteWithTheEtag(path, etag string) error {
+func (c *FilesAPIComponent) theFileUploadIsMarkedAsCompleteWithTheEtag(path, etag string) error {
 	json := fmt.Sprintf(`{
 	"etag": "%s",
 	"state": "%s"
 }`, etag, store.StateUploaded)
-	return c.ApiFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
 }
 
-func (c *FilesApiComponent) iSetTheCollectionIDToForFile(collectionID, path string) error {
-	json := fmt.Sprintf(`{"collection_id": "%s"}`, collectionID)
-	return c.ApiFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+func (c *FilesAPIComponent) iSetTheCollectionIDToForFile(collectionID, path string) error {
+	json := fmt.Sprintf(`{"collection_id": %q}`, collectionID)
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
 }
 
-func (c *FilesApiComponent) theFileMetadataIsRequested(filepath string) error {
-	return c.ApiFeature.IGet(fmt.Sprintf("/files/%s", filepath))
+func (c *FilesAPIComponent) theFileMetadataIsRequested(filepath string) error {
+	return c.APIFeature.IGet(fmt.Sprintf("/files/%s", filepath))
 }
 
-func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *godog.Table) error {
+func (c *FilesAPIComponent) theFollowingDocumentEntryShouldBeLookLike(table *godog.Table) error {
 	ctx := context.Background()
 
 	metaData := files.StoredRegisteredMetaData{}
@@ -308,14 +308,14 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 
 	expectedMetaData := keyValues.(*ExpectedMetaDataMoved)
 
-	_ = c.ApiFeature.IGet(fmt.Sprintf("/files/%s", expectedMetaData.Path))
-	responseBody := c.ApiFeature.HTTPResponse.Body
-	body, _ := ioutil.ReadAll(responseBody)
-	assert.NoError(c.ApiFeature, json.Unmarshal(body, &metaData))
+	_ = c.APIFeature.IGet(fmt.Sprintf("/files/%s", expectedMetaData.Path))
+	responseBody := c.APIFeature.HTTPResponse.Body
+	body, _ := io.ReadAll(responseBody)
+	assert.NoError(c.APIFeature, json.Unmarshal(body, &metaData))
 
 	dbMetadata := files.StoredRegisteredMetaData{}
 	res := c.mongoClient.Database("files").Collection("metadata").FindOne(ctx, bson.M{"path": expectedMetaData.Path})
-	assert.NoError(c.ApiFeature, res.Decode(&dbMetadata))
+	assert.NoError(c.APIFeature, res.Decode(&dbMetadata))
 
 	metaData.CreatedAt = dbMetadata.CreatedAt
 	metaData.LastModified = dbMetadata.LastModified
@@ -335,71 +335,74 @@ func (c *FilesApiComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 
 	isPublishable, _ := strconv.ParseBool(expectedMetaData.IsPublishable)
 	sizeInBytes, _ := strconv.ParseUint(expectedMetaData.SizeInBytes, 10, 64)
-	assert.Equal(c.ApiFeature, isPublishable, metaData.IsPublishable)
-	assert.Equal(c.ApiFeature, expectedMetaData.CollectionID, *metaData.CollectionID)
-	assert.Equal(c.ApiFeature, expectedMetaData.Title, metaData.Title)
-	assert.Equal(c.ApiFeature, sizeInBytes, metaData.SizeInBytes)
-	assert.Equal(c.ApiFeature, expectedMetaData.Type, metaData.Type)
-	assert.Equal(c.ApiFeature, expectedMetaData.Licence, metaData.Licence)
-	assert.Equal(c.ApiFeature, expectedMetaData.LicenceUrl, metaData.LicenceUrl)
-	assert.Equal(c.ApiFeature, expectedMetaData.State, metaData.State)
-	assert.Equal(c.ApiFeature, expectedMetaData.Etag, metaData.Etag)
-	assert.Equal(c.ApiFeature, expectedMetaData.CreatedAt, metaData.CreatedAt.Format(time.RFC3339), "CREATED AT")
-	assert.Equal(c.ApiFeature, expectedMetaData.LastModified, metaData.LastModified.Format(time.RFC3339), "LAST MODIFIED")
+	assert.Equal(c.APIFeature, isPublishable, metaData.IsPublishable)
+	assert.Equal(c.APIFeature, expectedMetaData.CollectionID, *metaData.CollectionID)
+	assert.Equal(c.APIFeature, expectedMetaData.Title, metaData.Title)
+	assert.Equal(c.APIFeature, sizeInBytes, metaData.SizeInBytes)
+	assert.Equal(c.APIFeature, expectedMetaData.Type, metaData.Type)
+	assert.Equal(c.APIFeature, expectedMetaData.Licence, metaData.Licence)
+	assert.Equal(c.APIFeature, expectedMetaData.LicenceURL, metaData.LicenceURL)
+	assert.Equal(c.APIFeature, expectedMetaData.State, metaData.State)
+	assert.Equal(c.APIFeature, expectedMetaData.Etag, metaData.Etag)
+	assert.Equal(c.APIFeature, expectedMetaData.CreatedAt, metaData.CreatedAt.Format(time.RFC3339), "CREATED AT")
+	assert.Equal(c.APIFeature, expectedMetaData.LastModified, metaData.LastModified.Format(time.RFC3339), "LAST MODIFIED")
 	if expectedMetaData.PublishedAt != "" {
-		assert.Equal(c.ApiFeature, expectedMetaData.PublishedAt, metaData.PublishedAt.Format(time.RFC3339), "PUBLISHED AT")
+		assert.Equal(c.APIFeature, expectedMetaData.PublishedAt, metaData.PublishedAt.Format(time.RFC3339), "PUBLISHED AT")
 	}
 	if expectedMetaData.MovedAt != "" {
-		assert.Equal(c.ApiFeature, expectedMetaData.MovedAt, metaData.MovedAt.Format(time.RFC3339), "MOVED AT")
+		assert.Equal(c.APIFeature, expectedMetaData.MovedAt, metaData.MovedAt.Format(time.RFC3339), "MOVED AT")
 	}
 
-	return c.ApiFeature.StepError()
+	return c.APIFeature.StepError()
 }
 
-func (c *FilesApiComponent) iPublishTheCollection(collectionID string) error {
-	body := fmt.Sprintf(`{"state": "%s"}`, store.StatePublished)
-	c.ApiFeature.IPatch(fmt.Sprintf("/collection/%s", collectionID), &messages.PickleDocString{MediaType: "application/json", Content: body})
+func (c *FilesAPIComponent) iPublishTheCollection(collectionID string) error {
+	body := fmt.Sprintf(`{"state": %q}`, store.StatePublished)
+	err := c.APIFeature.IPatch(fmt.Sprintf("/collection/%s", collectionID), &messages.PickleDocString{MediaType: "application/json", Content: body})
+	assert.NoError(c.APIFeature, err)
 
-	return c.ApiFeature.StepError()
+	return c.APIFeature.StepError()
 }
 
-func (c *FilesApiComponent) theFollowingPublishedMessageIsSent(table *godog.Table) error {
+func (c *FilesAPIComponent) theFollowingPublishedMessageIsSent(table *godog.Table) error {
 	expectedMessage, _ := assistdog.NewDefault().ParseMap(table)
 	for i := 0; i < 30; i++ {
 		if msg, ok := c.msgs[expectedMessage["path"]]; ok {
-			assert.True(c.ApiFeature, ok, "Could not find message")
-			assert.Equal(c.ApiFeature, expectedMessage["path"], msg.Path)
-			assert.Equal(c.ApiFeature, expectedMessage["etag"], msg.Etag)
-			assert.Equal(c.ApiFeature, expectedMessage["type"], msg.Type)
-			assert.Equal(c.ApiFeature, expectedMessage["sizeInBytes"], msg.SizeInBytes)
-			return c.ApiFeature.StepError()
+			assert.True(c.APIFeature, ok, "Could not find message")
+			assert.Equal(c.APIFeature, expectedMessage["path"], msg.Path)
+			assert.Equal(c.APIFeature, expectedMessage["etag"], msg.Etag)
+			assert.Equal(c.APIFeature, expectedMessage["type"], msg.Type)
+			assert.Equal(c.APIFeature, expectedMessage["sizeInBytes"], msg.SizeInBytes)
+			return c.APIFeature.StepError()
 		}
 
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	assert.Fail(c.ApiFeature, "Could not find kafka message")
-	return c.ApiFeature.StepError()
+	assert.Fail(c.APIFeature, "Could not find kafka message")
+	return c.APIFeature.StepError()
 }
 
-func (c *FilesApiComponent) kafkaConsumerGroupIsRunning() error {
+func (c *FilesAPIComponent) kafkaConsumerGroupIsRunning() error {
 	c.msgs = make(map[string]files.FilePublished)
 	ctx := context.Background()
 	cfg, _ := config.Get()
-	min := 1 * time.Millisecond
-	max := 5 * time.Millisecond
+	minRetry := 1 * time.Millisecond
+	maxRetry := 5 * time.Millisecond
 	cgConfig := &kafka.ConsumerGroupConfig{
 		KafkaVersion:      &cfg.KafkaConfig.Version,
 		MinBrokersHealthy: &cfg.KafkaConfig.ProducerMinBrokersHealthy,
 		Topic:             cfg.KafkaConfig.StaticFilePublishedTopic,
 		GroupName:         "testing-stuff",
 		BrokerAddrs:       cfg.KafkaConfig.Addr,
-		MinRetryPeriod:    &min,
-		MaxRetryPeriod:    &max,
+		MinRetryPeriod:    &minRetry,
+		MaxRetryPeriod:    &maxRetry,
 	}
 	c.cg, _ = kafka.NewConsumerGroup(ctx, cgConfig)
-	c.cg.Start()
-	c.cg.RegisterHandler(ctx, func(ctx context.Context, workerID int, msg kafka.Message) error {
+	err := c.cg.Start()
+	assert.NoError(c.APIFeature, err)
+
+	err = c.cg.RegisterHandler(ctx, func(ctx context.Context, workerID int, msg kafka.Message) error {
 		schema := &avro.Schema{
 			Definition: `{
 					"type": "record",
@@ -413,12 +416,14 @@ func (c *FilesApiComponent) kafkaConsumerGroupIsRunning() error {
 				  }`,
 		}
 		fp := files.FilePublished{}
-		schema.Unmarshal(msg.GetData(), &fp)
+		err := schema.Unmarshal(msg.GetData(), &fp)
+		assert.NoError(c.APIFeature, err)
 
 		c.msgs[fp.Path] = fp
 
 		return nil
 	})
+	assert.NoError(c.APIFeature, err)
 
 	for {
 		if c.cg.State().String() == "Consuming" {
@@ -427,15 +432,15 @@ func (c *FilesApiComponent) kafkaConsumerGroupIsRunning() error {
 		time.Sleep(250 * time.Millisecond)
 	}
 
-	return c.ApiFeature.StepError()
+	return c.APIFeature.StepError()
 }
 
-func (c *FilesApiComponent) iAmInWebMode() error {
+func (c *FilesAPIComponent) iAmInWebMode() error {
 	c.isPublishing = false
 
-	return c.ApiFeature.StepError()
+	return c.APIFeature.StepError()
 }
 
-func (c *FilesApiComponent) iGetFilesInTheCollection(collectionID string) error {
-	return c.ApiFeature.IGet(fmt.Sprintf("/files?collection_id=%s", collectionID))
+func (c *FilesAPIComponent) iGetFilesInTheCollection(collectionID string) error {
+	return c.APIFeature.IGet(fmt.Sprintf("/files?collection_id=%s", collectionID))
 }

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/ONSdigital/dp-files-api/store"
@@ -14,7 +14,7 @@ import (
 type PatchRequestHandlers struct {
 	UploadComplete   http.HandlerFunc
 	Published        http.HandlerFunc
-	Moved        http.HandlerFunc
+	Moved            http.HandlerFunc
 	CollectionUpdate http.HandlerFunc
 }
 
@@ -56,13 +56,13 @@ func isCollectionIDUpdate(stateMetaData StateMetadata) bool {
 
 func getStateMetadataFromRequest(req *http.Request) (StateMetadata, error) {
 	stateMetaData := StateMetadata{}
-	requestBody, err := ioutil.ReadAll(req.Body)
+	requestBody, err := io.ReadAll(req.Body)
 
 	setRequestBody(req, requestBody)
 
 	if err == nil {
 		requestBodyBuffer := bytes.NewBuffer(requestBody)
-		state := ioutil.NopCloser(requestBodyBuffer)
+		state := io.NopCloser(requestBodyBuffer)
 		err = json.NewDecoder(state).Decode(&stateMetaData)
 	}
 
@@ -70,5 +70,5 @@ func getStateMetadataFromRequest(req *http.Request) (StateMetadata, error) {
 }
 
 func setRequestBody(req *http.Request, requestBody []byte) {
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(requestBody))
+	req.Body = io.NopCloser(bytes.NewBuffer(requestBody))
 }

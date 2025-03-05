@@ -48,7 +48,10 @@ func NewServiceList(cfg *config.Config, buildTime, gitCommit, version string, ro
 		router:    router,
 	}
 
-	return e, e.setup()
+	if err := e.setup(); err != nil {
+		return nil, err
+	}
+	return e, nil
 }
 
 func (e *ExternalServiceList) setup() error {
@@ -64,7 +67,7 @@ func (e *ExternalServiceList) setup() error {
 		return err
 	}
 
-	e.createHttpServer()
+	e.createHTTPServer()
 	if err := e.createKafkaProducer(); err != nil {
 		return err
 	}
@@ -140,7 +143,7 @@ func (e *ExternalServiceList) createKafkaProducer() error {
 	return nil
 }
 
-func (e *ExternalServiceList) createHttpServer() {
+func (e *ExternalServiceList) createHTTPServer() {
 	s := dphttp.NewServer(e.cfg.BindAddr, e.router)
 	s.HandleOSSignals = false
 	e.httpServer = s

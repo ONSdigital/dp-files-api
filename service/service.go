@@ -49,7 +49,6 @@ type Service struct {
 
 // Run the service
 func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error, cfg *config.Config, r *mux.Router) (*Service, error) {
-
 	log.Info(ctx, "running service")
 
 	mongoClient := serviceList.GetMongoDB()
@@ -82,7 +81,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		patchRequestHandlers := api.PatchRequestHandlers{
 			UploadComplete:   authMiddleware.Require("static-files:update", api.HandleMarkUploadComplete(store.MarkUploadComplete)),
 			Published:        authMiddleware.Require("static-files:update", api.HandleMarkFilePublished(store.MarkFilePublished)),
-			Moved:        authMiddleware.Require("static-files:update", api.HandleMarkFileMoved(store.MarkFileMoved)),
+			Moved:            authMiddleware.Require("static-files:update", api.HandleMarkFileMoved(store.MarkFileMoved)),
 			CollectionUpdate: authMiddleware.Require("static-files:update", api.HandlerUpdateCollectionID(store.UpdateCollectionID)),
 		}
 

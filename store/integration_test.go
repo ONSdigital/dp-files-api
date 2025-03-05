@@ -19,7 +19,6 @@ import (
 
 var (
 	componentFlag = flag.Bool("component", false, "perform component tests")
-	loggingFlag   = flag.Bool("logging", false, "print logging")
 )
 
 const (
@@ -59,7 +58,6 @@ func TestStoreIntegration(t *testing.T) {
 }
 
 func (s *StoreIntegrationTest) TestOptionalFieldsExcluded() {
-
 	m := files.StoredRegisteredMetaData{
 		Path:          path,
 		IsPublishable: false,
@@ -67,7 +65,7 @@ func (s *StoreIntegrationTest) TestOptionalFieldsExcluded() {
 		SizeInBytes:   10,
 		Type:          "text/plain",
 		Licence:       "MIT",
-		LicenceUrl:    "www.licence.com/MIT",
+		LicenceURL:    "www.licence.com/MIT",
 	}
 
 	s.store.RegisterFileUpload(s.ctx, m)
@@ -81,7 +79,6 @@ func (s *StoreIntegrationTest) TestOptionalFieldsExcluded() {
 }
 
 func (s *StoreIntegrationTest) TestOptionalCollectionIDIncluded() {
-
 	collectionID := "1234"
 
 	m := files.StoredRegisteredMetaData{
@@ -92,7 +89,7 @@ func (s *StoreIntegrationTest) TestOptionalCollectionIDIncluded() {
 		SizeInBytes:   10,
 		Type:          "text/plain",
 		Licence:       "MIT",
-		LicenceUrl:    "www.licence.com/MIT",
+		LicenceURL:    "www.licence.com/MIT",
 	}
 
 	s.store.RegisterFileUpload(s.ctx, m)

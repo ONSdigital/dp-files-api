@@ -59,7 +59,7 @@ func buildValidationErrors(validationErrs validator.ValidationErrors) jsonErrors
 
 func writeError(w http.ResponseWriter, errs jsonErrors, httpCode int) {
 	w.WriteHeader(httpCode)
-	json.NewEncoder(w).Encode(&errs)
+	_ = json.NewEncoder(w).Encode(&errs)
 }
 
 func buildErrors(err error, code string) jsonErrors {

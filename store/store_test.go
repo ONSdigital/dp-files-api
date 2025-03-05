@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
@@ -90,7 +89,6 @@ func CollectionFindOneChain(chain []CollectionFindOneFuncChainEntry) CollectionF
 			if currentRun <= run {
 				return item.fun(ctx, filter, result, opts...)
 			}
-
 		}
 		return errors.New("unexpected CollectionFindOne call: no functions left in the chain")
 	}
@@ -235,12 +233,12 @@ func (suite *StoreSuite) assertImmutableFieldsUnchanged(metadata, actualMetadata
 	suite.Equal(metadata.SizeInBytes, actualMetadata.SizeInBytes)
 	suite.Equal(metadata.Type, actualMetadata.Type)
 	suite.Equal(metadata.Licence, actualMetadata.Licence)
-	suite.Equal(metadata.LicenceUrl, actualMetadata.LicenceUrl)
+	suite.Equal(metadata.LicenceURL, actualMetadata.LicenceURL)
 	suite.Equal(metadata.Etag, actualMetadata.Etag)
 }
 
-func (suite *StoreSuite) generateTestTime(addedSeconds time.Duration) time.Time {
-	return time.Now().Add(time.Second * addedSeconds).Round(time.Second).UTC()
+func (suite *StoreSuite) generateTestTime(addedDuration time.Duration) time.Time {
+	return time.Now().Add(time.Second * addedDuration).Round(time.Second).UTC()
 }
 
 func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegisteredMetaData {
@@ -258,7 +256,7 @@ func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegis
 		SizeInBytes:       10,
 		Type:              "text/plain",
 		Licence:           "MIT",
-		LicenceUrl:        "https://opensource.org/licenses/MIT",
+		LicenceURL:        "https://opensource.org/licenses/MIT",
 		CreatedAt:         createdAt,
 		LastModified:      lastModified,
 		UploadCompletedAt: &uploadCompletedAt,
@@ -300,7 +298,7 @@ func (l *LogInterceptor) Stop() {
 }
 
 func (l *LogInterceptor) GetLogEvent() string {
-	logResult, _ := ioutil.ReadAll(l.logBuffer)
+	logResult, _ := io.ReadAll(l.logBuffer)
 	logOut := make(map[string]interface{})
 	json.Unmarshal(logResult, &logOut)
 
@@ -309,7 +307,7 @@ func (l *LogInterceptor) GetLogEvent() string {
 
 func (l *LogInterceptor) GetLogEvents(eventName string) map[int]map[string]interface{} {
 	retVal := make(map[int]map[string]interface{})
-	logResult, _ := ioutil.ReadAll(l.logBuffer)
+	logResult, _ := io.ReadAll(l.logBuffer)
 	logz := strings.Split(string(logResult), "\n")
 	counter := 0
 	for _, line := range logz {
@@ -326,7 +324,7 @@ func (l *LogInterceptor) GetLogEvents(eventName string) map[int]map[string]inter
 }
 
 func (l *LogInterceptor) IsEventPresent(eventName string) bool {
-	logResult, _ := ioutil.ReadAll(l.logBuffer)
+	logResult, _ := io.ReadAll(l.logBuffer)
 	logz := strings.Split(string(logResult), "\n")
 	for _, line := range logz {
 		logOut := make(map[string]interface{})

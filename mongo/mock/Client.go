@@ -17,31 +17,31 @@ var _ mongo.Client = &ClientMock{}
 
 // ClientMock is a mock implementation of mongo.Client.
 //
-// 	func TestSomethingThatUsesClient(t *testing.T) {
+//	func TestSomethingThatUsesClient(t *testing.T) {
 //
-// 		// make and configure a mocked mongo.Client
-// 		mockedClient := &ClientMock{
-// 			CheckerFunc: func(contextMoqParam context.Context, checkState *healthcheck.CheckState) error {
-// 				panic("mock out the Checker method")
-// 			},
-// 			CloseFunc: func(contextMoqParam context.Context) error {
-// 				panic("mock out the Close method")
-// 			},
-// 			CollectionFunc: func(s string) *mongodriver.Collection {
-// 				panic("mock out the Collection method")
-// 			},
-// 			ConnectionFunc: func() *mongodriver.MongoConnection {
-// 				panic("mock out the Connection method")
-// 			},
-// 			URIFunc: func() string {
-// 				panic("mock out the URI method")
-// 			},
-// 		}
+//		// make and configure a mocked mongo.Client
+//		mockedClient := &ClientMock{
+//			CheckerFunc: func(contextMoqParam context.Context, checkState *healthcheck.CheckState) error {
+//				panic("mock out the Checker method")
+//			},
+//			CloseFunc: func(contextMoqParam context.Context) error {
+//				panic("mock out the Close method")
+//			},
+//			CollectionFunc: func(s string) *mongodriver.Collection {
+//				panic("mock out the Collection method")
+//			},
+//			ConnectionFunc: func() *mongodriver.MongoConnection {
+//				panic("mock out the Connection method")
+//			},
+//			URIFunc: func() string {
+//				panic("mock out the URI method")
+//			},
+//		}
 //
-// 		// use mockedClient in code that requires mongo.Client
-// 		// and then make assertions.
+//		// use mockedClient in code that requires mongo.Client
+//		// and then make assertions.
 //
-// 	}
+//	}
 type ClientMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(contextMoqParam context.Context, checkState *healthcheck.CheckState) error
@@ -111,7 +111,8 @@ func (mock *ClientMock) Checker(contextMoqParam context.Context, checkState *hea
 
 // CheckerCalls gets all the calls that were made to Checker.
 // Check the length with:
-//     len(mockedClient.CheckerCalls())
+//
+//	len(mockedClient.CheckerCalls())
 func (mock *ClientMock) CheckerCalls() []struct {
 	ContextMoqParam context.Context
 	CheckState      *healthcheck.CheckState
@@ -144,7 +145,8 @@ func (mock *ClientMock) Close(contextMoqParam context.Context) error {
 
 // CloseCalls gets all the calls that were made to Close.
 // Check the length with:
-//     len(mockedClient.CloseCalls())
+//
+//	len(mockedClient.CloseCalls())
 func (mock *ClientMock) CloseCalls() []struct {
 	ContextMoqParam context.Context
 } {
@@ -175,7 +177,8 @@ func (mock *ClientMock) Collection(s string) *mongodriver.Collection {
 
 // CollectionCalls gets all the calls that were made to Collection.
 // Check the length with:
-//     len(mockedClient.CollectionCalls())
+//
+//	len(mockedClient.CollectionCalls())
 func (mock *ClientMock) CollectionCalls() []struct {
 	S string
 } {
@@ -203,7 +206,8 @@ func (mock *ClientMock) Connection() *mongodriver.MongoConnection {
 
 // ConnectionCalls gets all the calls that were made to Connection.
 // Check the length with:
-//     len(mockedClient.ConnectionCalls())
+//
+//	len(mockedClient.ConnectionCalls())
 func (mock *ClientMock) ConnectionCalls() []struct {
 } {
 	var calls []struct {
@@ -229,7 +233,8 @@ func (mock *ClientMock) URI() string {
 
 // URICalls gets all the calls that were made to URI.
 // Check the length with:
-//     len(mockedClient.URICalls())
+//
+//	len(mockedClient.URICalls())
 func (mock *ClientMock) URICalls() []struct {
 } {
 	var calls []struct {

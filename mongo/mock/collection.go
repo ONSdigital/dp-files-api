@@ -17,70 +17,70 @@ var _ mongo.MongoCollection = &MongoCollectionMock{}
 
 // MongoCollectionMock is a mock implementation of mongo.MongoCollection.
 //
-// 	func TestSomethingThatUsesMongoCollection(t *testing.T) {
+//	func TestSomethingThatUsesMongoCollection(t *testing.T) {
 //
-// 		// make and configure a mocked mongo.MongoCollection
-// 		mockedMongoCollection := &MongoCollectionMock{
-// 			AggregateFunc: func(ctx context.Context, pipeline interface{}, results interface{}) error {
-// 				panic("mock out the Aggregate method")
-// 			},
-// 			CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
-// 				panic("mock out the Count method")
-// 			},
-// 			DeleteFunc: func(ctx context.Context, selector interface{}) (*mongodriver.CollectionDeleteResult, error) {
-// 				panic("mock out the Delete method")
-// 			},
-// 			DeleteByIdFunc: func(ctx context.Context, id interface{}) (*mongodriver.CollectionDeleteResult, error) {
-// 				panic("mock out the DeleteById method")
-// 			},
-// 			DeleteManyFunc: func(ctx context.Context, selector interface{}) (*mongodriver.CollectionDeleteResult, error) {
-// 				panic("mock out the DeleteMany method")
-// 			},
-// 			DistinctFunc: func(ctx context.Context, fieldName string, filter interface{}) ([]interface{}, error) {
-// 				panic("mock out the Distinct method")
-// 			},
-// 			FindFunc: func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
-// 				panic("mock out the Find method")
-// 			},
-// 			FindCursorFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (mongodriver.Cursor, error) {
-// 				panic("mock out the FindCursor method")
-// 			},
-// 			FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-// 				panic("mock out the FindOne method")
-// 			},
-// 			InsertFunc: func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
-// 				panic("mock out the Insert method")
-// 			},
-// 			InsertManyFunc: func(ctx context.Context, documents []interface{}) (*mongodriver.CollectionInsertManyResult, error) {
-// 				panic("mock out the InsertMany method")
-// 			},
-// 			MustFunc: func() *mongodriver.Must {
-// 				panic("mock out the Must method")
-// 			},
-// 			NewLockClientFunc: func() *lock.Client {
-// 				panic("mock out the NewLockClient method")
-// 			},
-// 			UpdateFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-// 				panic("mock out the Update method")
-// 			},
-// 			UpdateByIdFunc: func(ctx context.Context, id interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-// 				panic("mock out the UpdateById method")
-// 			},
-// 			UpdateManyFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-// 				panic("mock out the UpdateMany method")
-// 			},
-// 			UpsertFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-// 				panic("mock out the Upsert method")
-// 			},
-// 			UpsertByIdFunc: func(ctx context.Context, id interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
-// 				panic("mock out the UpsertById method")
-// 			},
-// 		}
+//		// make and configure a mocked mongo.MongoCollection
+//		mockedMongoCollection := &MongoCollectionMock{
+//			AggregateFunc: func(ctx context.Context, pipeline interface{}, results interface{}) error {
+//				panic("mock out the Aggregate method")
+//			},
+//			CountFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (int, error) {
+//				panic("mock out the Count method")
+//			},
+//			DeleteFunc: func(ctx context.Context, selector interface{}) (*mongodriver.CollectionDeleteResult, error) {
+//				panic("mock out the Delete method")
+//			},
+//			DeleteByIdFunc: func(ctx context.Context, id interface{}) (*mongodriver.CollectionDeleteResult, error) {
+//				panic("mock out the DeleteById method")
+//			},
+//			DeleteManyFunc: func(ctx context.Context, selector interface{}) (*mongodriver.CollectionDeleteResult, error) {
+//				panic("mock out the DeleteMany method")
+//			},
+//			DistinctFunc: func(ctx context.Context, fieldName string, filter interface{}) ([]interface{}, error) {
+//				panic("mock out the Distinct method")
+//			},
+//			FindFunc: func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
+//				panic("mock out the Find method")
+//			},
+//			FindCursorFunc: func(ctx context.Context, filter interface{}, opts ...mongodriver.FindOption) (mongodriver.Cursor, error) {
+//				panic("mock out the FindCursor method")
+//			},
+//			FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+//				panic("mock out the FindOne method")
+//			},
+//			InsertFunc: func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
+//				panic("mock out the Insert method")
+//			},
+//			InsertManyFunc: func(ctx context.Context, documents []interface{}) (*mongodriver.CollectionInsertManyResult, error) {
+//				panic("mock out the InsertMany method")
+//			},
+//			MustFunc: func() *mongodriver.Must {
+//				panic("mock out the Must method")
+//			},
+//			NewLockClientFunc: func() *lock.Client {
+//				panic("mock out the NewLockClient method")
+//			},
+//			UpdateFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+//				panic("mock out the Update method")
+//			},
+//			UpdateByIdFunc: func(ctx context.Context, id interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+//				panic("mock out the UpdateById method")
+//			},
+//			UpdateManyFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+//				panic("mock out the UpdateMany method")
+//			},
+//			UpsertFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+//				panic("mock out the Upsert method")
+//			},
+//			UpsertByIdFunc: func(ctx context.Context, id interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+//				panic("mock out the UpsertById method")
+//			},
+//		}
 //
-// 		// use mockedMongoCollection in code that requires mongo.MongoCollection
-// 		// and then make assertions.
+//		// use mockedMongoCollection in code that requires mongo.MongoCollection
+//		// and then make assertions.
 //
-// 	}
+//	}
 type MongoCollectionMock struct {
 	// AggregateFunc mocks the Aggregate method.
 	AggregateFunc func(ctx context.Context, pipeline interface{}, results interface{}) error
@@ -325,7 +325,8 @@ func (mock *MongoCollectionMock) Aggregate(ctx context.Context, pipeline interfa
 
 // AggregateCalls gets all the calls that were made to Aggregate.
 // Check the length with:
-//     len(mockedMongoCollection.AggregateCalls())
+//
+//	len(mockedMongoCollection.AggregateCalls())
 func (mock *MongoCollectionMock) AggregateCalls() []struct {
 	Ctx      context.Context
 	Pipeline interface{}
@@ -364,7 +365,8 @@ func (mock *MongoCollectionMock) Count(ctx context.Context, filter interface{}, 
 
 // CountCalls gets all the calls that were made to Count.
 // Check the length with:
-//     len(mockedMongoCollection.CountCalls())
+//
+//	len(mockedMongoCollection.CountCalls())
 func (mock *MongoCollectionMock) CountCalls() []struct {
 	Ctx    context.Context
 	Filter interface{}
@@ -401,7 +403,8 @@ func (mock *MongoCollectionMock) Delete(ctx context.Context, selector interface{
 
 // DeleteCalls gets all the calls that were made to Delete.
 // Check the length with:
-//     len(mockedMongoCollection.DeleteCalls())
+//
+//	len(mockedMongoCollection.DeleteCalls())
 func (mock *MongoCollectionMock) DeleteCalls() []struct {
 	Ctx      context.Context
 	Selector interface{}
@@ -436,7 +439,8 @@ func (mock *MongoCollectionMock) DeleteById(ctx context.Context, id interface{})
 
 // DeleteByIdCalls gets all the calls that were made to DeleteById.
 // Check the length with:
-//     len(mockedMongoCollection.DeleteByIdCalls())
+//
+//	len(mockedMongoCollection.DeleteByIdCalls())
 func (mock *MongoCollectionMock) DeleteByIdCalls() []struct {
 	Ctx context.Context
 	ID  interface{}
@@ -471,7 +475,8 @@ func (mock *MongoCollectionMock) DeleteMany(ctx context.Context, selector interf
 
 // DeleteManyCalls gets all the calls that were made to DeleteMany.
 // Check the length with:
-//     len(mockedMongoCollection.DeleteManyCalls())
+//
+//	len(mockedMongoCollection.DeleteManyCalls())
 func (mock *MongoCollectionMock) DeleteManyCalls() []struct {
 	Ctx      context.Context
 	Selector interface{}
@@ -508,7 +513,8 @@ func (mock *MongoCollectionMock) Distinct(ctx context.Context, fieldName string,
 
 // DistinctCalls gets all the calls that were made to Distinct.
 // Check the length with:
-//     len(mockedMongoCollection.DistinctCalls())
+//
+//	len(mockedMongoCollection.DistinctCalls())
 func (mock *MongoCollectionMock) DistinctCalls() []struct {
 	Ctx       context.Context
 	FieldName string
@@ -549,7 +555,8 @@ func (mock *MongoCollectionMock) Find(ctx context.Context, filter interface{}, r
 
 // FindCalls gets all the calls that were made to Find.
 // Check the length with:
-//     len(mockedMongoCollection.FindCalls())
+//
+//	len(mockedMongoCollection.FindCalls())
 func (mock *MongoCollectionMock) FindCalls() []struct {
 	Ctx     context.Context
 	Filter  interface{}
@@ -590,7 +597,8 @@ func (mock *MongoCollectionMock) FindCursor(ctx context.Context, filter interfac
 
 // FindCursorCalls gets all the calls that were made to FindCursor.
 // Check the length with:
-//     len(mockedMongoCollection.FindCursorCalls())
+//
+//	len(mockedMongoCollection.FindCursorCalls())
 func (mock *MongoCollectionMock) FindCursorCalls() []struct {
 	Ctx    context.Context
 	Filter interface{}
@@ -631,7 +639,8 @@ func (mock *MongoCollectionMock) FindOne(ctx context.Context, filter interface{}
 
 // FindOneCalls gets all the calls that were made to FindOne.
 // Check the length with:
-//     len(mockedMongoCollection.FindOneCalls())
+//
+//	len(mockedMongoCollection.FindOneCalls())
 func (mock *MongoCollectionMock) FindOneCalls() []struct {
 	Ctx    context.Context
 	Filter interface{}
@@ -670,7 +679,8 @@ func (mock *MongoCollectionMock) Insert(ctx context.Context, document interface{
 
 // InsertCalls gets all the calls that were made to Insert.
 // Check the length with:
-//     len(mockedMongoCollection.InsertCalls())
+//
+//	len(mockedMongoCollection.InsertCalls())
 func (mock *MongoCollectionMock) InsertCalls() []struct {
 	Ctx      context.Context
 	Document interface{}
@@ -705,7 +715,8 @@ func (mock *MongoCollectionMock) InsertMany(ctx context.Context, documents []int
 
 // InsertManyCalls gets all the calls that were made to InsertMany.
 // Check the length with:
-//     len(mockedMongoCollection.InsertManyCalls())
+//
+//	len(mockedMongoCollection.InsertManyCalls())
 func (mock *MongoCollectionMock) InsertManyCalls() []struct {
 	Ctx       context.Context
 	Documents []interface{}
@@ -735,7 +746,8 @@ func (mock *MongoCollectionMock) Must() *mongodriver.Must {
 
 // MustCalls gets all the calls that were made to Must.
 // Check the length with:
-//     len(mockedMongoCollection.MustCalls())
+//
+//	len(mockedMongoCollection.MustCalls())
 func (mock *MongoCollectionMock) MustCalls() []struct {
 } {
 	var calls []struct {
@@ -761,7 +773,8 @@ func (mock *MongoCollectionMock) NewLockClient() *lock.Client {
 
 // NewLockClientCalls gets all the calls that were made to NewLockClient.
 // Check the length with:
-//     len(mockedMongoCollection.NewLockClientCalls())
+//
+//	len(mockedMongoCollection.NewLockClientCalls())
 func (mock *MongoCollectionMock) NewLockClientCalls() []struct {
 } {
 	var calls []struct {
@@ -794,7 +807,8 @@ func (mock *MongoCollectionMock) Update(ctx context.Context, selector interface{
 
 // UpdateCalls gets all the calls that were made to Update.
 // Check the length with:
-//     len(mockedMongoCollection.UpdateCalls())
+//
+//	len(mockedMongoCollection.UpdateCalls())
 func (mock *MongoCollectionMock) UpdateCalls() []struct {
 	Ctx      context.Context
 	Selector interface{}
@@ -833,7 +847,8 @@ func (mock *MongoCollectionMock) UpdateById(ctx context.Context, id interface{},
 
 // UpdateByIdCalls gets all the calls that were made to UpdateById.
 // Check the length with:
-//     len(mockedMongoCollection.UpdateByIdCalls())
+//
+//	len(mockedMongoCollection.UpdateByIdCalls())
 func (mock *MongoCollectionMock) UpdateByIdCalls() []struct {
 	Ctx    context.Context
 	ID     interface{}
@@ -872,7 +887,8 @@ func (mock *MongoCollectionMock) UpdateMany(ctx context.Context, selector interf
 
 // UpdateManyCalls gets all the calls that were made to UpdateMany.
 // Check the length with:
-//     len(mockedMongoCollection.UpdateManyCalls())
+//
+//	len(mockedMongoCollection.UpdateManyCalls())
 func (mock *MongoCollectionMock) UpdateManyCalls() []struct {
 	Ctx      context.Context
 	Selector interface{}
@@ -911,7 +927,8 @@ func (mock *MongoCollectionMock) Upsert(ctx context.Context, selector interface{
 
 // UpsertCalls gets all the calls that were made to Upsert.
 // Check the length with:
-//     len(mockedMongoCollection.UpsertCalls())
+//
+//	len(mockedMongoCollection.UpsertCalls())
 func (mock *MongoCollectionMock) UpsertCalls() []struct {
 	Ctx      context.Context
 	Selector interface{}
@@ -950,7 +967,8 @@ func (mock *MongoCollectionMock) UpsertById(ctx context.Context, id interface{},
 
 // UpsertByIdCalls gets all the calls that were made to UpsertById.
 // Check the length with:
-//     len(mockedMongoCollection.UpsertByIdCalls())
+//
+//	len(mockedMongoCollection.UpsertByIdCalls())
 func (mock *MongoCollectionMock) UpsertByIdCalls() []struct {
 	Ctx    context.Context
 	ID     interface{}

@@ -76,7 +76,7 @@ func (e *fakeServiceContainer) GetClock() clock.Clock {
 func (e *fakeServiceContainer) GetS3Clienter() aws.S3Clienter {
 	cfg, _ := config.Get()
 	s, err := session.NewSession(&awssdk.Config{
-		Endpoint:                      awssdk.String("http://localstack:4566"), //"http://localstack:4566"
+		Endpoint:                      awssdk.String("http://localstack:4566"), // "http://localstack:4566"
 		Region:                        awssdk.String(cfg.AwsRegion),
 		S3ForcePathStyle:              awssdk.Bool(true),
 		DisableSSL:                    awssdk.Bool(true),

@@ -113,9 +113,9 @@ func (suite *StoreSuite) TestGetFileMetadataWithCollectionPatching() {
 
 func (suite *StoreSuite) TestGetFilesMetadataNoPatching() {
 	metadata1 := suite.generateMetadata(suite.defaultCollectionID)
-	metadata1.Path = metadata1.Path + "1"
+	metadata1.Path += "1"
 	metadata2 := suite.generateMetadata(suite.defaultCollectionID)
-	metadata2.Path = metadata2.Path + "2"
+	metadata2.Path += "2"
 
 	metadataColl := mock.MongoCollectionMock{
 		FindFunc: CollectionFindReturnsMetadataOnFilter(
@@ -139,10 +139,10 @@ func (suite *StoreSuite) TestGetFilesMetadataNoPatching() {
 
 func (suite *StoreSuite) TestGetFilesMetadataWithPatching() {
 	metadata1 := suite.generateMetadata(suite.defaultCollectionID)
-	metadata1.Path = metadata1.Path + "1"
+	metadata1.Path += "1"
 	metadata1.State = store.StateUploaded
 	metadata2 := suite.generateMetadata(suite.defaultCollectionID)
-	metadata2.Path = metadata2.Path + "2"
+	metadata2.Path += "2"
 	metadata2.State = store.StateUploaded
 
 	collection := suite.generatePublishedCollectionInfo(suite.defaultCollectionID)

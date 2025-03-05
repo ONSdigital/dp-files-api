@@ -412,7 +412,6 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenFileNotExists() {
 }
 
 func (suite *StoreSuite) TestMarkFileMovedFailsWhenUpdateReturnsError() {
-
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
 	metadata.State = store.StatePublished
 	metadata.Etag = "test-etag"

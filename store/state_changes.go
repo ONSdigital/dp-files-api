@@ -62,7 +62,7 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 		}
 	}
 
-	//check to see if collectionID exists and is not-published
+	// check to see if collectionID exists and is not-published
 	if metaData.CollectionID != nil {
 		logdata["collection_id"] = *metaData.CollectionID
 		published, err := store.IsCollectionPublished(ctx, *metaData.CollectionID)
@@ -133,7 +133,7 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 		return ErrFileNotInUploadedState
 	}
 
-	if m.IsPublishable != true {
+	if !m.IsPublishable {
 		log.Error(ctx, "mark file published: file not set as publishable",
 			ErrFileIsNotPublishable, logdata)
 		return ErrFileIsNotPublishable
@@ -144,10 +144,10 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 		ctx,
 		bson.M{fieldPath: path},
 		bson.D{
-			{"$set", bson.D{
-				{fieldState, StatePublished},
-				{fieldLastModified, now},
-				{fieldPublishedAt, now}}},
+			{Key: "$set", Value: bson.D{
+				{Key: fieldState, Value: StatePublished},
+				{Key: fieldLastModified, Value: now},
+				{Key: fieldPublishedAt, Value: now}}},
 		})
 	if err != nil {
 		return err
@@ -196,10 +196,10 @@ func (store *Store) updateFileState(ctx context.Context, path, etag, toState, ex
 				ctx,
 				bson.M{fieldPath: path},
 				bson.D{
-					{"$set", bson.D{
-						{fieldEtag, etag},
-						{fieldLastModified, now},
-						{timestampField, now}}},
+					{Key: "$set", Value: bson.D{
+						{Key: fieldEtag, Value: etag},
+						{Key: fieldLastModified, Value: now},
+						{Key: timestampField, Value: now}}},
 				})
 			if err != nil {
 				log.Error(ctx, "error while updating file metadata", err, logdata)
@@ -232,11 +232,11 @@ func (store *Store) updateFileState(ctx context.Context, path, etag, toState, ex
 		ctx,
 		bson.M{fieldPath: path},
 		bson.D{
-			{"$set", bson.D{
-				{fieldEtag, etag},
-				{fieldState, toState},
-				{fieldLastModified, now},
-				{timestampField, now}}},
+			{Key: "$set", Value: bson.D{
+				{Key: fieldEtag, Value: etag},
+				{Key: fieldState, Value: toState},
+				{Key: fieldLastModified, Value: now},
+				{Key: timestampField, Value: now}}},
 		})
 
 	return err

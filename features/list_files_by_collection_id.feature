@@ -23,7 +23,7 @@ Feature: List Files by Collection ID
       | SizeInBytes       | 14794                                                                     |
       | Type              | image/jpeg                                                                |
       | Licence           | OGL v3                                                                    |
-      | LicenceUrl        | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | LicenceURL        | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
       | CreatedAt         | 2021-10-21T15:13:14Z                                                      |
       | LastModified      | 2021-10-21T15:14:14Z                                                      |
       | UploadCompletedAt | 2021-10-21T15:14:14Z                                                      |
@@ -36,7 +36,7 @@ Feature: List Files by Collection ID
       | SizeInBytes       | 14794                                                                     |
       | Type              | image/jpeg                                                                |
       | Licence           | OGL v3                                                                    |
-      | LicenceUrl        | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | LicenceURL        | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
       | CreatedAt         | 2021-10-21T15:13:14Z                                                      |
       | LastModified      | 2021-10-21T15:14:14Z                                                      |
       | UploadCompletedAt | 2021-10-21T15:14:14Z                                                      |

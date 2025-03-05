@@ -5,9 +5,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/cucumber/godog/colors"
 	"os"
 	"testing"
+
+	"github.com/cucumber/godog/colors"
 
 	"github.com/ONSdigital/log.go/v2/log"
 
@@ -31,10 +32,10 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 		log.SetDestination(buf, buf)
 	}
 
-	component := steps.NewFilesApiComponent()
+	component := steps.NewFilesAPIComponent()
 
 	apiFeature := componenttest.NewAPIFeature(component.Initialiser)
-	component.ApiFeature = apiFeature
+	component.APIFeature = apiFeature
 
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		component.Reset()
