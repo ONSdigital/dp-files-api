@@ -95,4 +95,9 @@ issues:
       linters:
         - revive
       source: "github.com/smartystreets/goconvey/convey"
+    # Allow test file to have repeat variables for test cases
+    - path: store/metadata_retrieval_test.go
+      text: 'string `coll1` has 5 occurrences, make it a constant'
+      linters:
+        - goconst
   new: false
