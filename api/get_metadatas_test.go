@@ -14,7 +14,7 @@ import (
 
 func TestGetFilesMetadataWhenCollectionIDNotProvided(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/files", nil)
+	req := httptest.NewRequest(http.MethodGet, "/files", http.NoBody)
 
 	h := api.HandlerGetFilesMetadata(func(ctx context.Context, collectionID string) ([]files.StoredRegisteredMetaData, error) {
 		return []files.StoredRegisteredMetaData{}, nil
@@ -27,7 +27,7 @@ func TestGetFilesMetadataWhenCollectionIDNotProvided(t *testing.T) {
 
 func TestGetFilesMetadataWhenErrorReturned(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/files?collection_id=12345678", nil)
+	req := httptest.NewRequest(http.MethodGet, "/files?collection_id=12345678", http.NoBody)
 
 	h := api.HandlerGetFilesMetadata(func(ctx context.Context, collectionID string) ([]files.StoredRegisteredMetaData, error) {
 		return []files.StoredRegisteredMetaData{}, errors.New("something went wrong")
@@ -40,7 +40,7 @@ func TestGetFilesMetadataWhenErrorReturned(t *testing.T) {
 
 func TestGetFilesMetadataHandledWriteFailures(t *testing.T) {
 	rec := &ErrorWriter{}
-	req := httptest.NewRequest(http.MethodGet, "/files?collection_id=12345678", nil)
+	req := httptest.NewRequest(http.MethodGet, "/files?collection_id=12345678", http.NoBody)
 
 	h := api.HandlerGetFilesMetadata(func(ctx context.Context, collectionID string) ([]files.StoredRegisteredMetaData, error) {
 		return []files.StoredRegisteredMetaData{}, nil

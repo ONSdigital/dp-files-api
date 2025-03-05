@@ -3,7 +3,7 @@ package api_test
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -25,7 +25,7 @@ func TestPublishHandlerHandlesUnexpectedPublishingError(t *testing.T) {
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	assert.Contains(t, string(response), "InternalError")
 }
 

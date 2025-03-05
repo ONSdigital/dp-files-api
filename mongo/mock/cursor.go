@@ -15,28 +15,28 @@ var _ mongo.MongoCursor = &MongoCursorMock{}
 
 // MongoCursorMock is a mock implementation of mongo.MongoCursor.
 //
-// 	func TestSomethingThatUsesMongoCursor(t *testing.T) {
+//	func TestSomethingThatUsesMongoCursor(t *testing.T) {
 //
-// 		// make and configure a mocked mongo.MongoCursor
-// 		mockedMongoCursor := &MongoCursorMock{
-// 			CloseFunc: func(ctx context.Context) error {
-// 				panic("mock out the Close method")
-// 			},
-// 			DecodeFunc: func(val interface{}) error {
-// 				panic("mock out the Decode method")
-// 			},
-// 			ErrFunc: func() error {
-// 				panic("mock out the Err method")
-// 			},
-// 			NextFunc: func(ctx context.Context) bool {
-// 				panic("mock out the Next method")
-// 			},
-// 		}
+//		// make and configure a mocked mongo.MongoCursor
+//		mockedMongoCursor := &MongoCursorMock{
+//			CloseFunc: func(ctx context.Context) error {
+//				panic("mock out the Close method")
+//			},
+//			DecodeFunc: func(val interface{}) error {
+//				panic("mock out the Decode method")
+//			},
+//			ErrFunc: func() error {
+//				panic("mock out the Err method")
+//			},
+//			NextFunc: func(ctx context.Context) bool {
+//				panic("mock out the Next method")
+//			},
+//		}
 //
-// 		// use mockedMongoCursor in code that requires mongo.MongoCursor
-// 		// and then make assertions.
+//		// use mockedMongoCursor in code that requires mongo.MongoCursor
+//		// and then make assertions.
 //
-// 	}
+//	}
 type MongoCursorMock struct {
 	// CloseFunc mocks the Close method.
 	CloseFunc func(ctx context.Context) error
@@ -95,7 +95,8 @@ func (mock *MongoCursorMock) Close(ctx context.Context) error {
 
 // CloseCalls gets all the calls that were made to Close.
 // Check the length with:
-//     len(mockedMongoCursor.CloseCalls())
+//
+//	len(mockedMongoCursor.CloseCalls())
 func (mock *MongoCursorMock) CloseCalls() []struct {
 	Ctx context.Context
 } {
@@ -126,7 +127,8 @@ func (mock *MongoCursorMock) Decode(val interface{}) error {
 
 // DecodeCalls gets all the calls that were made to Decode.
 // Check the length with:
-//     len(mockedMongoCursor.DecodeCalls())
+//
+//	len(mockedMongoCursor.DecodeCalls())
 func (mock *MongoCursorMock) DecodeCalls() []struct {
 	Val interface{}
 } {
@@ -154,7 +156,8 @@ func (mock *MongoCursorMock) Err() error {
 
 // ErrCalls gets all the calls that were made to Err.
 // Check the length with:
-//     len(mockedMongoCursor.ErrCalls())
+//
+//	len(mockedMongoCursor.ErrCalls())
 func (mock *MongoCursorMock) ErrCalls() []struct {
 } {
 	var calls []struct {
@@ -183,7 +186,8 @@ func (mock *MongoCursorMock) Next(ctx context.Context) bool {
 
 // NextCalls gets all the calls that were made to Next.
 // Check the length with:
-//     len(mockedMongoCursor.NextCalls())
+//
+//	len(mockedMongoCursor.NextCalls())
 func (mock *MongoCursorMock) NextCalls() []struct {
 	Ctx context.Context
 } {

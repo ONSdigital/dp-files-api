@@ -3,18 +3,18 @@ package service
 import (
 	"context"
 	"errors"
+	"testing"
+
 	authMock "github.com/ONSdigital/dp-authorisation/v2/authorisation/mock"
 	"github.com/ONSdigital/dp-files-api/files/mock"
 	hcMock "github.com/ONSdigital/dp-files-api/health/mock"
 	mongoMock "github.com/ONSdigital/dp-files-api/mongo/mock"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestServicesShutdownCalled(t *testing.T) {
 	Convey("Shutting down dependencies in the service container", t, func() {
-
 		m := &mongoMock.ClientMock{CloseFunc: func(ctx context.Context) error { return nil }}
 		hc := &hcMock.CheckerMock{StopFunc: func() {}}
 		hs := &mock.HTTPServerMock{ShutdownFunc: func(ctx context.Context) error { return nil }}
@@ -28,7 +28,6 @@ func TestServicesShutdownCalled(t *testing.T) {
 		}
 
 		Convey("All dependencies successfully shutdown", func() {
-
 			assert.NoError(t, serviceList.Shutdown(context.Background()))
 
 			assert.Len(t, m.CloseCalls(), 1)

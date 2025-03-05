@@ -2,8 +2,9 @@ package health
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"net/http"
+
+	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 )
 
 //go:generate moq -out mock/healthCheck.go -pkg mock . Checker

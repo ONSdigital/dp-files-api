@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/ONSdigital/dp-files-api/api"
-	"github.com/stretchr/testify/suite"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/ONSdigital/dp-files-api/api"
+	"github.com/stretchr/testify/suite"
 )
 
 type patchRequestMetadataStates struct {
@@ -47,7 +48,7 @@ func (suite *PatchRequestToHandlerSuite) SetupTest() {
 	suite.PatchRequestHandlers = api.PatchRequestHandlers{
 		UploadComplete:   generatePatchRequestHandler(uploadCompleteHandlerBody),
 		Published:        generatePatchRequestHandler(publishedHandlerBody),
-		Moved:        generatePatchRequestHandler(movedHandlerBody),
+		Moved:            generatePatchRequestHandler(movedHandlerBody),
 		CollectionUpdate: generatePatchRequestHandler(collectionUpdateHandlerBody),
 	}
 }
@@ -62,7 +63,7 @@ func (suite *PatchRequestToHandlerSuite) TestPatchRequestToHandlerReturnsCorrect
 
 		patchRequestHandler.ServeHTTP(w, req)
 
-		actualBody, _ := ioutil.ReadAll(w.Body)
+		actualBody, _ := io.ReadAll(w.Body)
 
 		suite.Equal(testState.ExpectedBody, string(actualBody))
 	}
@@ -72,13 +73,13 @@ func (suite *PatchRequestToHandlerSuite) TestPatchRequestToHandlerPassesBodyToSu
 	var actualRequestBody []byte
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		actualRequestBody, _ = ioutil.ReadAll(r.Body)
+		actualRequestBody, _ = io.ReadAll(r.Body)
 	})
 
 	patchRequestHandlers := api.PatchRequestHandlers{
 		UploadComplete:   testHandler,
 		Published:        testHandler,
-		Moved:        testHandler,
+		Moved:            testHandler,
 		CollectionUpdate: testHandler,
 	}
 
@@ -91,7 +92,7 @@ func (suite *PatchRequestToHandlerSuite) TestPatchRequestToHandlerPassesBodyToSu
 		actualHandler := api.PatchRequestToHandler(patchRequestHandlers)
 		actualHandler.ServeHTTP(w, req)
 
-		msg := fmt.Sprintf(`Expected "%s" to equal "%s"`, actualRequestBody, expectedRequestBody)
+		msg := fmt.Sprintf(`Expected %q to equal %q`, actualRequestBody, expectedRequestBody)
 
 		suite.Equal(expectedRequestBody, actualRequestBody, msg)
 	}

@@ -31,8 +31,6 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-var svc service.Service
-
 func TestClose(t *testing.T) {
 	Convey("Having a correctly initialised service in publishing mode", t, func() {
 		hc := &hcMock.CheckerMock{

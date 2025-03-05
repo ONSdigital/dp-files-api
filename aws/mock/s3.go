@@ -17,22 +17,22 @@ var _ aws.S3Clienter = &S3ClienterMock{}
 
 // S3ClienterMock is a mock implementation of aws.S3Clienter.
 //
-// 	func TestSomethingThatUsesS3Clienter(t *testing.T) {
+//	func TestSomethingThatUsesS3Clienter(t *testing.T) {
 //
-// 		// make and configure a mocked aws.S3Clienter
-// 		mockedS3Clienter := &S3ClienterMock{
-// 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
-// 				panic("mock out the Checker method")
-// 			},
-// 			HeadFunc: func(key string) (*s3.HeadObjectOutput, error) {
-// 				panic("mock out the Head method")
-// 			},
-// 		}
+//		// make and configure a mocked aws.S3Clienter
+//		mockedS3Clienter := &S3ClienterMock{
+//			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+//				panic("mock out the Checker method")
+//			},
+//			HeadFunc: func(key string) (*s3.HeadObjectOutput, error) {
+//				panic("mock out the Head method")
+//			},
+//		}
 //
-// 		// use mockedS3Clienter in code that requires aws.S3Clienter
-// 		// and then make assertions.
+//		// use mockedS3Clienter in code that requires aws.S3Clienter
+//		// and then make assertions.
 //
-// 	}
+//	}
 type S3ClienterMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
@@ -79,7 +79,8 @@ func (mock *S3ClienterMock) Checker(ctx context.Context, state *healthcheck.Chec
 
 // CheckerCalls gets all the calls that were made to Checker.
 // Check the length with:
-//     len(mockedS3Clienter.CheckerCalls())
+//
+//	len(mockedS3Clienter.CheckerCalls())
 func (mock *S3ClienterMock) CheckerCalls() []struct {
 	Ctx   context.Context
 	State *healthcheck.CheckState
@@ -112,7 +113,8 @@ func (mock *S3ClienterMock) Head(key string) (*s3.HeadObjectOutput, error) {
 
 // HeadCalls gets all the calls that were made to Head.
 // Check the length with:
-//     len(mockedS3Clienter.HeadCalls())
+//
+//	len(mockedS3Clienter.HeadCalls())
 func (mock *S3ClienterMock) HeadCalls() []struct {
 	Key string
 } {

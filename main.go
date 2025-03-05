@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
-	"github.com/gorilla/mux"
 	"os"
 	"os/signal"
+	"syscall"
+
+	"github.com/gorilla/mux"
 
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/service"
@@ -35,14 +37,14 @@ func main() {
 	ctx := context.Background()
 
 	if err := run(ctx); err != nil {
-		log.Fatal(nil, "fatal runtime error", err)
+		log.Fatal(ctx, "fatal runtime error", err)
 		os.Exit(1)
 	}
 }
 
 func run(ctx context.Context) error {
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, os.Kill)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
 	// Read config
 	cfg, err := config.Get()
@@ -57,7 +59,6 @@ func run(ctx context.Context) error {
 	svcList, err := service.NewServiceList(cfg, BuildTime, GitCommit, Version, r)
 	if err != nil {
 		return errors.Wrap(err, "initialising services failed")
-
 	}
 	log.Info(ctx, "dp-files-api version", log.Data{"version": Version})
 
