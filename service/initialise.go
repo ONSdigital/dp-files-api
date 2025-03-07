@@ -9,11 +9,12 @@ import (
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/v2/http"
-	dps3 "github.com/ONSdigital/dp-s3/v2"
+	dps3 "github.com/ONSdigital/dp-s3/v3"
 	"github.com/ONSdigital/log.go/v2/log"
-	awssdk "github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
+	awssdk "github.com/aws/aws-sdk-go-v2/aws"
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gorilla/mux"
 
 	"github.com/ONSdigital/dp-files-api/config"
@@ -80,22 +81,25 @@ func (e *ExternalServiceList) setup() error {
 }
 
 func (e *ExternalServiceList) createS3() (err error) {
+	ctx := context.Background()
 	if e.cfg.LocalstackHost != "" {
-		s, err := session.NewSession(&awssdk.Config{
-			Endpoint:         awssdk.String(e.cfg.LocalstackHost),
-			Region:           awssdk.String(e.cfg.AwsRegion),
-			S3ForcePathStyle: awssdk.Bool(true),
-			Credentials:      credentials.NewStaticCredentials("test", "test", ""),
-		})
-
+		awsConfig, err := awsConfig.LoadDefaultConfig(ctx,
+			awsConfig.WithRegion(e.cfg.AwsRegion),
+			awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("test", "test", "")),
+		)
 		if err != nil {
+			log.Error(ctx, "failed to create aws config", err)
 			return err
 		}
-		e.s3Client = dps3.NewClientWithSession(e.cfg.PrivateBucketName, s)
+
+		e.s3Client = dps3.NewClientWithConfig(e.cfg.PrivateBucketName, awsConfig, func(o *s3.Options) {
+			o.BaseEndpoint = awssdk.String(e.cfg.LocalstackHost)
+			o.UsePathStyle = true
+		})
 		return nil
 	}
 
-	s3Client, err := dps3.NewClient(e.cfg.AwsRegion, e.cfg.PrivateBucketName)
+	s3Client, err := dps3.NewClient(ctx, e.cfg.AwsRegion, e.cfg.PrivateBucketName)
 	if err != nil {
 		return err
 	}
