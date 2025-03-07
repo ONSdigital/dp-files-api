@@ -12,7 +12,7 @@ import (
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -425,7 +425,9 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenUpdateReturnsError() {
 	}
 	s3Client := &s3Mock.S3ClienterMock{
 		CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-		HeadFunc:    func(key string) (*s3.HeadObjectOutput, error) { return &s3.HeadObjectOutput{ETag: &metadata.Etag}, nil },
+		HeadFunc: func(ctx context.Context, key string) (*s3.HeadObjectOutput, error) {
+			return &s3.HeadObjectOutput{ETag: &metadata.Etag}, nil
+		},
 	}
 
 	collectionsCollection := mock.MongoCollectionMock{
@@ -440,7 +442,6 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenUpdateReturnsError() {
 	suite.Error(err)
 }
 
-// here?
 func (suite *StoreSuite) TestMarkFileMovedEtagMismatch() {
 	metadata := suite.generateMetadata(suite.defaultCollectionID)
 
@@ -454,7 +455,9 @@ func (suite *StoreSuite) TestMarkFileMovedEtagMismatch() {
 	}
 	s3Client := &s3Mock.S3ClienterMock{
 		CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-		HeadFunc:    func(key string) (*s3.HeadObjectOutput, error) { return &s3.HeadObjectOutput{ETag: &wrongEtag}, nil },
+		HeadFunc: func(ctx context.Context, key string) (*s3.HeadObjectOutput, error) {
+			return &s3.HeadObjectOutput{ETag: &wrongEtag}, nil
+		},
 	}
 
 	collectionsCollection := mock.MongoCollectionMock{
@@ -481,7 +484,9 @@ func (suite *StoreSuite) TestMarkFileMovedSucceeds() {
 	}
 	s3Client := &s3Mock.S3ClienterMock{
 		CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-		HeadFunc:    func(key string) (*s3.HeadObjectOutput, error) { return &s3.HeadObjectOutput{ETag: &metadata.Etag}, nil },
+		HeadFunc: func(ctx context.Context, key string) (*s3.HeadObjectOutput, error) {
+			return &s3.HeadObjectOutput{ETag: &metadata.Etag}, nil
+		},
 	}
 
 	collectionsCollection := mock.MongoCollectionMock{

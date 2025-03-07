@@ -56,7 +56,7 @@ func run(ctx context.Context) error {
 	svcErrors := make(chan error, 1)
 	r := mux.NewRouter().StrictSlash(true)
 
-	svcList, err := service.NewServiceList(cfg, BuildTime, GitCommit, Version, r)
+	svcList, err := service.NewServiceList(ctx, cfg, BuildTime, GitCommit, Version, r)
 	if err != nil {
 		return errors.Wrap(err, "initialising services failed")
 	}

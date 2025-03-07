@@ -22,10 +22,11 @@ import (
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 
 	dphttp "github.com/ONSdigital/dp-net/v2/http"
-	dps3 "github.com/ONSdigital/dp-s3/v2"
-	awssdk "github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
+	dps3 "github.com/ONSdigital/dp-s3/v3"
+	awssdk "github.com/aws/aws-sdk-go-v2/aws"
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 type fakeServiceContainer struct {
@@ -75,20 +76,19 @@ func (e *fakeServiceContainer) GetClock() clock.Clock {
 
 func (e *fakeServiceContainer) GetS3Clienter() aws.S3Clienter {
 	cfg, _ := config.Get()
-	s, err := session.NewSession(&awssdk.Config{
-		Endpoint:                      awssdk.String("http://localstack:4566"), // "http://localstack:4566"
-		Region:                        awssdk.String(cfg.AwsRegion),
-		S3ForcePathStyle:              awssdk.Bool(true),
-		DisableSSL:                    awssdk.Bool(true),
-		CredentialsChainVerboseErrors: awssdk.Bool(true),
-		Credentials:                   credentials.NewStaticCredentials("test", "test", ""),
-	})
 
+	awsConfig, err := awsConfig.LoadDefaultConfig(context.Background(),
+		awsConfig.WithRegion(cfg.AwsRegion),
+		awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("test", "test", "")),
+	)
 	if err != nil {
 		fmt.Println("S3 ERROR: " + err.Error())
 	}
 
-	return dps3.NewClientWithSession(cfg.PrivateBucketName, s)
+	return dps3.NewClientWithConfig(cfg.PrivateBucketName, awsConfig, func(o *s3.Options) {
+		o.BaseEndpoint = awssdk.String("http://localstack:4566")
+		o.UsePathStyle = true
+	})
 }
 
 func (e *fakeServiceContainer) GetKafkaProducer() kafka.IProducer {
