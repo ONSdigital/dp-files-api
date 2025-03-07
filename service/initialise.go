@@ -40,7 +40,7 @@ type ExternalServiceList struct {
 }
 
 // NewServiceList creates a new service list of dependent services with the provided initialiser
-func NewServiceList(cfg *config.Config, buildTime, gitCommit, version string, router *mux.Router) (*ExternalServiceList, error) {
+func NewServiceList(ctx context.Context, cfg *config.Config, buildTime, gitCommit, version string, router *mux.Router) (*ExternalServiceList, error) {
 	e := &ExternalServiceList{
 		cfg:       cfg,
 		buildTime: buildTime,
@@ -49,13 +49,13 @@ func NewServiceList(cfg *config.Config, buildTime, gitCommit, version string, ro
 		router:    router,
 	}
 
-	if err := e.setup(); err != nil {
+	if err := e.setup(ctx); err != nil {
 		return nil, err
 	}
 	return e, nil
 }
 
-func (e *ExternalServiceList) setup() error {
+func (e *ExternalServiceList) setup(ctx context.Context) error {
 	if err := e.createHealthCheck(); err != nil {
 		return err
 	}
@@ -73,15 +73,14 @@ func (e *ExternalServiceList) setup() error {
 		return err
 	}
 
-	if err := e.createS3(); err != nil {
+	if err := e.createS3(ctx); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (e *ExternalServiceList) createS3() (err error) {
-	ctx := context.Background()
+func (e *ExternalServiceList) createS3(ctx context.Context) (err error) {
 	if e.cfg.LocalstackHost != "" {
 		awsConfig, err := awsConfig.LoadDefaultConfig(ctx,
 			awsConfig.WithRegion(e.cfg.AwsRegion),
