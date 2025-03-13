@@ -21,7 +21,10 @@ func HandleGetFileMetadata(getMetadata GetFileMetadata) http.HandlerFunc {
 			return
 		}
 
-		json.NewEncoder(w).Encode(metadata)
+		if err := json.NewEncoder(w).Encode(metadata); err != nil {
+			handleError(w, err)
+			return
+		}
 
 		w.WriteHeader(http.StatusOK)
 	}

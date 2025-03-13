@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -30,7 +30,7 @@ func TestMarkFileUploadCompleteUnsuccessful(t *testing.T) {
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	assert.Contains(t, string(response), "it's all gone very wrong")
 }
 
@@ -49,25 +49,25 @@ func TestJsonDecodingUploadComplete(t *testing.T) {
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	assert.Contains(t, string(response), "BadJsonEncoding")
 }
 
 func TestValidateUploadComplete(t *testing.T) {
 	tests := []struct {
 		name                     string
-		incomingJson             string
+		incomingJSON             string
 		expectedErrorDescription string
 	}{
 		{
 			name:                     "Validate that etag is required",
-			incomingJson:             `{"": ""}`,
+			incomingJSON:             `{"": ""}`,
 			expectedErrorDescription: "Etag required",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			body := bytes.NewBufferString(test.incomingJson)
+			body := bytes.NewBufferString(test.incomingJSON)
 			req := httptest.NewRequest(http.MethodPatch, "/files/path.jpg", body)
 
 			rec := httptest.NewRecorder()
@@ -79,8 +79,8 @@ func TestValidateUploadComplete(t *testing.T) {
 
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
 
-			expectedResponse := fmt.Sprintf(`{"errors": [{"code": "ValidationError", "description": "%s"}]}`, test.expectedErrorDescription)
-			response, _ := ioutil.ReadAll(rec.Body)
+			expectedResponse := fmt.Sprintf(`{"errors": [{"code": "ValidationError", "description": %q}]}`, test.expectedErrorDescription)
+			response, _ := io.ReadAll(rec.Body)
 			assert.JSONEq(t, expectedResponse, string(response))
 		})
 	}

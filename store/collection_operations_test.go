@@ -350,7 +350,6 @@ func (suite *StoreSuite) TestMarkCollectionPublishedPersistenceFailure() {
 }
 
 func (suite *StoreSuite) TestMarkCollectionPublishedFindCalled() {
-
 	expectedError := errors.New("an error occurred")
 
 	metadataColl := mock.MongoCollectionMock{
@@ -380,7 +379,6 @@ func (suite *StoreSuite) TestMarkCollectionPublishedFindCalled() {
 }
 
 func (suite *StoreSuite) TestNotifyCollectionPublishedFindErrored() {
-
 	expectedError := errors.New("an error occurred")
 
 	collection := mock.MongoCollectionMock{

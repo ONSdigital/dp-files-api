@@ -21,7 +21,7 @@ type RegisterMetadata struct {
 	SizeInBytes   uint64  `json:"size_in_bytes" validate:"gt=0"`
 	Type          string  `json:"type"`
 	Licence       string  `json:"licence" validate:"required"`
-	LicenceUrl    string  `json:"licence_url" validate:"required"`
+	LicenceURL    string  `json:"licence_url" validate:"required"`
 }
 
 func HandlerRegisterUploadStarted(register RegisterFileUpload, deadlineDuration time.Duration) http.HandlerFunc {
@@ -51,13 +51,16 @@ func HandlerRegisterUploadStarted(register RegisterFileUpload, deadlineDuration 
 
 func validateRegisterMetadata(rm RegisterMetadata) error {
 	validate := validator.New()
-	validate.RegisterValidation("aws-upload-key", awsUploadKeyValidator)
+	if err := validate.RegisterValidation("aws-upload-key", awsUploadKeyValidator); err != nil {
+		return err
+	}
 	return validate.Struct(rm)
 }
 
 func getRegisterMetadataFromRequest(req *http.Request) (RegisterMetadata, error) {
 	rm := RegisterMetadata{}
-	return rm, json.NewDecoder(req.Body).Decode(&rm)
+	err := json.NewDecoder(req.Body).Decode(&rm)
+	return rm, err
 }
 
 func generateStoredRegisterMetaData(m RegisterMetadata) files.StoredRegisteredMetaData {
@@ -69,6 +72,6 @@ func generateStoredRegisterMetaData(m RegisterMetadata) files.StoredRegisteredMe
 		SizeInBytes:   m.SizeInBytes,
 		Type:          m.Type,
 		Licence:       m.Licence,
-		LicenceUrl:    m.LicenceUrl,
+		LicenceURL:    m.LicenceURL,
 	}
 }

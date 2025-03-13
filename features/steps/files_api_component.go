@@ -21,11 +21,11 @@ import (
 	"github.com/ONSdigital/log.go/v2/log"
 )
 
-type FilesApiComponent struct {
-	DpHttpServer *dphttp.Server
+type FilesAPIComponent struct {
+	DpHTTPServer *dphttp.Server
 	svc          *service.Service
 	svcList      service.ServiceContainer
-	ApiFeature   *componenttest.APIFeature
+	APIFeature   *componenttest.APIFeature
 	errChan      chan error
 	mongoClient  *mongo.Client
 	cg           *kafka.ConsumerGroup
@@ -34,33 +34,33 @@ type FilesApiComponent struct {
 	isAuthorised bool
 }
 
-func NewFilesApiComponent() *FilesApiComponent {
+func NewFilesAPIComponent() *FilesAPIComponent {
 	s := dphttp.NewServer("", http.NewServeMux())
 	s.HandleOSSignals = false
 
-	d := &FilesApiComponent{
-		DpHttpServer: s,
+	c := &FilesAPIComponent{
+		DpHTTPServer: s,
 		errChan:      make(chan error),
 	}
 
 	log.Namespace = "dp-files-api"
 
-	d.isPublishing = true
+	c.isPublishing = true
 
-	return d
+	return c
 }
 
-func (d *FilesApiComponent) Initialiser() (http.Handler, error) {
+func (c *FilesAPIComponent) Initialiser() (http.Handler, error) {
 	r := &mux.Router{}
-	d.svcList = &fakeServiceContainer{d.DpHttpServer, r, d.isAuthorised}
+	c.svcList = &fakeServiceContainer{c.DpHTTPServer, r, c.isAuthorised}
 	cfg, _ := config.Get()
-	cfg.IsPublishing = d.isPublishing
-	d.svc, _ = service.Run(context.Background(), d.svcList, d.errChan, cfg, r)
+	cfg.IsPublishing = c.isPublishing
+	c.svc, _ = service.Run(context.Background(), c.svcList, c.errChan, cfg, r)
 
-	return d.DpHttpServer.Handler, nil
+	return c.DpHTTPServer.Handler, nil
 }
 
-func (d *FilesApiComponent) Reset() {
+func (c *FilesAPIComponent) Reset() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -68,38 +68,59 @@ func (d *FilesApiComponent) Reset() {
 		context.Background(),
 		options.Client().ApplyURI("mongodb://root:password@mongo:27017"))
 
-	d.mongoClient = client
-	d.mongoClient.Database("files").Collection("metadata").Drop(ctx)
-	d.mongoClient.Database("files").CreateCollection(ctx, "metadata")
-	d.mongoClient.Database("files").Collection("metadata").Indexes().CreateOne(
+	c.mongoClient = client
+	if err := c.mongoClient.Database("files").Collection("metadata").Drop(ctx); err != nil {
+		log.Error(ctx, "failed to drop metadata collection", err)
+		panic(err)
+	}
+	if err := c.mongoClient.Database("files").CreateCollection(ctx, "metadata"); err != nil {
+		log.Error(ctx, "failed to create metadata collection", err)
+		panic(err)
+	}
+	if _, err := c.mongoClient.Database("files").Collection("metadata").Indexes().CreateOne(
 		ctx,
 		mongo.IndexModel{
-			Keys:    bson.D{{"path", 1}},
+			Keys:    bson.D{{Key: "path", Value: 1}},
 			Options: options.Index().SetUnique(true),
 		},
-	)
-	d.mongoClient.Database("files").Collection("collections").Drop(ctx)
-	d.mongoClient.Database("files").CreateCollection(ctx, "collections")
-	d.mongoClient.Database("files").Collection("collections").Indexes().CreateOne(
+	); err != nil {
+		log.Error(ctx, "failed to create index on metadata collection", err)
+		panic(err)
+	}
+	if err := c.mongoClient.Database("files").Collection("collections").Drop(ctx); err != nil {
+		log.Error(ctx, "failed to drop collections collection", err)
+		panic(err)
+	}
+	if err := c.mongoClient.Database("files").CreateCollection(ctx, "collections"); err != nil {
+		log.Error(ctx, "failed to create collections collection", err)
+		panic(err)
+	}
+	if _, err := c.mongoClient.Database("files").Collection("collections").Indexes().CreateOne(
 		ctx,
 		mongo.IndexModel{
-			Keys:    bson.D{{"id", 1}},
+			Keys:    bson.D{{Key: "id", Value: 1}},
 			Options: options.Index().SetUnique(true),
 		},
-	)
-	d.isPublishing = true
+	); err != nil {
+		log.Error(ctx, "failed to create index on collections collection", err)
+		panic(err)
+	}
+	c.isPublishing = true
 }
 
-func (d *FilesApiComponent) Close() error {
-	if d.cg != nil {
-		d.cg.Stop()
+func (c *FilesAPIComponent) Close() error {
+	if c.cg != nil {
+		if err := c.cg.Stop(); err != nil {
+			return err
+		}
 	}
 
 	cfg, _ := config.Get()
 
-	if d.svc != nil {
-		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-		return d.svc.Close(ctx, cfg.GracefulShutdownTimeout)
+	if c.svc != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		return c.svc.Close(ctx, cfg.GracefulShutdownTimeout)
 	}
 	return nil
 }

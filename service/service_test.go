@@ -24,14 +24,12 @@ import (
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	kafka "github.com/ONSdigital/dp-kafka/v3"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
-
-var svc service.Service
 
 func TestClose(t *testing.T) {
 	Convey("Having a correctly initialised service in publishing mode", t, func() {
@@ -55,7 +53,9 @@ func TestClose(t *testing.T) {
 		}
 		s3Client := &s3Mock.S3ClienterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-			HeadFunc:    func(key string) (*s3.HeadObjectOutput, error) { return &s3.HeadObjectOutput{}, nil },
+			HeadFunc: func(ctx context.Context, key string) (*s3.HeadObjectOutput, error) {
+				return &s3.HeadObjectOutput{}, nil
+			},
 		}
 
 		serviceList := &mock.ServiceContainerMock{
@@ -141,7 +141,9 @@ func TestClose(t *testing.T) {
 
 		s3Client := &s3Mock.S3ClienterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-			HeadFunc:    func(key string) (*s3.HeadObjectOutput, error) { return &s3.HeadObjectOutput{}, nil },
+			HeadFunc: func(ctx context.Context, key string) (*s3.HeadObjectOutput, error) {
+				return &s3.HeadObjectOutput{}, nil
+			},
 		}
 
 		serviceList := &mock.ServiceContainerMock{

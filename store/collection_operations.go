@@ -78,7 +78,7 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 		return ErrCollectionIDAlreadySet
 	}
 
-	//check to see if collectionID exists and is not-published
+	// check to see if collectionID exists and is not-published
 	published, err := store.IsCollectionPublished(ctx, collectionID)
 	if err != nil {
 		log.Error(ctx, "update collection ID: caught db error", err, logdata)
@@ -93,8 +93,8 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 		ctx,
 		bson.M{"path": path},
 		bson.D{
-			{"$set", bson.D{
-				{"collection_id", collectionID}},
+			{Key: "$set", Value: bson.D{
+				{Key: "collection_id", Value: collectionID}},
 			},
 		})
 
@@ -102,8 +102,8 @@ func (store *Store) UpdateCollectionID(ctx context.Context, path, collectionID s
 }
 
 type ChangeFileState struct {
-	State	string	`schema:"state" validate:"required"`
-	Etag	string	`schema:"etag" validate:"required"`
+	State string `schema:"state" validate:"required"`
+	Etag  string `schema:"etag" validate:"required"`
 }
 
 // GetFilesMetadata godoc
@@ -153,25 +153,25 @@ func (store *Store) MarkCollectionPublished(ctx context.Context, collectionID st
 	return nil
 }
 
-func (store *Store) updateCollectionState(ctx context.Context, collectionID string, state string) error {
+func (store *Store) updateCollectionState(ctx context.Context, collectionID, state string) error {
 	logdata := log.Data{"collection_id": collectionID, "state": state}
 
 	now := store.clock.GetCurrentTime()
 
 	fields := bson.D{
-		{fieldState, state},
-		{fieldLastModified, now},
+		{Key: fieldState, Value: state},
+		{Key: fieldLastModified, Value: now},
 	}
 
 	if state == StatePublished {
-		fields = append(fields, bson.E{fieldPublishedAt, now})
+		fields = append(fields, bson.E{Key: fieldPublishedAt, Value: now})
 	}
 
 	_, err := store.collectionsCollection.Upsert(
 		ctx,
 		bson.M{fieldID: collectionID},
 		bson.D{
-			{"$set", fields},
+			{Key: "$set", Value: fields},
 		})
 	if err != nil {
 		log.Error(ctx, fmt.Sprintf("failed to change collection %v to %s state", collectionID, state), err, logdata)
@@ -241,24 +241,24 @@ func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID 
 	totalCount, _ := store.metadataCollection.Count(ctx, bson.M{fieldCollectionID: collectionID})
 	log.Info(ctx, "notify collection published start", log.Data{"collection_id": collectionID, "total_files": totalCount})
 	// balance the number of batches Vs batch size
-	batch_size := store.cfg.MinBatchSize
-	num_batches := int(math.Ceil(float64(totalCount) / float64(batch_size)))
-	if num_batches > store.cfg.MaxNumBatches {
-		num_batches = store.cfg.MaxNumBatches
-		batch_size = int(math.Ceil(float64(totalCount) / float64(num_batches)))
+	batchSize := store.cfg.MinBatchSize
+	numBatches := int(math.Ceil(float64(totalCount) / float64(batchSize)))
+	if numBatches > store.cfg.MaxNumBatches {
+		numBatches = store.cfg.MaxNumBatches
+		batchSize = int(math.Ceil(float64(totalCount) / float64(numBatches)))
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(num_batches)
-	for i := 0; i < num_batches; i++ {
-		offset := i * batch_size
+	wg.Add(numBatches)
+	for i := 0; i < numBatches; i++ {
+		offset := i * batchSize
 		cursor, err := store.metadataCollection.FindCursor(ctx, bson.M{fieldCollectionID: collectionID}, mongodriver.Offset(offset))
 		if err != nil {
 			wg.Done()
 			log.Error(ctx, "BatchSendKafkaMessages: failed to query collection", err, log.Data{"collection_id": collectionID})
 			continue
 		}
-		go store.BatchSendKafkaMessages(ctx, cursor, &wg, collectionID, offset, batch_size, i)
+		go store.BatchSendKafkaMessages(ctx, cursor, &wg, collectionID, offset, batchSize, i)
 	}
 	wg.Wait()
 
@@ -271,11 +271,11 @@ func (store *Store) BatchSendKafkaMessages(
 	wg *sync.WaitGroup,
 	collectionID string,
 	offset,
-	batch_size,
-	batch_num int,
+	batchSize,
+	batchNum int,
 ) {
 	defer wg.Done()
-	ld := log.Data{"collection_id": collectionID, "offset": offset, "batch_size": batch_size, "batch_num": batch_num}
+	ld := log.Data{"collection_id": collectionID, "offset": offset, "batch_size": batchSize, "batch_num": batchNum}
 	log.Info(ctx, "BatchSendKafkaMessages", ld)
 	defer func() {
 		if err := cursor.Close(ctx); err != nil {
@@ -283,7 +283,7 @@ func (store *Store) BatchSendKafkaMessages(
 		}
 	}()
 
-	for i := 0; i < batch_size; i++ {
+	for i := 0; i < batchSize; i++ {
 		if cursor.Next(ctx) {
 			var m files.StoredRegisteredMetaData
 			if err := cursor.Decode(&m); err != nil {

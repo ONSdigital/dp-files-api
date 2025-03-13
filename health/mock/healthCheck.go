@@ -17,28 +17,28 @@ var _ health.Checker = &CheckerMock{}
 
 // CheckerMock is a mock implementation of health.Checker.
 //
-// 	func TestSomethingThatUsesChecker(t *testing.T) {
+//	func TestSomethingThatUsesChecker(t *testing.T) {
 //
-// 		// make and configure a mocked health.Checker
-// 		mockedChecker := &CheckerMock{
-// 			AddCheckFunc: func(name string, checker healthcheck.Checker) error {
-// 				panic("mock out the AddCheck method")
-// 			},
-// 			HandlerFunc: func(w http.ResponseWriter, req *http.Request)  {
-// 				panic("mock out the Handler method")
-// 			},
-// 			StartFunc: func(ctx context.Context)  {
-// 				panic("mock out the Start method")
-// 			},
-// 			StopFunc: func()  {
-// 				panic("mock out the Stop method")
-// 			},
-// 		}
+//		// make and configure a mocked health.Checker
+//		mockedChecker := &CheckerMock{
+//			AddCheckFunc: func(name string, checker healthcheck.Checker) error {
+//				panic("mock out the AddCheck method")
+//			},
+//			HandlerFunc: func(w http.ResponseWriter, req *http.Request)  {
+//				panic("mock out the Handler method")
+//			},
+//			StartFunc: func(ctx context.Context)  {
+//				panic("mock out the Start method")
+//			},
+//			StopFunc: func()  {
+//				panic("mock out the Stop method")
+//			},
+//		}
 //
-// 		// use mockedChecker in code that requires health.Checker
-// 		// and then make assertions.
+//		// use mockedChecker in code that requires health.Checker
+//		// and then make assertions.
 //
-// 	}
+//	}
 type CheckerMock struct {
 	// AddCheckFunc mocks the AddCheck method.
 	AddCheckFunc func(name string, checker healthcheck.Checker) error
@@ -103,7 +103,8 @@ func (mock *CheckerMock) AddCheck(name string, checker healthcheck.Checker) erro
 
 // AddCheckCalls gets all the calls that were made to AddCheck.
 // Check the length with:
-//     len(mockedChecker.AddCheckCalls())
+//
+//	len(mockedChecker.AddCheckCalls())
 func (mock *CheckerMock) AddCheckCalls() []struct {
 	Name    string
 	Checker healthcheck.Checker
@@ -138,7 +139,8 @@ func (mock *CheckerMock) Handler(w http.ResponseWriter, req *http.Request) {
 
 // HandlerCalls gets all the calls that were made to Handler.
 // Check the length with:
-//     len(mockedChecker.HandlerCalls())
+//
+//	len(mockedChecker.HandlerCalls())
 func (mock *CheckerMock) HandlerCalls() []struct {
 	W   http.ResponseWriter
 	Req *http.Request
@@ -171,7 +173,8 @@ func (mock *CheckerMock) Start(ctx context.Context) {
 
 // StartCalls gets all the calls that were made to Start.
 // Check the length with:
-//     len(mockedChecker.StartCalls())
+//
+//	len(mockedChecker.StartCalls())
 func (mock *CheckerMock) StartCalls() []struct {
 	Ctx context.Context
 } {
@@ -199,7 +202,8 @@ func (mock *CheckerMock) Stop() {
 
 // StopCalls gets all the calls that were made to Stop.
 // Check the length with:
-//     len(mockedChecker.StopCalls())
+//
+//	len(mockedChecker.StopCalls())
 func (mock *CheckerMock) StopCalls() []struct {
 } {
 	var calls []struct {
