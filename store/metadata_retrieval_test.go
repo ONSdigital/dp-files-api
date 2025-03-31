@@ -20,7 +20,7 @@ func (suite *StoreSuite) TestGetFileMetadataNotFoundError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	_, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -35,7 +35,7 @@ func (suite *StoreSuite) TestGetFileMetadataOtherError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	_, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	suite.EqualError(err, "find error")
@@ -51,7 +51,7 @@ func (suite *StoreSuite) TestGetFileMetadataNoCollectionPatching() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	actualMetadata, _ := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	suite.Exactly(expectedMetadata, actualMetadata)
@@ -73,7 +73,7 @@ func (suite *StoreSuite) TestGetFileMetadataCollectionError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	actualMetadata, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -99,7 +99,7 @@ func (suite *StoreSuite) TestGetFileMetadataWithCollectionPatching() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	actualMetadata, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	suite.NoError(err)
@@ -128,7 +128,7 @@ func (suite *StoreSuite) TestGetFilesMetadataNoPatching() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	expectedMetadata := []files.StoredRegisteredMetaData{metadata1, metadata2}
 	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID)
@@ -159,7 +159,7 @@ func (suite *StoreSuite) TestGetFilesMetadataWithPatching() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	expectedMetadata := []files.StoredRegisteredMetaData{metadata1, metadata2}
 	expectedMetadata[0].State = store.StatePublished
@@ -193,7 +193,7 @@ func (suite *StoreSuite) TestGetFilesMetadataNoResult() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	expectedMetadata := make([]files.StoredRegisteredMetaData, 0)
 	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, "INVALID_COLLECTION_ID")
@@ -211,7 +211,7 @@ func (suite *StoreSuite) TestGetFilesMetadataFindError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID)
 
@@ -232,7 +232,7 @@ func (suite *StoreSuite) TestGetFilesMetadataCollectionError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID)
 
@@ -241,7 +241,7 @@ func (suite *StoreSuite) TestGetFilesMetadataCollectionError() {
 }
 
 func (suite *StoreSuite) TestPatchMetadataNilMetadata() {
-	subject := store.NewStore(nil, nil, nil, suite.defaultClock, nil, nil)
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	var metadata *files.StoredRegisteredMetaData
 	collection := &files.StoredCollection{}
@@ -251,7 +251,7 @@ func (suite *StoreSuite) TestPatchMetadataNilMetadata() {
 }
 
 func (suite *StoreSuite) TestPatchMetadataNilCollection() {
-	subject := store.NewStore(nil, nil, nil, suite.defaultClock, nil, nil)
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	collectionID := "coll1"
 	metadata := files.StoredRegisteredMetaData{
@@ -266,7 +266,7 @@ func (suite *StoreSuite) TestPatchMetadataNilCollection() {
 }
 
 func (suite *StoreSuite) TestPatchMetadataNilCollectionID() {
-	subject := store.NewStore(nil, nil, nil, suite.defaultClock, nil, nil)
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	metadata := files.StoredRegisteredMetaData{
 		Path:  "path1",
@@ -284,7 +284,7 @@ func (suite *StoreSuite) TestPatchMetadataNilCollectionID() {
 }
 
 func (suite *StoreSuite) TestPatchMetadataCollectionIDMismatch() {
-	subject := store.NewStore(nil, nil, nil, suite.defaultClock, nil, nil)
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	collectionID := "coll1"
 	metadata := files.StoredRegisteredMetaData{
@@ -304,7 +304,7 @@ func (suite *StoreSuite) TestPatchMetadataCollectionIDMismatch() {
 }
 
 func (suite *StoreSuite) TestPatchMetadataBadState() {
-	subject := store.NewStore(nil, nil, nil, suite.defaultClock, nil, nil)
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	collectionID := "coll1"
 	metadata := files.StoredRegisteredMetaData{
@@ -324,7 +324,7 @@ func (suite *StoreSuite) TestPatchMetadataBadState() {
 }
 
 func (suite *StoreSuite) TestPatchMetadataBadCollectionState() {
-	subject := store.NewStore(nil, nil, nil, suite.defaultClock, nil, nil)
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	collectionID := "coll1"
 	metadata := files.StoredRegisteredMetaData{
@@ -343,7 +343,7 @@ func (suite *StoreSuite) TestPatchMetadataBadCollectionState() {
 }
 
 func (suite *StoreSuite) TestPatchMetadataSuccess() {
-	subject := store.NewStore(nil, nil, nil, suite.defaultClock, nil, nil)
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	collectionID := "coll1"
 	publishedAt := suite.generateTestTime(1)

@@ -34,7 +34,7 @@ func TestConfig(t *testing.T) {
 				So(testCfg.MinBatchSize, ShouldEqual, 20)
 				So(testCfg.MongoConfig.ClusterEndpoint, ShouldEqual, "localhost:27017")
 				So(testCfg.MongoConfig.Database, ShouldEqual, "files")
-				So(testCfg.MongoConfig.Collections, ShouldResemble, map[string]string{MetadataCollection: "metadata", CollectionsCollection: "collections"})
+				So(testCfg.MongoConfig.Collections, ShouldResemble, map[string]string{MetadataCollection: "metadata", CollectionsCollection: "collections", BundlesCollection: "bundles"})
 				So(testCfg.MongoConfig.IsStrongReadConcernEnabled, ShouldEqual, false)
 				So(testCfg.MongoConfig.IsWriteConcernMajorityEnabled, ShouldEqual, true)
 				So(testCfg.MongoConfig.ConnectTimeout, ShouldEqual, 5*time.Second)
