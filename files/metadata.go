@@ -8,6 +8,7 @@ type StoredRegisteredMetaData struct {
 	Path              string     `bson:"path" json:"path"`
 	IsPublishable     bool       `bson:"is_publishable" json:"is_publishable"`
 	CollectionID      *string    `bson:"collection_id,omitempty" json:"collection_id,omitempty"`
+	BundleID          *string    `bson:"bundle_id,omitempty" json:"bundle_id,omitempty"`
 	Title             string     `bson:"title" json:"title"`
 	SizeInBytes       uint64     `bson:"size_in_bytes" json:"size_in_bytes"`
 	Type              string     `bson:"type" json:"type"`

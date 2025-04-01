@@ -45,13 +45,13 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 		return errFindingMetadata
 	}
 
-	if m.State == StateUploaded && *m.CollectionID == *metaData.CollectionID {
+	if m.State == StateUploaded && (*m.CollectionID == *metaData.CollectionID || m.BundleID == metaData.BundleID) {
 		log.Info(ctx, "File upload already registered: skipping registration of file metadata", logdata)
 		return nil
 	}
 
 	// delete existing file metadata if file upload comes from a different collection
-	if m.State == StateUploaded && *m.CollectionID != *metaData.CollectionID {
+	if m.State == StateUploaded && (*m.CollectionID != *metaData.CollectionID || m.BundleID != metaData.BundleID) {
 		result, err := store.metadataCollection.Delete(ctx, bson.M{fieldPath: metaData.Path})
 		if err != nil {
 			log.Error(ctx, "error while deleting metadata", err, logdata)
@@ -75,6 +75,20 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 			return ErrCollectionAlreadyPublished
 		}
 	}
+
+	// check to see if bundleID exists and is not-published
+	if metaData.BundleID != nil {
+		logdata["bundle_id"] = *metaData.BundleID
+		published, err := store.IsBundlePublished(ctx, *metaData.BundleID)
+		if err != nil {
+			log.Error(ctx, "bundle published check error", err, logdata)
+			return err
+		}
+		if published {
+			log.Error(ctx, "bundle is already published", ErrBundleAlreadyPublished, logdata)
+			return ErrBundleAlreadyPublished
+		}
+	}
 	now := store.clock.GetCurrentTime()
 	metaData.CreatedAt = now
 	metaData.LastModified = now
@@ -92,6 +106,14 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 		err := store.registerCollection(ctx, *metaData.CollectionID)
 		if err != nil {
 			log.Error(ctx, "failed to register collection", err, logdata)
+			return err
+		}
+	}
+
+	if metaData.BundleID != nil {
+		err := store.registerBundle(ctx, *metaData.BundleID)
+		if err != nil {
+			log.Error(ctx, "failed to register bundle", err, logdata)
 			return err
 		}
 	}

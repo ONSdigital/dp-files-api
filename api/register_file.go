@@ -17,6 +17,7 @@ type RegisterMetadata struct {
 	Path          string  `json:"path" validate:"required,aws-upload-key"`
 	IsPublishable *bool   `json:"is_publishable,omitempty" validate:"required"`
 	CollectionID  *string `json:"collection_id,omitempty"`
+	BundleID      *string `json:"bundle_id,omitempty"`
 	Title         string  `json:"title"`
 	SizeInBytes   uint64  `json:"size_in_bytes" validate:"gt=0"`
 	Type          string  `json:"type"`
@@ -68,6 +69,7 @@ func generateStoredRegisterMetaData(m RegisterMetadata) files.StoredRegisteredMe
 		Path:          m.Path,
 		IsPublishable: *m.IsPublishable,
 		CollectionID:  m.CollectionID,
+		BundleID:      m.BundleID,
 		Title:         m.Title,
 		SizeInBytes:   m.SizeInBytes,
 		Type:          m.Type,

@@ -24,7 +24,7 @@ func (store *Store) IsCollectionPublished(ctx context.Context, collectionID stri
 		// to the older method that checks the file statuses (if all files in the collection are marked
 		// as published, we consider the collection published).
 		if errors.Is(err, ErrCollectionMetadataNotRegistered) {
-			return store.AreAllFilesPublished(ctx, collectionID)
+			return store.AreAllCollectionFilesPublished(ctx, collectionID)
 		}
 		// we've hit an unexpected error
 		return false, fmt.Errorf("collection published check: %w", err)
@@ -35,10 +35,10 @@ func (store *Store) IsCollectionPublished(ctx context.Context, collectionID stri
 	return false, nil
 }
 
-func (store *Store) AreAllFilesPublished(ctx context.Context, collectionID string) (bool, error) {
+func (store *Store) AreAllCollectionFilesPublished(ctx context.Context, collectionID string) (bool, error) {
 	empty, err := store.IsCollectionEmpty(ctx, collectionID)
 	if err != nil {
-		return false, fmt.Errorf("AreAllFilesPublished empty collection check: %w", err)
+		return false, fmt.Errorf("AreAllCollectionFilesPublished empty collection check: %w", err)
 	}
 	if empty {
 		return false, nil
@@ -54,7 +54,7 @@ func (store *Store) AreAllFilesPublished(ctx context.Context, collectionID strin
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			return true, nil
 		}
-		return false, fmt.Errorf("AreAllFilesPublished check: %w", err)
+		return false, fmt.Errorf("AreAllCollectionFilesPublished check: %w", err)
 	}
 	return false, nil
 }
