@@ -42,7 +42,7 @@ func (suite *StoreSuite) TestGetFileMetadataOtherError() {
 }
 
 func (suite *StoreSuite) TestGetFileMetadataNoCollectionPatching() {
-	expectedMetadata := suite.generateMetadata(suite.defaultCollectionID)
+	expectedMetadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 
 	metadataBytes, _ := bson.Marshal(expectedMetadata)
 
@@ -61,7 +61,7 @@ func (suite *StoreSuite) TestGetFileMetadataCollectionError() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	expectedMetadata := suite.generateMetadata(suite.defaultCollectionID)
+	expectedMetadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	expectedMetadata.State = store.StateUploaded
 	metadataBytes, _ := bson.Marshal(expectedMetadata)
 
@@ -84,7 +84,7 @@ func (suite *StoreSuite) TestGetFileMetadataCollectionError() {
 }
 
 func (suite *StoreSuite) TestGetFileMetadataWithCollectionPatching() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata.State = store.StateUploaded
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -112,9 +112,9 @@ func (suite *StoreSuite) TestGetFileMetadataWithCollectionPatching() {
 }
 
 func (suite *StoreSuite) TestGetFilesMetadataNoPatching() {
-	metadata1 := suite.generateMetadata(suite.defaultCollectionID)
+	metadata1 := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata1.Path += "1"
-	metadata2 := suite.generateMetadata(suite.defaultCollectionID)
+	metadata2 := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata2.Path += "2"
 
 	metadataColl := mock.MongoCollectionMock{
@@ -138,10 +138,10 @@ func (suite *StoreSuite) TestGetFilesMetadataNoPatching() {
 }
 
 func (suite *StoreSuite) TestGetFilesMetadataWithPatching() {
-	metadata1 := suite.generateMetadata(suite.defaultCollectionID)
+	metadata1 := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata1.Path += "1"
 	metadata1.State = store.StateUploaded
-	metadata2 := suite.generateMetadata(suite.defaultCollectionID)
+	metadata2 := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata2.Path += "2"
 	metadata2.State = store.StateUploaded
 
@@ -220,7 +220,7 @@ func (suite *StoreSuite) TestGetFilesMetadataFindError() {
 }
 
 func (suite *StoreSuite) TestGetFilesMetadataCollectionError() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadataColl := mock.MongoCollectionMock{
 		FindFunc: CollectionFindReturnsMetadataOnFilter(
 			[]files.StoredRegisteredMetaData{metadata},

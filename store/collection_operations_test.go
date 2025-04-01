@@ -63,7 +63,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDCollectionIDAlreadySet() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
@@ -85,7 +85,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDCollectionCheckFail() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	metadata := suite.generateMetadata("")
+	metadata := suite.generateCollectionMetadata("")
 	metadata.State = store.StateUploaded
 	metadata.CollectionID = nil
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -115,7 +115,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDCollectionAlreadyPublished() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	metadata := suite.generateMetadata("")
+	metadata := suite.generateCollectionMetadata("")
 	metadata.State = store.StatePublished
 	metadata.CollectionID = nil
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -142,7 +142,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDCollectionAlreadyPublished() {
 }
 
 func (suite *StoreSuite) TestUpdateCollectionIDUpdateReturnsError() {
-	metadata := suite.generateMetadata("")
+	metadata := suite.generateCollectionMetadata("")
 	metadata.State = store.StateUploaded
 	metadata.CollectionID = nil
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -169,7 +169,7 @@ func (suite *StoreSuite) TestUpdateCollectionIDUpdateReturnsError() {
 }
 
 func (suite *StoreSuite) TestUpdateCollectionIDUpdateSuccess() {
-	metadata := suite.generateMetadata("")
+	metadata := suite.generateCollectionMetadata("")
 	metadata.State = store.StateUploaded
 	metadata.CollectionID = nil
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -398,7 +398,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedFindErrored() {
 }
 
 func (suite *StoreSuite) TestNotifyCollectionPublishedPersistenceSuccess() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	cursor := mock.MongoCursorMock{
@@ -448,7 +448,7 @@ func (suite *StoreSuite) TestBatchingWithLargeNumberOfFiles() {
 	cfg, _ := config.Get()
 	expectedBatchSize := int(math.Ceil(float64(numFiles) / float64(cfg.MaxNumBatches)))
 
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	cursor := mock.MongoCursorMock{
@@ -496,7 +496,7 @@ func (suite *StoreSuite) TestBatchingWithLargeNumberOfFiles() {
 }
 
 func (suite *StoreSuite) TestNotifyCollectionPublishedKafkaErrorDoesNotFailOperation() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	kafkaError := errors.New("an error occurred with Kafka")
