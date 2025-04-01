@@ -105,6 +105,24 @@ func (c *FilesAPIComponent) Reset() {
 		log.Error(ctx, "failed to create index on collections collection", err)
 		panic(err)
 	}
+	if err := c.mongoClient.Database("files").Collection("bundles").Drop(ctx); err != nil {
+		log.Error(ctx, "failed to drop bundles collection", err)
+		panic(err)
+	}
+	if err := c.mongoClient.Database("files").CreateCollection(ctx, "bundles"); err != nil {
+		log.Error(ctx, "failed to create bundles collection", err)
+		panic(err)
+	}
+	if _, err := c.mongoClient.Database("files").Collection("bundles").Indexes().CreateOne(
+		ctx,
+		mongo.IndexModel{
+			Keys:    bson.D{{Key: "id", Value: 1}},
+			Options: options.Index().SetUnique(true),
+		},
+	); err != nil {
+		log.Error(ctx, "failed to create index on bundles collection", err)
+		panic(err)
+	}
 	c.isPublishing = true
 }
 
