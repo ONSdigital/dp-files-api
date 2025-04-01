@@ -12,7 +12,7 @@ import (
 )
 
 func (suite *StoreSuite) TestGetBundlePublishedMetadataSuccess() {
-	expectedBundle := files.StoredCollection{
+	expectedBundle := files.StoredBundle{
 		ID:    suite.defaultBundleID,
 		State: store.StatePublished,
 	}
@@ -43,7 +43,7 @@ func (suite *StoreSuite) TestGetBundlePublishedMetadataNotFound() {
 
 	suite.Error(err)
 	suite.ErrorIs(err, store.ErrBundleMetadataNotRegistered)
-	suite.Equal(files.StoredCollection{}, actualBundle)
+	suite.Equal(files.StoredBundle{}, actualBundle)
 }
 
 func (suite *StoreSuite) TestGetBundlePublishedMetadataUnexpectedError() {
@@ -60,10 +60,10 @@ func (suite *StoreSuite) TestGetBundlePublishedMetadataUnexpectedError() {
 
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
-	suite.Equal(files.StoredCollection{}, actualBundle)
+	suite.Equal(files.StoredBundle{}, actualBundle)
 }
 func (suite *StoreSuite) TestIsBundlePublishedSuccess() {
-	expectedBundle := files.StoredCollection{
+	expectedBundle := files.StoredBundle{
 		ID:    suite.defaultBundleID,
 		State: store.StatePublished,
 	}
@@ -83,7 +83,7 @@ func (suite *StoreSuite) TestIsBundlePublishedSuccess() {
 }
 
 func (suite *StoreSuite) TestIsBundlePublishedNotPublishedState() {
-	expectedBundle := files.StoredCollection{
+	expectedBundle := files.StoredBundle{
 		ID:    suite.defaultBundleID,
 		State: store.StateCreated,
 	}

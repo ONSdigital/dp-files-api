@@ -30,6 +30,12 @@ type StoredCollection struct {
 	PublishedAt  *time.Time `bson:"published_at,omitempty" json:"-"`
 }
 
+type StoredBundle struct {
+	ID           string    `bson:"id" json:"id"`
+	State        string    `bson:"state" json:"state"`
+	LastModified time.Time `bson:"last_modified" json:"-"`
+}
+
 type FileEtagChange struct {
 	Path string
 	Etag string

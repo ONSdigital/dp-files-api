@@ -102,7 +102,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenBundleAlreadyPublished() {
 	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
 	metadata.State = store.StatePublished
 
-	bundle, _ := bson.Marshal(files.StoredCollection{
+	bundle, _ := bson.Marshal(files.StoredBundle{
 		State: store.StatePublished,
 	})
 	bundleCollection := mock.MongoCollectionMock{

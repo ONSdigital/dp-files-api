@@ -31,15 +31,15 @@ func (store *Store) IsBundlePublished(ctx context.Context, bundleID string) (boo
 	return false, nil
 }
 
-func (store *Store) GetBundlePublishedMetadata(ctx context.Context, id string) (files.StoredCollection, error) {
-	bundle := files.StoredCollection{}
+func (store *Store) GetBundlePublishedMetadata(ctx context.Context, id string) (files.StoredBundle, error) {
+	bundle := files.StoredBundle{}
 	err := store.bundlesCollection.FindOne(ctx, bson.M{fieldID: id}, &bundle)
 	if err != nil {
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
-			return files.StoredCollection{}, ErrBundleMetadataNotRegistered
+			return files.StoredBundle{}, ErrBundleMetadataNotRegistered
 		}
 		log.Error(ctx, "bundle metadata fetch error", err, log.Data{"id": id})
-		return files.StoredCollection{}, err
+		return files.StoredBundle{}, err
 	}
 	return bundle, err
 }
@@ -85,7 +85,7 @@ func (store *Store) IsBundleEmpty(ctx context.Context, bundleID string) (bool, e
 func (store *Store) registerBundle(ctx context.Context, bundleID string) error {
 	logdata := log.Data{"bundle_id": bundleID}
 	now := store.clock.GetCurrentTime()
-	bundle := files.StoredCollection{
+	bundle := files.StoredBundle{
 		ID:           bundleID,
 		State:        StateCreated,
 		LastModified: now,
