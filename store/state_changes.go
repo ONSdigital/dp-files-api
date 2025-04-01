@@ -34,6 +34,8 @@ const (
 // @Failure      404
 // @Failure      500
 // @Router       /files [post]
+//
+//nolint:gocyclo // cyclomatic complexity is high (> 20) // acceptable for now
 func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 	logdata := log.Data{"path": metaData.Path}
 
