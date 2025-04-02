@@ -30,6 +30,7 @@ type StoreSuite struct {
 	suite.Suite
 	logInterceptor       LogInterceptor
 	defaultCollectionID  string
+	defaultBundleID      string
 	path                 string
 	defaultContext       context.Context
 	defaultClock         steps.TestClock
@@ -211,6 +212,8 @@ func KafkaSendReturnsNil() KafkaSendFunc {
 
 func (suite *StoreSuite) SetupTest() {
 	suite.defaultCollectionID = "123456"
+	suite.defaultBundleID = "789"
+
 	suite.path = "test.txt"
 	suite.defaultContext = context.Background()
 	suite.defaultClock = steps.TestClock{}
@@ -241,7 +244,7 @@ func (suite *StoreSuite) generateTestTime(addedDuration time.Duration) time.Time
 	return time.Now().Add(time.Second * addedDuration).Round(time.Second).UTC()
 }
 
-func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegisteredMetaData {
+func (suite *StoreSuite) generateCollectionMetadata(collectionID string) files.StoredRegisteredMetaData {
 	createdAt := suite.generateTestTime(1)
 	lastModified := suite.generateTestTime(2)
 	uploadCompletedAt := suite.generateTestTime(3)
@@ -252,6 +255,32 @@ func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegis
 		Path:              suite.path,
 		IsPublishable:     true,
 		CollectionID:      &collectionID,
+		Title:             "Test file",
+		SizeInBytes:       10,
+		Type:              "text/plain",
+		Licence:           "MIT",
+		LicenceURL:        "https://opensource.org/licenses/MIT",
+		CreatedAt:         createdAt,
+		LastModified:      lastModified,
+		UploadCompletedAt: &uploadCompletedAt,
+		PublishedAt:       &publishedAt,
+		MovedAt:           &movedAt,
+		State:             store.StateMoved,
+		Etag:              "1234567",
+	}
+}
+
+func (suite *StoreSuite) generateBundleMetadata(bundleID string) files.StoredRegisteredMetaData {
+	createdAt := suite.generateTestTime(1)
+	lastModified := suite.generateTestTime(2)
+	uploadCompletedAt := suite.generateTestTime(3)
+	publishedAt := suite.generateTestTime(4)
+	movedAt := suite.generateTestTime(5)
+
+	return files.StoredRegisteredMetaData{
+		Path:              suite.path,
+		IsPublishable:     true,
+		BundleID:          &bundleID,
 		Title:             "Test file",
 		SizeInBytes:       10,
 		Type:              "text/plain",

@@ -46,7 +46,7 @@ func (s *StoreIntegrationTest) SetupTest() {
 	client.Database("files").Collection("metadata").Drop(s.ctx)
 
 	cfg, _ := config.Get()
-	s.store = store.NewStore(s.mc.Collection(config.MetadataCollection), s.mc.Collection(config.CollectionsCollection), &kafkatest.IProducerMock{}, steps.TestClock{}, nil, cfg)
+	s.store = store.NewStore(s.mc.Collection(config.MetadataCollection), s.mc.Collection(config.CollectionsCollection), s.mc.Collection(config.BundlesCollection), &kafkatest.IProducerMock{}, steps.TestClock{}, nil, cfg)
 }
 
 func TestStoreIntegration(t *testing.T) {

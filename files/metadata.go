@@ -8,6 +8,7 @@ type StoredRegisteredMetaData struct {
 	Path              string     `bson:"path" json:"path"`
 	IsPublishable     bool       `bson:"is_publishable" json:"is_publishable"`
 	CollectionID      *string    `bson:"collection_id,omitempty" json:"collection_id,omitempty"`
+	BundleID          *string    `bson:"bundle_id,omitempty" json:"bundle_id,omitempty"`
 	Title             string     `bson:"title" json:"title"`
 	SizeInBytes       uint64     `bson:"size_in_bytes" json:"size_in_bytes"`
 	Type              string     `bson:"type" json:"type"`
@@ -27,6 +28,12 @@ type StoredCollection struct {
 	State        string     `bson:"state" json:"state"`
 	LastModified time.Time  `bson:"last_modified" json:"-"`
 	PublishedAt  *time.Time `bson:"published_at,omitempty" json:"-"`
+}
+
+type StoredBundle struct {
+	ID           string    `bson:"id" json:"id"`
+	State        string    `bson:"state" json:"state"`
+	LastModified time.Time `bson:"last_modified" json:"-"`
 }
 
 type FileEtagChange struct {

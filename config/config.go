@@ -49,6 +49,7 @@ var cfg *Config
 const (
 	MetadataCollection    = "MetadataCollection"
 	CollectionsCollection = "CollectionsCollection"
+	BundlesCollection     = "BundlesCollection"
 )
 
 // Get returns the default config with any modifications through environment
@@ -75,6 +76,7 @@ func Get() (*Config, error) {
 			Collections: map[string]string{
 				MetadataCollection:    "metadata",
 				CollectionsCollection: "collections",
+				BundlesCollection:     "bundles",
 			},
 			IsStrongReadConcernEnabled:    false,
 			IsWriteConcernMajorityEnabled: true,

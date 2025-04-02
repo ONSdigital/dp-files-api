@@ -20,7 +20,7 @@ func (suite *StoreSuite) TestRegisterFileUploadCollectionPublishedCheckError() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata.State = store.StatePublished
 
 	expectedError := errors.New("collection fetch error")
@@ -34,10 +34,35 @@ func (suite *StoreSuite) TestRegisterFileUploadCollectionPublishedCheckError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataCollection, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataCollection, &collCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("collection published check error"))
+	suite.ErrorIs(err, expectedError)
+}
+
+func (suite *StoreSuite) TestRegisterFileUploadBundlePublishedCheckError() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
+	metadata.State = store.StatePublished
+
+	expectedError := errors.New("bundle fetch error")
+	bundleCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(expectedError),
+	}
+
+	metadataCollection := mock.MongoCollectionMock{
+		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
+		FindOneFunc: CollectionFindOneSucceeds(),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataCollection, nil, &bundleCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
+
+	suite.Equal(true, suite.logInterceptor.IsEventPresent("bundle published check error"))
 	suite.ErrorIs(err, expectedError)
 }
 
@@ -45,7 +70,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenCollectionAlreadyPublished() 
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata.State = store.StatePublished
 
 	coll, _ := bson.Marshal(files.StoredCollection{
@@ -61,7 +86,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenCollectionAlreadyPublished() 
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataCollection, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataCollection, &collCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -70,11 +95,40 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenCollectionAlreadyPublished() 
 	suite.ErrorIs(err, store.ErrCollectionAlreadyPublished)
 }
 
+func (suite *StoreSuite) TestRegisterFileUploadWhenBundleAlreadyPublished() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
+	metadata.State = store.StatePublished
+
+	bundle, _ := bson.Marshal(files.StoredBundle{
+		State: store.StatePublished,
+	})
+	bundleCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(bundle), // bundle is PUBLISHED
+	}
+
+	metadataCollection := mock.MongoCollectionMock{
+		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
+		FindOneFunc: CollectionFindOneSucceeds(),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataCollection, nil, &bundleCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("bundle is already published", logEvent)
+	suite.ErrorIs(err, store.ErrBundleAlreadyPublished)
+}
+
 func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata.State = store.StateUploaded
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -88,7 +142,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&alwaysFindsExistingCollection, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&alwaysFindsExistingCollection, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -98,7 +152,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 }
 
 func (suite *StoreSuite) TestRegisterFileUploadWhenFileDoesNotAlreadyExist() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata.State = ""
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -136,7 +190,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFileDoesNotAlreadyExist() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsZero, &collCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsZero, &collCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.NoError(err)
@@ -146,7 +200,7 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertReturnsError() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata.State = store.StateCreated
 	expectedError := errors.New("error occurred")
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -162,7 +216,7 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertReturnsError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -176,7 +230,7 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertSucceeds() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata.State = store.StateCreated
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -192,7 +246,7 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertSucceeds() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -205,7 +259,7 @@ func (suite *StoreSuite) TestRegisterFileUploadRegisterCollectionFails() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata.State = store.StateCreated
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -222,10 +276,39 @@ func (suite *StoreSuite) TestRegisterFileUploadRegisterCollectionFails() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("failed to register collection"))
+	suite.Error(err)
+	suite.ErrorIs(err, expectedError)
+}
+
+func (suite *StoreSuite) TestRegisterFileUploadRegisterBundleFails() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
+	metadata.State = store.StateCreated
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	collectionCountReturnsZero := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+		InsertFunc:  CollectionInsertReturnsNilAndNil(),
+	}
+	expectedError := errors.New("collection insert error")
+	emptyCollection := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+		InsertFunc: CollectionInsertReturnsNilAndError(expectedError),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionCountReturnsZero, nil, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
+
+	suite.Equal(true, suite.logInterceptor.IsEventPresent("failed to register bundle"))
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
 }
@@ -234,7 +317,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 
 	tests := []struct {
 		currentState string
@@ -259,7 +342,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
 		}
 
 		cfg, _ := config.Get()
-		subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+		subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 		err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
 		logEvents := suite.logInterceptor.GetLogEvents("update file state: state mismatch")
@@ -274,7 +357,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenFileNotExists() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StateCreated
 
@@ -288,7 +371,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenFileNotExists() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
 	logEvents := suite.logInterceptor.GetLogEvents("update file state: attempted to operate on unregistered file")
@@ -299,7 +382,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenFileNotExists() {
 }
 
 func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenUpdateReturnsError() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StateCreated
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -316,7 +399,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenUpdateReturnsError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.Error(err)
@@ -324,7 +407,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenUpdateReturnsError() {
 }
 
 func (suite *StoreSuite) TestMarkUploadCompleteSucceeds() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StateCreated
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -340,7 +423,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteSucceeds() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.NoError(err)
@@ -350,7 +433,7 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenNotInCreatedState() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 
 	tests := []struct {
 		currentState string
@@ -376,7 +459,7 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenNotInCreatedState() {
 		}
 
 		cfg, _ := config.Get()
-		subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+		subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 		err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 		logEvents := suite.logInterceptor.GetLogEvents("update file state: state mismatch")
@@ -391,7 +474,7 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenFileNotExists() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StatePublished
 
@@ -400,7 +483,7 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenFileNotExists() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	logEvents := suite.logInterceptor.GetLogEvents("update file state: attempted to operate on unregistered file")
@@ -412,7 +495,7 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenFileNotExists() {
 }
 
 func (suite *StoreSuite) TestMarkFileMovedFailsWhenUpdateReturnsError() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata.State = store.StatePublished
 	metadata.Etag = "test-etag"
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -436,14 +519,14 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenUpdateReturnsError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
 	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.Error(err)
 }
 
 func (suite *StoreSuite) TestMarkFileMovedEtagMismatch() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StatePublished
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -466,14 +549,14 @@ func (suite *StoreSuite) TestMarkFileMovedEtagMismatch() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
 	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.ErrorIs(err, store.ErrEtagMismatchWhilePublishing, "the actual err was %v", err)
 }
 
 func (suite *StoreSuite) TestMarkFileMovedSucceeds() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 
 	metadata.State = store.StatePublished
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -495,7 +578,7 @@ func (suite *StoreSuite) TestMarkFileMovedSucceeds() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
 	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.NoError(err)
@@ -510,7 +593,7 @@ func (suite *StoreSuite) TestMarkFilePublishedFindReturnsErrNoDocumentFound() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	logEvents := suite.logInterceptor.GetLogEvents("mark file as published: attempted to operate on unregistered file")
@@ -531,7 +614,7 @@ func (suite *StoreSuite) TestMarkFilePublishedFindReturnsUnspecifiedError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -545,7 +628,7 @@ func (suite *StoreSuite) TestMarkFilePublishedCollectionIDNil() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	metadata := suite.generateMetadata("")
+	metadata := suite.generateCollectionMetadata("")
 	metadata.CollectionID = nil
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -554,7 +637,7 @@ func (suite *StoreSuite) TestMarkFilePublishedCollectionIDNil() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -574,7 +657,7 @@ func (suite *StoreSuite) TestMarkFilePublishedStateUploaded() {
 	}
 
 	for _, state := range notUploadedStates {
-		metadata := suite.generateMetadata(suite.defaultCollectionID)
+		metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 		metadata.State = state
 		metadataBytes, _ := bson.Marshal(metadata)
 
@@ -583,7 +666,7 @@ func (suite *StoreSuite) TestMarkFilePublishedStateUploaded() {
 		}
 
 		cfg, _ := config.Get()
-		subject := store.NewStore(&collectionWithUploadedFile, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+		subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 		err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 		logEvent := suite.logInterceptor.GetLogEvent()
@@ -595,7 +678,7 @@ func (suite *StoreSuite) TestMarkFilePublishedStateUploaded() {
 }
 
 func (suite *StoreSuite) TestMarkFilePublishedUpdateReturnsError() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata.State = store.StateUploaded
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -612,7 +695,7 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateReturnsError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
@@ -621,7 +704,7 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateReturnsError() {
 }
 
 func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaReturnsError() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata.State = store.StateUploaded
 	metadataBytes, _ := bson.Marshal(metadata)
 	expectedError := errors.New("an error occurred")
@@ -641,7 +724,7 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaReturnsError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &kafkaMock, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
@@ -651,7 +734,7 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaReturnsError() {
 }
 
 func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaDoesNotReturnError() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata.State = store.StateUploaded
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -670,7 +753,7 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaDoesNotReturnError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, &kafkaMock, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 

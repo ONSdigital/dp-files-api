@@ -67,6 +67,7 @@ type ExpectedMetaData struct {
 	Path          string
 	IsPublishable string
 	CollectionID  string
+	BundleID      string
 	Title         string
 	SizeInBytes   string
 	Type          string
@@ -113,8 +114,6 @@ func (c *FilesAPIComponent) theFollowingDocumentShouldBeCreated(table *godog.Tab
 	res := c.mongoClient.Database("files").Collection("metadata").FindOne(ctx, bson.M{"path": expectedMetaData.Path})
 	assert.NoError(c.APIFeature, res.Decode(&metaData))
 
-	fmt.Println("EXPECTD METADATA", expectedMetaData.CollectionID)
-
 	isPublishable, _ := strconv.ParseBool(expectedMetaData.IsPublishable)
 	sizeInBytes, _ := strconv.ParseUint(expectedMetaData.SizeInBytes, 10, 64)
 	assert.Equal(c.APIFeature, isPublishable, metaData.IsPublishable)
@@ -123,6 +122,12 @@ func (c *FilesAPIComponent) theFollowingDocumentShouldBeCreated(table *godog.Tab
 	} else {
 		assert.Equal(c.APIFeature, expectedMetaData.CollectionID, *metaData.CollectionID)
 	}
+	if expectedMetaData.BundleID == "" {
+		assert.Nil(c.APIFeature, metaData.BundleID)
+	} else {
+		assert.Equal(c.APIFeature, expectedMetaData.BundleID, *metaData.BundleID)
+	}
+
 	assert.Equal(c.APIFeature, expectedMetaData.Title, metaData.Title)
 	assert.Equal(c.APIFeature, sizeInBytes, metaData.SizeInBytes)
 	assert.Equal(c.APIFeature, expectedMetaData.Type, metaData.Type)
@@ -165,6 +170,7 @@ func (c *FilesAPIComponent) theFileUploadHasBeenPublishedWith(path string, table
 		Path:              path,
 		IsPublishable:     isPublishable,
 		CollectionID:      &data.CollectionID,
+		BundleID:          &data.BundleID,
 		Title:             data.Title,
 		SizeInBytes:       sizeInBytes,
 		Type:              data.Type,
@@ -217,6 +223,10 @@ func (c *FilesAPIComponent) theFileUploadHasBeenCompletedWith(path string, table
 		m.CollectionID = &data.CollectionID
 	}
 
+	if data.BundleID != "" {
+		m.BundleID = &data.BundleID
+	}
+
 	_, err = c.mongoClient.Database("files").Collection("metadata").InsertOne(context.Background(), &m)
 	assert.NoError(c.APIFeature, err)
 
@@ -251,6 +261,10 @@ func (c *FilesAPIComponent) theFileUploadHasBeenRegisteredWith(path string, tabl
 
 	if data.CollectionID != "" {
 		m.CollectionID = &data.CollectionID
+	}
+
+	if data.BundleID != "" {
+		m.BundleID = &data.BundleID
 	}
 
 	_, err = c.mongoClient.Database("files").Collection("metadata").InsertOne(context.Background(), &m)

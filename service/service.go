@@ -59,6 +59,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	store := store.NewStore(
 		mongoClient.Collection(config.MetadataCollection),
 		mongoClient.Collection(config.CollectionsCollection),
+		mongoClient.Collection(config.BundlesCollection),
 		kafkaProducer,
 		serviceList.GetClock(),
 		s3Client,
