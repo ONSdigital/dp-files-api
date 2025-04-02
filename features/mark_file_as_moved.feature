@@ -43,7 +43,7 @@ Feature: Mark files as moved
       | State             | PUBLISHED                                                                 |
     When the file "index.html" is marked as moved with etag "987654321"
     Then the HTTP status code should be "200"
-    And the following document entry should be look like:
+    And the following document entry should look like:
       | Path              | index.html                                                                |
       | IsPublishable     | true                                                                      |
       | CollectionID      | 1234-asdfg-54321-qwerty                                                   |

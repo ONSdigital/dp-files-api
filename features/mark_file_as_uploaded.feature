@@ -19,7 +19,7 @@ Feature: Mark files as uploaded
             | State         | CREATED                                                                   |
         When the file upload "images/meme.jpg" is marked as complete with the etag "123456789"
         Then the HTTP status code should be "200"
-        And the following document entry should be look like:
+        And the following document entry should look like:
             | Path              | images/meme.jpg                                                          |
             | IsPublishable     | true                                                                      |
             | CollectionID      | 1234-asdfg-54321-qwerty                                                   |

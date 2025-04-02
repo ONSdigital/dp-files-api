@@ -25,7 +25,7 @@ Feature: Web mode restrictions
     When the file upload "images/meme.jpg" is marked as complete with the etag "123456789"
     Then the HTTP status code should be "403"
 
-  Scenario: The one where I try to mark a file as published
+  Scenario: The one where I try to mark a file as published (collection)
     Given the file upload "images/other-meme.jpg" has been completed with:
       | IsPublishable     | true                                                                      |
       | CollectionID      | 1234-asdfg-54321-qwerty                                                   |
@@ -40,6 +40,23 @@ Feature: Web mode restrictions
       | State             | UPLOADED                                                                  |
       | Etag              | 123456789                                                                 |
     When I publish the collection "1234-asdfg-54321-qwerty"
+    Then the HTTP status code should be "403"
+
+  Scenario: The one where I try to mark a file as published (bundle)
+    Given the file upload "images/other-meme.jpg" has been completed with:
+      | IsPublishable     | true                                                                      |
+      | BundleID          | 1234-asdfg-54321-qwerty                                                   |
+      | Title             | The latest Meme                                                           |
+      | SizeInBytes       | 14794                                                                     |
+      | Type              | image/jpeg                                                                |
+      | Licence           | OGL v3                                                                    |
+      | LicenceURL        | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | CreatedAt         | 2021-10-21T15:13:14Z                                                      |
+      | LastModified      | 2021-10-21T15:14:14Z                                                      |
+      | UploadCompletedAt | 2021-10-21T15:14:14Z                                                      |
+      | State             | UPLOADED                                                                  |
+      | Etag              | 123456789                                                                 |
+    When I publish the bundle "1234-asdfg-54321-qwerty"
     Then the HTTP status code should be "403"
 
   Scenario: The one where I try to mark the file as moved
