@@ -48,6 +48,7 @@ type CollectionFindOneFunc func(ctx context.Context, filter interface{}, result 
 type CollectionUpdateFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
 type CollectionUpdateManyFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
 type CollectionInsertFunc func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error)
+type BundleFindOneFunc func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error
 type KafkaSendFunc func(schema *avro.Schema, event interface{}) error
 
 func CollectionFindReturnsValueAndError(value int, expectedError error) CollectionFindFunc {
@@ -62,6 +63,14 @@ func CollectionFindOneSetsResultAndReturnsNil(metadataBytes []byte) CollectionFi
 		return nil
 	}
 }
+
+func BundleFindOneSetsResultAndReturnsNil(metadataBytes []byte) BundleFindOneFunc {
+	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+		bson.Unmarshal(metadataBytes, result)
+		return nil
+	}
+}
+
 func CollectionFindOneSucceeds() CollectionFindOneFunc {
 	metadata := files.StoredRegisteredMetaData{}
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -69,7 +78,20 @@ func CollectionFindOneSucceeds() CollectionFindOneFunc {
 	return CollectionFindOneSetsResultAndReturnsNil(metadataBytes)
 }
 
+func BundleFindOneSucceeds() BundleFindOneFunc {
+	metadata := files.StoredRegisteredMetaData{}
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	return BundleFindOneSetsResultAndReturnsNil(metadataBytes)
+}
+
 func CollectionFindOneReturnsError(expectedError error) CollectionFindOneFunc {
+	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+		return expectedError
+	}
+}
+
+func BundleFindOneReturnsError(expectedError error) BundleFindOneFunc {
 	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
 		return expectedError
 	}

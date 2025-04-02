@@ -10,6 +10,7 @@ var (
 	ErrFileStateMismatch               = errors.New("file state mismatch")
 	ErrFileIsNotPublishable            = errors.New("file is not set as publishable")
 	ErrNoFilesInCollection             = errors.New("no files found in collection")
+	ErrNoFilesInBundle                 = errors.New("no files found in bundle")
 	ErrCollectionIDAlreadySet          = errors.New("collection ID already set")
 	ErrCollectionIDNotSet              = errors.New("collection ID not set")
 	ErrCollectionAlreadyPublished      = errors.New("collection with the given id is already published")

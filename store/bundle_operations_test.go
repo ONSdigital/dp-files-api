@@ -1,15 +1,392 @@
 package store_test
 
 import (
+	"context"
 	"errors"
+	"math"
+	"strconv"
+	"time"
 
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/mongo/mock"
 	"github.com/ONSdigital/dp-files-api/store"
+	"github.com/ONSdigital/dp-kafka/v3/avro"
+	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
 )
+
+func (suite *StoreSuite) TestMarkBundlePublishedBundleEmptyCheckReturnsError() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	expectedError := errors.New("an error occurred during files count")
+
+	bundleCountReturnsError := mock.MongoCollectionMock{
+		FindOneFunc: BundleFindOneReturnsError(expectedError),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&bundleCountReturnsError, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.MarkBundlePublished(suite.defaultContext, suite.defaultBundleID)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("failed to check if bundle is empty", logEvent)
+	suite.Error(err)
+	suite.ErrorIs(err, expectedError)
+}
+
+func (suite *StoreSuite) TestMarkBundlePublishedBundleEmpty() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	bundleCountReturnsError := mock.MongoCollectionMock{
+		FindOneFunc: BundleFindOneReturnsError(mongodriver.ErrNoDocumentFound),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&bundleCountReturnsError, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.MarkBundlePublished(suite.defaultContext, suite.defaultBundleID)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("bundle empty check fail", logEvent)
+	suite.Error(err)
+	suite.ErrorIs(err, store.ErrNoFilesInBundle)
+}
+
+func (suite *StoreSuite) TestMarkBundlePublishedWhenFileExistsInStateOtherThanUploaded() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	collection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSucceeds(), // there are some files in the bundle
+	}
+	bundleCollection := mock.MongoCollectionMock{
+		FindOneFunc: BundleFindOneSucceeds(), // bundle is not PUBLISHED
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collection, nil, &bundleCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.MarkBundlePublished(suite.defaultContext, suite.defaultBundleID)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("bundle uploaded check fail", logEvent)
+	suite.Error(err)
+	suite.ErrorIs(err, store.ErrFileNotInUploadedState)
+}
+
+func (suite *StoreSuite) TestMarkBundlePublishedBundleUploadedCheckReturnsError() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	expectedError := errors.New("an error occurred during uploaded check")
+
+	collectionCountReturnsError := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
+			{CollectionFindOneSucceeds(), 1},                  // there are some files in the bundle
+			{CollectionFindOneReturnsError(expectedError), 1}, // but UPLOADED check fails
+		}),
+	}
+	bundleCollection := mock.MongoCollectionMock{
+		FindOneFunc: BundleFindOneSucceeds(), // bundle is not PUBLISHED
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionCountReturnsError, nil, &bundleCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.MarkBundlePublished(suite.defaultContext, suite.defaultBundleID)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("failed to check if bundle is uploaded", logEvent)
+	suite.Error(err)
+	suite.ErrorIs(err, expectedError)
+}
+
+func (suite *StoreSuite) TestMarkBundlePublishedBundlePublishedCheckReturnsTrue() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := files.StoredRegisteredMetaData{
+		State: store.StateUploaded,
+	}
+	metadataBytes, _ := bson.Marshal(metadata)
+	bundle := files.StoredBundle{
+		State: store.StatePublished,
+	}
+	bundleBytes, _ := bson.Marshal(bundle)
+
+	collectionCountReturnsError := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
+			{CollectionFindOneSucceeds(), 1},                             // there are some files in the bundle
+			{CollectionFindOneSetsResultAndReturnsNil(metadataBytes), 1}, // but the bundle is PUBLISHED
+		}),
+	}
+
+	bundleCollection := mock.MongoCollectionMock{
+		FindOneFunc: BundleFindOneSetsResultAndReturnsNil(bundleBytes), // but the bundle is PUBLISHED
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionCountReturnsError, nil, &bundleCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.MarkBundlePublished(suite.defaultContext, suite.defaultBundleID)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("bundle uploaded check fail", logEvent)
+	suite.Error(err)
+	suite.ErrorIs(err, store.ErrFileNotInUploadedState)
+}
+
+func (suite *StoreSuite) TestMarkBundlePublishedPersistenceFailure() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	expectedError := errors.New("an error occurred")
+	metadataColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
+			{CollectionFindOneSucceeds(), 1},                                   // there are some files in the bundle
+			{CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound), 2}, // all of them are UPLOADED
+		}),
+	}
+	bundleColl := mock.MongoCollectionMock{
+		UpsertFunc: func(ctx context.Context, selector, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+			return nil, expectedError
+		},
+		FindOneFunc: BundleFindOneSucceeds(), // bundle is not PUBLISHED
+	}
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataColl, nil, &bundleColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.MarkBundlePublished(suite.defaultContext, suite.defaultBundleID)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("failed to change bundle 789 to PUBLISHED state", logEvent)
+	suite.Error(err)
+	suite.ErrorIs(err, expectedError)
+}
+
+func (suite *StoreSuite) TestMarkBundlePublishedFindCalled() {
+	expectedError := errors.New("an error occurred")
+
+	metadataColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
+			{CollectionFindOneSucceeds(), 1},                                   // there are some files in the bundle
+			{CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound), 2}, // all of them are UPLOADED
+		}),
+		CountFunc:      CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout(),
+		FindCursorFunc: CollectionFindCursorReturnsCursorAndError(nil, expectedError),
+	}
+	bundleColl := mock.MongoCollectionMock{
+		UpsertFunc: func(ctx context.Context, selector, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+			return nil, nil
+		},
+		FindOneFunc: BundleFindOneSucceeds(), // bundle is not PUBLISHED
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataColl, nil, &bundleColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.MarkBundlePublished(suite.defaultContext, suite.defaultBundleID)
+
+	suite.NoError(err)
+	suite.Eventually(func() bool {
+		return len(metadataColl.FindCursorCalls()) == 1
+	}, time.Second, 10*time.Millisecond)
+}
+
+func (suite *StoreSuite) TestNotifyBundlePublishedFindErrored() {
+	expectedError := errors.New("an error occurred")
+
+	collection := mock.MongoCollectionMock{
+		CountFunc:      CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout(),
+		UpdateManyFunc: CollectionUpdateManyReturnsNilAndNil(),
+		FindCursorFunc: CollectionFindCursorReturnsCursorAndError(nil, expectedError),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	subject.NotifyBundlePublished(suite.defaultContext, suite.defaultBundleID)
+
+	suite.Eventually(func() bool {
+		return len(collection.FindCursorCalls()) == 1
+	}, time.Second, 10*time.Millisecond)
+}
+
+func (suite *StoreSuite) TestNotifyBundlePublishedPersistenceSuccess() {
+	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	cursor := mock.MongoCursorMock{
+		CloseFunc: func(ctx context.Context) error { return nil },
+		NextFunc:  CursorReturnsNumberOfNext(5),
+		DecodeFunc: func(val interface{}) error {
+			return bson.Unmarshal(metadataBytes, val)
+		},
+		ErrFunc: func() error { return nil },
+	}
+
+	collection := mock.MongoCollectionMock{
+		CountFunc:      CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout(),
+		UpdateManyFunc: CollectionUpdateManyReturnsNilAndNil(),
+		FindCursorFunc: CollectionFindCursorReturnsCursorAndError(&cursor, nil),
+	}
+
+	kafkaMock := kafkatest.IProducerMock{
+		SendFunc: func(schema *avro.Schema, event interface{}) error {
+			filePublished := event.(*files.FilePublished)
+
+			suite.Equal(metadata.Path, filePublished.Path)
+			suite.Equal(metadata.Etag, filePublished.Etag)
+			suite.Equal(metadata.Type, filePublished.Type)
+			suite.Equal(strconv.FormatUint(metadata.SizeInBytes, 10), filePublished.SizeInBytes)
+
+			return nil
+		},
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collection, nil, nil, &kafkaMock, suite.defaultClock, nil, cfg)
+
+	subject.NotifyBundlePublished(suite.defaultContext, suite.defaultBundleID)
+
+	suite.Equal(6, len(cursor.NextCalls()))
+	suite.Equal(5, len(cursor.DecodeCalls()))
+	suite.Equal(5, len(kafkaMock.SendCalls()))
+	suite.Equal(1, len(cursor.ErrCalls()))
+	suite.Equal(1, len(cursor.CloseCalls()))
+}
+
+func (suite *StoreSuite) TestBatchingWithLargeNumberOfFilesBundle() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+	numFiles := 5000
+	cfg, _ := config.Get()
+	expectedBatchSize := int(math.Ceil(float64(numFiles) / float64(cfg.MaxNumBatches)))
+
+	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	cursor := mock.MongoCursorMock{
+		CloseFunc: func(ctx context.Context) error { return nil },
+		NextFunc:  CursorReturnsNumberOfNext(numFiles),
+		DecodeFunc: func(val interface{}) error {
+			return bson.Unmarshal(metadataBytes, val)
+		},
+		ErrFunc: func() error { return nil },
+	}
+
+	collection := mock.MongoCollectionMock{
+		CountFunc:      CollectionCountReturnsValueAndNil(numFiles),
+		UpdateManyFunc: CollectionUpdateManyReturnsNilAndNil(),
+		FindCursorFunc: CollectionFindCursorReturnsCursorAndError(&cursor, nil),
+	}
+
+	kafkaMock := kafkatest.IProducerMock{
+		SendFunc: func(schema *avro.Schema, event interface{}) error {
+			filePublished := event.(*files.FilePublished)
+
+			suite.Equal(metadata.Path, filePublished.Path)
+			suite.Equal(metadata.Etag, filePublished.Etag)
+			suite.Equal(metadata.Type, filePublished.Type)
+			suite.Equal(strconv.FormatUint(metadata.SizeInBytes, 10), filePublished.SizeInBytes)
+
+			return nil
+		},
+	}
+
+	subject := store.NewStore(&collection, nil, nil, &kafkaMock, suite.defaultClock, nil, cfg)
+
+	subject.NotifyBundlePublished(suite.defaultContext, suite.defaultBundleID)
+
+	evts := suite.logInterceptor.GetLogEvents("BatchSendBundleKafkaMessages")
+
+	for _, evt := range evts {
+		suite.EqualValues(evt["batch_size"].(float64), expectedBatchSize)
+	}
+	// make sure correct number of messages are sent
+	suite.Equal(len(kafkaMock.SendCalls()), numFiles)
+	suite.Equal(cfg.MaxNumBatches, len(evts))
+	suite.Equal(cfg.MaxNumBatches, len(cursor.ErrCalls()))
+	suite.Equal(cfg.MaxNumBatches, len(cursor.CloseCalls()))
+}
+
+func (suite *StoreSuite) TestNotifyBundlePublishedKafkaErrorDoesNotFailOperation() {
+	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	kafkaError := errors.New("an error occurred with Kafka")
+
+	cursor := mock.MongoCursorMock{
+		CloseFunc: func(ctx context.Context) error { return nil },
+		NextFunc:  CursorReturnsNumberOfNext(5),
+		DecodeFunc: func(val interface{}) error {
+			return bson.Unmarshal(metadataBytes, val)
+		},
+		ErrFunc: func() error { return nil },
+	}
+	collection := mock.MongoCollectionMock{
+		CountFunc:      CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout(),
+		UpdateManyFunc: CollectionUpdateManyReturnsNilAndNil(),
+		FindCursorFunc: CollectionFindCursorReturnsCursorAndError(&cursor, nil),
+	}
+
+	kafkaMock := kafkatest.IProducerMock{
+		SendFunc: KafkaSendReturnsError(kafkaError),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collection, nil, nil, &kafkaMock, suite.defaultClock, nil, cfg)
+
+	subject.NotifyBundlePublished(suite.defaultContext, suite.defaultBundleID)
+
+	suite.Equal(6, len(cursor.NextCalls()))
+	suite.Equal(5, len(cursor.DecodeCalls()))
+	suite.Equal(5, len(kafkaMock.SendCalls()))
+	suite.Equal(1, len(cursor.ErrCalls()))
+	suite.Equal(1, len(cursor.CloseCalls()))
+}
+
+func (suite *StoreSuite) TestNotifyBundlePublishedDecodeErrorDoesNotFailOperation() {
+	cursor := mock.MongoCursorMock{
+		CloseFunc: func(ctx context.Context) error { return nil },
+		NextFunc:  CursorReturnsNumberOfNext(5),
+		DecodeFunc: func(val interface{}) error {
+			return errors.New("decode error")
+		},
+		ErrFunc: func() error { return nil },
+	}
+	collection := mock.MongoCollectionMock{
+		CountFunc:      CollectionCountReturnsOneNilWhenFilterContainsAndOrZeroNilWithout(),
+		UpdateManyFunc: CollectionUpdateManyReturnsNilAndNil(),
+		FindCursorFunc: CollectionFindCursorReturnsCursorAndError(&cursor, nil),
+	}
+
+	kafkaMock := kafkatest.IProducerMock{
+		SendFunc: KafkaSendReturnsError(errors.New("an error occurred with Kafka")),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collection, nil, nil, &kafkaMock, suite.defaultClock, nil, cfg)
+
+	subject.NotifyBundlePublished(suite.defaultContext, suite.defaultBundleID)
+
+	suite.Equal(6, len(cursor.NextCalls()))
+	suite.Equal(5, len(cursor.DecodeCalls()))
+	suite.Equal(0, len(kafkaMock.SendCalls()))
+	suite.Equal(1, len(cursor.ErrCalls()))
+	suite.Equal(1, len(cursor.CloseCalls()))
+}
 
 func (suite *StoreSuite) TestGetBundlePublishedMetadataSuccess() {
 	expectedBundle := files.StoredBundle{
