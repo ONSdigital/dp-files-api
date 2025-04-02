@@ -441,7 +441,7 @@ func (suite *StoreSuite) TestNotifyCollectionPublishedPersistenceSuccess() {
 	suite.Equal(1, len(cursor.CloseCalls()))
 }
 
-func (suite *StoreSuite) TestBatchingWithLargeNumberOfFiles() {
+func (suite *StoreSuite) TestBatchingWithLargeNumberOfFilesCollection() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 	numFiles := 5000
@@ -483,7 +483,7 @@ func (suite *StoreSuite) TestBatchingWithLargeNumberOfFiles() {
 
 	subject.NotifyCollectionPublished(suite.defaultContext, suite.defaultCollectionID)
 
-	evts := suite.logInterceptor.GetLogEvents("BatchSendKafkaMessages")
+	evts := suite.logInterceptor.GetLogEvents("BatchSendCollectionKafkaMessages")
 
 	for _, evt := range evts {
 		suite.EqualValues(evt["batch_size"].(float64), expectedBatchSize)

@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPublishHandlerHandlesUnexpectedPublishingError(t *testing.T) {
+func TestMarkCollectionPublishedHandlerHandlesUnexpectedPublishingError(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPatch, "/files/ignore.txt", strings.NewReader(`{"collection_id": "asdfghjkl"}`))
 
@@ -29,7 +29,7 @@ func TestPublishHandlerHandlesUnexpectedPublishingError(t *testing.T) {
 	assert.Contains(t, string(response), "InternalError")
 }
 
-func TestPublishHandlerDontReturnErrorIfCollectionEmpty(t *testing.T) {
+func TestMarkCollectionPublishedHandlerDontReturnErrorIfCollectionEmpty(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPatch, "/files/ignore.txt", strings.NewReader(`{"collection_id": "asdfghjkl"}`))
 
