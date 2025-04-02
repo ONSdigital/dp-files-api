@@ -668,10 +668,9 @@ func (suite *StoreSuite) TestMarkFilePublishedCollectionIDNil() {
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
-
-	suite.Equal("file had no collection id", logEvent)
+	suite.Equal("mark file published: file was not in state UPLOADED", logEvent)
 	suite.Error(err)
-	suite.ErrorIs(err, store.ErrCollectionIDNotSet)
+	suite.ErrorIs(err, store.ErrFileNotInUploadedState)
 }
 
 func (suite *StoreSuite) TestMarkFilePublishedStateUploaded() {

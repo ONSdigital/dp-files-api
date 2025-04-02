@@ -31,7 +31,7 @@ func PatchRequestToHandler(handlers PatchRequestHandlers) http.HandlerFunc {
 			return
 		}
 
-		if isCollectionIDUpdate(stateMetaData) {
+		if stateMetaData.CollectionID != nil && isCollectionIDUpdate(stateMetaData) {
 			handlers.CollectionUpdate.ServeHTTP(w, req)
 			return
 		}
@@ -51,7 +51,7 @@ func PatchRequestToHandler(handlers PatchRequestHandlers) http.HandlerFunc {
 }
 
 func isCollectionIDUpdate(stateMetaData StateMetadata) bool {
-	return stateMetaData.CollectionID != nil && stateMetaData.State == nil
+	return stateMetaData.State == nil
 }
 
 func getStateMetadataFromRequest(req *http.Request) (StateMetadata, error) {
