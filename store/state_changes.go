@@ -122,11 +122,6 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 	}
 	logdata["metadata"] = m
 
-	if m.CollectionID == nil {
-		log.Error(ctx, "file had no collection id", ErrCollectionIDNotSet, logdata)
-		return ErrCollectionIDNotSet
-	}
-
 	if m.State != StateUploaded {
 		log.Error(ctx, fmt.Sprintf("mark file published: file was not in state %s", StateUploaded),
 			ErrFileNotInUploadedState, logdata)
@@ -182,10 +177,12 @@ func (store *Store) updateFileState(ctx context.Context, path, etag, toState, ex
 	logdata["actualCurrentState"] = metadata.State
 
 	var isCollectionPublished bool
-	isCollectionPublished, err = store.IsCollectionPublished(ctx, *metadata.CollectionID) // also moved
-	if err != nil {
-		log.Error(ctx, "is collection published: caught db error", err, logdata)
-		return err
+	if metadata.CollectionID != nil {
+		isCollectionPublished, err = store.IsCollectionPublished(ctx, *metadata.CollectionID) // also moved
+		if err != nil {
+			log.Error(ctx, "is collection published: caught db error", err, logdata)
+			return err
+		}
 	}
 
 	// update only timestamps if we are already in uploaded state
