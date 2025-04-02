@@ -66,17 +66,15 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 		}
 
 		// check to see if collectionID exists and is not-published
-		if metaData.CollectionID != nil {
-			logdata["collection_id"] = *metaData.CollectionID
-			published, err := store.IsCollectionPublished(ctx, *metaData.CollectionID)
-			if err != nil {
-				log.Error(ctx, "collection published check error", err, logdata)
-				return err
-			}
-			if published {
-				log.Error(ctx, "collection is already published", ErrCollectionAlreadyPublished, logdata)
-				return ErrCollectionAlreadyPublished
-			}
+		logdata["collection_id"] = *metaData.CollectionID
+		published, err := store.IsCollectionPublished(ctx, *metaData.CollectionID)
+		if err != nil {
+			log.Error(ctx, "collection published check error", err, logdata)
+			return err
+		}
+		if published {
+			log.Error(ctx, "collection is already published", ErrCollectionAlreadyPublished, logdata)
+			return ErrCollectionAlreadyPublished
 		}
 	}
 
@@ -99,17 +97,15 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 		}
 
 		// check to see if bundleID exists and is not-published
-		if metaData.BundleID != nil {
-			logdata["bundle_id"] = *metaData.BundleID
-			published, err := store.IsBundlePublished(ctx, *metaData.BundleID)
-			if err != nil {
-				log.Error(ctx, "bundle published check error", err, logdata)
-				return err
-			}
-			if published {
-				log.Error(ctx, "bundle is already published", ErrBundleAlreadyPublished, logdata)
-				return ErrBundleAlreadyPublished
-			}
+		logdata["bundle_id"] = *metaData.BundleID
+		published, err := store.IsBundlePublished(ctx, *metaData.BundleID)
+		if err != nil {
+			log.Error(ctx, "bundle published check error", err, logdata)
+			return err
+		}
+		if published {
+			log.Error(ctx, "bundle is already published", ErrBundleAlreadyPublished, logdata)
+			return ErrBundleAlreadyPublished
 		}
 	}
 
