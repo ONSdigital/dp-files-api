@@ -35,7 +35,7 @@ const (
 // @Failure      500
 // @Router       /files [post]
 //
-//nolint:gocyclo // cyclomatic complexity is high (> 20) // acceptable for now
+//nolint:gocyclo,gocognit // cyclomatic and cognitive complexity is high // acceptable for now
 func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 	logdata := log.Data{"path": metaData.Path}
 
@@ -47,50 +47,72 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 		return errFindingMetadata
 	}
 
-	if m.State == StateUploaded && (*m.CollectionID == *metaData.CollectionID || m.BundleID == metaData.BundleID) {
-		log.Info(ctx, "File upload already registered: skipping registration of file metadata", logdata)
-		return nil
-	}
-
-	// delete existing file metadata if file upload comes from a different collection
-	if m.State == StateUploaded && (*m.CollectionID != *metaData.CollectionID || m.BundleID != metaData.BundleID) {
-		result, err := store.metadataCollection.Delete(ctx, bson.M{fieldPath: metaData.Path})
-		if err != nil {
-			log.Error(ctx, "error while deleting metadata", err, logdata)
-			return err
-		}
-		if result.DeletedCount > 0 {
-			log.Info(ctx, "deleted existing file metadata", logdata)
-		}
-	}
-
-	// check to see if collectionID exists and is not-published
 	if metaData.CollectionID != nil {
-		logdata["collection_id"] = *metaData.CollectionID
-		published, err := store.IsCollectionPublished(ctx, *metaData.CollectionID)
-		if err != nil {
-			log.Error(ctx, "collection published check error", err, logdata)
-			return err
+		if m.State == StateUploaded && *m.CollectionID == *metaData.CollectionID {
+			log.Info(ctx, "File upload already registered: skipping registration of file metadata", logdata)
+			return nil
 		}
-		if published {
-			log.Error(ctx, "collection is already published", ErrCollectionAlreadyPublished, logdata)
-			return ErrCollectionAlreadyPublished
+
+		// delete existing file metadata if file upload comes from a different collection
+		if m.State == StateUploaded && *m.CollectionID != *metaData.CollectionID {
+			result, err := store.metadataCollection.Delete(ctx, bson.M{fieldPath: metaData.Path})
+			if err != nil {
+				log.Error(ctx, "error while deleting metadata", err, logdata)
+				return err
+			}
+			if result.DeletedCount > 0 {
+				log.Info(ctx, "deleted existing file metadata", logdata)
+			}
+		}
+
+		// check to see if collectionID exists and is not-published
+		if metaData.CollectionID != nil {
+			logdata["collection_id"] = *metaData.CollectionID
+			published, err := store.IsCollectionPublished(ctx, *metaData.CollectionID)
+			if err != nil {
+				log.Error(ctx, "collection published check error", err, logdata)
+				return err
+			}
+			if published {
+				log.Error(ctx, "collection is already published", ErrCollectionAlreadyPublished, logdata)
+				return ErrCollectionAlreadyPublished
+			}
 		}
 	}
 
-	// check to see if bundleID exists and is not-published
 	if metaData.BundleID != nil {
-		logdata["bundle_id"] = *metaData.BundleID
-		published, err := store.IsBundlePublished(ctx, *metaData.BundleID)
-		if err != nil {
-			log.Error(ctx, "bundle published check error", err, logdata)
-			return err
+		if m.State == StateUploaded && *m.BundleID == *metaData.BundleID {
+			log.Info(ctx, "File upload already registered: skipping registration of file metadata", logdata)
+			return nil
 		}
-		if published {
-			log.Error(ctx, "bundle is already published", ErrBundleAlreadyPublished, logdata)
-			return ErrBundleAlreadyPublished
+
+		// delete existing file metadata if file upload comes from a different bundle
+		if m.State == StateUploaded && *m.BundleID != *metaData.BundleID {
+			result, err := store.metadataCollection.Delete(ctx, bson.M{fieldPath: metaData.Path})
+			if err != nil {
+				log.Error(ctx, "error while deleting metadata", err, logdata)
+				return err
+			}
+			if result.DeletedCount > 0 {
+				log.Info(ctx, "deleted existing file metadata", logdata)
+			}
+		}
+
+		// check to see if bundleID exists and is not-published
+		if metaData.BundleID != nil {
+			logdata["bundle_id"] = *metaData.BundleID
+			published, err := store.IsBundlePublished(ctx, *metaData.BundleID)
+			if err != nil {
+				log.Error(ctx, "bundle published check error", err, logdata)
+				return err
+			}
+			if published {
+				log.Error(ctx, "bundle is already published", ErrBundleAlreadyPublished, logdata)
+				return ErrBundleAlreadyPublished
+			}
 		}
 	}
+
 	now := store.clock.GetCurrentTime()
 	metaData.CreatedAt = now
 	metaData.LastModified = now
