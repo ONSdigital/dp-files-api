@@ -104,9 +104,10 @@ func (store *Store) updateBundleState(ctx context.Context, bundleID, state strin
 		{Key: fieldLastModified, Value: now},
 	}
 
-	if state == StatePublished {
-		fields = append(fields, bson.E{Key: fieldPublishedAt, Value: now})
-	}
+	// TODO: uncomment when PublishedAt is added to StoredBundle struct
+	// if state == StatePublished {
+	// 	fields = append(fields, bson.E{Key: fieldPublishedAt, Value: now})
+	// }
 
 	_, err := store.bundlesCollection.Upsert(
 		ctx,
