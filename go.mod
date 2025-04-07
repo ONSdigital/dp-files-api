@@ -8,6 +8,12 @@ exclude github.com/hashicorp/consul/api v1.1.0
 // to avoid [CVE-2022-29153] CWE-918: Server-Side Request Forgery (SSRF)
 exclude github.com/hashicorp/consul/sdk v0.16.2
 
+// to avoid [CVE-2021-3121] CWE-129: Improper Validation of Array Index
+exclude github.com/gogo/protobuf v1.2.1
+
+// to avoid [CVE-2022-21698] CWE-400: Uncontrolled Resource Consumption ('Resource Exhaustion') & [CVE-2023-45142] CWE-770: Allocation of Resources Without Limits or Throttling
+exclude github.com/prometheus/client_golang v0.9.3
+
 require (
 	github.com/ONSdigital/dp-authorisation/v2 v2.32.0
 	github.com/ONSdigital/dp-component-test v0.19.0
