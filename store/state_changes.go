@@ -47,7 +47,7 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 		return errFindingMetadata
 	}
 
-	if metaData.CollectionID != nil {
+	if metaData.CollectionID != nil && m.CollectionID != nil {
 		if m.State == StateUploaded && *m.CollectionID == *metaData.CollectionID {
 			log.Info(ctx, "File upload already registered: skipping registration of file metadata", logdata)
 			return nil
@@ -78,7 +78,7 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 		}
 	}
 
-	if metaData.BundleID != nil {
+	if metaData.BundleID != nil && m.BundleID != nil {
 		if m.State == StateUploaded && *m.BundleID == *metaData.BundleID {
 			log.Info(ctx, "File upload already registered: skipping registration of file metadata", logdata)
 			return nil
