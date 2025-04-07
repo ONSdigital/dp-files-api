@@ -306,5 +306,4 @@ func (store *Store) BatchSendBundleKafkaMessages(
 	}
 
 	log.Info(ctx, "BatchSendBundleKafkaMessages end", ld)
-
 }

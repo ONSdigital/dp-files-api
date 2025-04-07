@@ -11,6 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+var testBundleID = "bundle1"
+
 func (suite *StoreSuite) TestGetFileMetadataNotFoundError() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
@@ -112,7 +114,7 @@ func (suite *StoreSuite) TestGetFileMetadataWithCollectionPatching() {
 }
 
 func (suite *StoreSuite) TestGetFileMetadataWithBundleID() {
-	bundleID := "test-bundle-id"
+	bundleID := testBundleID
 	expectedMetadata := files.StoredRegisteredMetaData{
 		Path:     suite.path,
 		State:    store.StateUploaded,
@@ -151,7 +153,7 @@ func (suite *StoreSuite) TestGetFileMetadataWithBundleID() {
 }
 
 func (suite *StoreSuite) TestGetFileMetadataWithBundleError() {
-	bundleID := "test-bundle-id"
+	bundleID := testBundleID
 	expectedMetadata := files.StoredRegisteredMetaData{
 		Path:     suite.path,
 		State:    store.StateUploaded,
@@ -579,7 +581,7 @@ func (suite *StoreSuite) TestPatchBundleMetadataNilMetadata() {
 func (suite *StoreSuite) TestPatchBundleMetadataNilBundle() {
 	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
-	bundleID := "bundle1"
+	bundleID := testBundleID
 	metadata := files.StoredRegisteredMetaData{
 		Path:     "path1",
 		State:    store.StateUploaded,
@@ -599,7 +601,7 @@ func (suite *StoreSuite) TestPatchBundleMetadataNilBundleID() {
 		State: store.StateUploaded,
 	}
 	bundle := &files.StoredBundle{
-		ID:    "bundle1",
+		ID:    testBundleID,
 		State: store.StatePublished,
 	}
 
@@ -612,7 +614,7 @@ func (suite *StoreSuite) TestPatchBundleMetadataNilBundleID() {
 func (suite *StoreSuite) TestPatchBundleMetadataBundleIDMismatch() {
 	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
-	bundleID := "bundle1"
+	bundleID := testBundleID
 	metadata := files.StoredRegisteredMetaData{
 		Path:     "path1",
 		State:    store.StateUploaded,
@@ -632,7 +634,7 @@ func (suite *StoreSuite) TestPatchBundleMetadataBundleIDMismatch() {
 func (suite *StoreSuite) TestPatchBundleMetadataBadState() {
 	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
-	bundleID := "bundle1"
+	bundleID := testBundleID
 	metadata := files.StoredRegisteredMetaData{
 		Path:     "path1",
 		State:    store.StateMoved,
@@ -652,7 +654,7 @@ func (suite *StoreSuite) TestPatchBundleMetadataBadState() {
 func (suite *StoreSuite) TestPatchBundleMetadataBadBundleState() {
 	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
-	bundleID := "bundle1"
+	bundleID := testBundleID
 	metadata := files.StoredRegisteredMetaData{
 		Path:     "path1",
 		State:    store.StateUploaded,
@@ -671,7 +673,7 @@ func (suite *StoreSuite) TestPatchBundleMetadataBadBundleState() {
 func (suite *StoreSuite) TestPatchBundleMetadataSuccess() {
 	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
-	bundleID := "bundle1"
+	bundleID := testBundleID
 	publishedAt := suite.generateTestTime(1)
 	lastModified := suite.generateTestTime(2)
 	metadata := files.StoredRegisteredMetaData{
