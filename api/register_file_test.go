@@ -43,6 +43,29 @@ func TestFileMetaDataCreationUnsuccessful(t *testing.T) {
 	assert.Contains(t, string(response), "it's all gone very wrong")
 }
 
+func TestFileMetaDataCreationUnsuccessfulWithBothCollectionAndBundleID(t *testing.T) {
+	rec := httptest.NewRecorder()
+	body := bytes.NewBufferString(`{
+          "path": "images/meme.jpg",
+          "is_publishable": true,
+          "collection_id": "1234-asdfg-54321-qwerty",
+		  "bundle_id": "test-bundle",
+          "title": "The latest Meme",
+          "size_in_bytes": 14794,
+          "type": "image/jpeg",
+          "licence": "OGL v3",
+          "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+        }`)
+	req := httptest.NewRequest(http.MethodPost, "/files", body)
+
+	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error { return nil }, 5*time.Second)
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	response, _ := io.ReadAll(rec.Body)
+	assert.Contains(t, string(response), "cannot set both collection and bundle ID")
+}
+
 func TestJsonDecodingMetaDataCreation(t *testing.T) {
 	rec := httptest.NewRecorder()
 	body := bytes.NewBufferString(`{
