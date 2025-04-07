@@ -308,6 +308,16 @@ func (suite *StoreSuite) generatePublishedCollectionInfo(collectionID string) fi
 	}
 }
 
+func (suite *StoreSuite) generatePublishedBundleInfo(bundleID string) files.StoredBundle {
+	publishedAt := suite.generateTestTime(1)
+	return files.StoredBundle{
+		ID:           bundleID,
+		State:        store.StatePublished,
+		PublishedAt:  &publishedAt,
+		LastModified: suite.generateTestTime(2),
+	}
+}
+
 func TestStoreSuite(t *testing.T) {
 	suite.Run(t, new(StoreSuite))
 }

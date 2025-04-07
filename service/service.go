@@ -84,6 +84,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 			Published:        authMiddleware.Require("static-files:update", api.HandleMarkFilePublished(store.MarkFilePublished)),
 			Moved:            authMiddleware.Require("static-files:update", api.HandleMarkFileMoved(store.MarkFileMoved)),
 			CollectionUpdate: authMiddleware.Require("static-files:update", api.HandlerUpdateCollectionID(store.UpdateCollectionID)),
+			BundleUpdate:     authMiddleware.Require("static-files:update", api.HandlerUpdateBundleID(store.UpdateBundleID)),
 		}
 
 		r.Path(filesURI).HandlerFunc(api.PatchRequestToHandler(patchRequestHandlers)).Methods(http.MethodPatch)

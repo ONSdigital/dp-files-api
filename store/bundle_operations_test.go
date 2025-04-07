@@ -1,7 +1,9 @@
 package store_test
 
 import (
+	"context"
 	"errors"
+	"fmt"
 
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
@@ -196,4 +198,179 @@ func (suite *StoreSuite) TestAreAllBundleFilesPublishedUnexpectedError() {
 	suite.Error(err)
 	suite.ErrorIs(err, expectedError)
 	suite.False(isPublished)
+}
+
+func (suite *StoreSuite) TestUpdateBundleIDFindReturnsErrNoDocumentFound() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.UpdateBundleID(suite.defaultContext, suite.path, suite.defaultBundleID)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("update bundle ID: attempted to operate on unregistered file", logEvent)
+	suite.Error(err)
+	suite.ErrorIs(err, store.ErrFileNotRegistered)
+}
+
+func (suite *StoreSuite) TestUpdateBundleIDFindReturnsUnspecifiedError() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	expectedError := errors.New("an error occurred")
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(expectedError),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.UpdateBundleID(suite.defaultContext, "", suite.defaultBundleID)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("failed finding metadata to update bundle ID", logEvent)
+	suite.Error(err)
+	suite.ErrorIs(err, expectedError)
+}
+
+func (suite *StoreSuite) TestUpdateBundleIDBundleIDAlreadySet() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.UpdateBundleID(suite.defaultContext, suite.path, suite.defaultBundleID)
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("update bundle ID: bundle ID already set", logEvent)
+	suite.Error(err)
+	suite.ErrorIs(err, store.ErrBundleIDAlreadySet)
+}
+
+func (suite *StoreSuite) TestUpdateBundleIDBundleCheckFail() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := suite.generateBundleMetadata("")
+	metadata.State = store.StateUploaded
+	metadata.BundleID = nil
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	expectedError := errors.New("an error occurred")
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneChain([]CollectionFindOneFuncChainEntry{
+			{CollectionFindOneSetsResultAndReturnsNil(metadataBytes), 1},
+		}),
+	}
+	bundleCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(expectedError),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundleCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.UpdateBundleID(suite.defaultContext, suite.path, suite.defaultBundleID)
+
+	suite.Equal(true, suite.logInterceptor.IsEventPresent("update bundle ID: caught db error"))
+	suite.Error(err)
+	suite.ErrorIs(err, expectedError)
+}
+
+func (suite *StoreSuite) TestUpdateBundleIDBundleAlreadyPublished() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := suite.generateBundleMetadata("")
+	metadata.State = store.StatePublished
+	metadata.BundleID = nil
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+	bundle, _ := bson.Marshal(files.StoredBundle{
+		State: store.StatePublished,
+	})
+	bundleCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(bundle),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundleCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.UpdateBundleID(suite.defaultContext, suite.path, suite.defaultBundleID)
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal(fmt.Sprintf("bundle with id [%s] is already published", suite.defaultBundleID), logEvent)
+	suite.Error(err)
+	suite.ErrorIs(err, store.ErrBundleAlreadyPublished)
+}
+
+func (suite *StoreSuite) TestUpdateBundleIDUpdateReturnsError() {
+	metadata := suite.generateBundleMetadata("")
+	metadata.State = store.StateUploaded
+	metadata.BundleID = nil
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	expectedError := errors.New("an error occurred")
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
+	}
+	emptyBundle := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &emptyBundle, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.UpdateBundleID(suite.defaultContext, suite.path, suite.defaultBundleID)
+
+	suite.Error(err)
+	suite.ErrorIs(err, expectedError)
+}
+
+func (suite *StoreSuite) TestUpdateBundleIDUpdateSuccess() {
+	metadata := suite.generateBundleMetadata("")
+	metadata.State = store.StateUploaded
+	metadata.BundleID = nil
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	collectionContainsOneUploadedFileWithNoBundleID := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+		UpdateFunc:  CollectionUpdateReturnsNilAndNil(),
+	}
+	emptyBundle := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionContainsOneUploadedFileWithNoBundleID, nil, &emptyBundle, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.UpdateBundleID(suite.defaultContext, suite.path, suite.defaultBundleID)
+
+	suite.NoError(err)
 }

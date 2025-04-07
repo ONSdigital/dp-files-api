@@ -16,11 +16,13 @@ type PatchRequestHandlers struct {
 	Published        http.HandlerFunc
 	Moved            http.HandlerFunc
 	CollectionUpdate http.HandlerFunc
+	BundleUpdate     http.HandlerFunc
 }
 
 type StateMetadata struct {
 	State        *string `json:"state,omitempty"`
 	CollectionID *string `json:"collection_id,omitempty"`
+	BundleID     *string `json:"bundle_id,omitempty"`
 }
 
 func PatchRequestToHandler(handlers PatchRequestHandlers) http.HandlerFunc {
@@ -33,6 +35,11 @@ func PatchRequestToHandler(handlers PatchRequestHandlers) http.HandlerFunc {
 
 		if isCollectionIDUpdate(stateMetaData) {
 			handlers.CollectionUpdate.ServeHTTP(w, req)
+			return
+		}
+
+		if isBundleIDUpdate(stateMetaData) {
+			handlers.BundleUpdate.ServeHTTP(w, req)
 			return
 		}
 
@@ -52,6 +59,10 @@ func PatchRequestToHandler(handlers PatchRequestHandlers) http.HandlerFunc {
 
 func isCollectionIDUpdate(stateMetaData StateMetadata) bool {
 	return stateMetaData.CollectionID != nil && stateMetaData.State == nil
+}
+
+func isBundleIDUpdate(stateMetaData StateMetadata) bool {
+	return stateMetaData.BundleID != nil && stateMetaData.State == nil
 }
 
 func getStateMetadataFromRequest(req *http.Request) (StateMetadata, error) {

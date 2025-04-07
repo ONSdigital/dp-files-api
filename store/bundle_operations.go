@@ -100,3 +100,45 @@ func (store *Store) registerBundle(ctx context.Context, bundleID string) error {
 	}
 	return nil
 }
+
+func (store *Store) UpdateBundleID(ctx context.Context, path, bundleID string) error {
+	metadata := files.StoredRegisteredMetaData{}
+	logdata := log.Data{"path": path}
+
+	if err := store.metadataCollection.FindOne(ctx, bson.M{"path": path}, &metadata); err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			log.Error(ctx, "update bundle ID: attempted to operate on unregistered file", err, logdata)
+			return ErrFileNotRegistered
+		}
+		log.Error(ctx, "failed finding metadata to update bundle ID", err, logdata)
+		return err
+	}
+
+	if metadata.BundleID != nil {
+		logdata["bundle_id"] = *metadata.BundleID
+		log.Error(ctx, "update bundle ID: bundle ID already set", ErrBundleIDAlreadySet, logdata)
+		return ErrBundleIDAlreadySet
+	}
+
+	// check to see if bundleID exists and is not-published
+	published, err := store.IsBundlePublished(ctx, bundleID)
+	if err != nil {
+		log.Error(ctx, "update bundle ID: caught db error", err, logdata)
+		return err
+	}
+	if published {
+		log.Error(ctx, fmt.Sprintf("bundle with id [%s] is already published", bundleID), ErrBundleAlreadyPublished, logdata)
+		return ErrBundleAlreadyPublished
+	}
+
+	_, err = store.metadataCollection.Update(
+		ctx,
+		bson.M{"path": path},
+		bson.D{
+			{Key: "$set", Value: bson.D{
+				{Key: "bundle_id", Value: bundleID}},
+			},
+		})
+
+	return err
+}

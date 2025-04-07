@@ -22,19 +22,25 @@ func (store *Store) GetFileMetadata(ctx context.Context, path string) (files.Sto
 		return fileMetadata, err
 	}
 
-	// pre-check to avoid fetching collection metadata if it's not necessary
-	if fileMetadata.CollectionID == nil || fileMetadata.State != StateUploaded {
-		return fileMetadata, nil
-	}
+	if fileMetadata.CollectionID != nil && fileMetadata.State == StateUploaded {
+		// get the collection metadata, and if they're not present, return the file unchanged
+		collectionPublishedMetadata, err := store.GetCollectionPublishedMetadata(ctx, *fileMetadata.CollectionID)
+		if err != nil {
+			return fileMetadata, nil
+		}
 
-	// get the collection metadata, and if they're not present, return the file unchanged
-	collectionPublishedMetadata, err := store.GetCollectionPublishedMetadata(ctx, *fileMetadata.CollectionID)
-	if err != nil {
-		return fileMetadata, nil
-	}
+		// we got the collection published metadata, so apply them to the file
+		store.PatchFilePublishMetadata(&fileMetadata, &collectionPublishedMetadata)
+	} else if fileMetadata.BundleID != nil && fileMetadata.State == StateUploaded {
+		// get the bundle metadata, and if they're not present, return the file unchanged
+		bundlePublishedMetadata, err := store.GetBundlePublishedMetadata(ctx, *fileMetadata.BundleID)
+		if err != nil {
+			return fileMetadata, nil
+		}
 
-	// we got the collection published metadata, so apply them to the file
-	store.PatchFilePublishMetadata(&fileMetadata, &collectionPublishedMetadata)
+		// we got the bundle published metadata, so apply them to the file
+		store.PatchFilePublishBundleMetadata(&fileMetadata, &bundlePublishedMetadata)
+	}
 
 	return fileMetadata, nil
 }
@@ -49,22 +55,41 @@ func (store *Store) GetFileMetadata(ctx context.Context, path string) (files.Sto
 // @Failure      404
 // @Failure      500
 // @Router       /files [get]
-func (store *Store) GetFilesMetadata(ctx context.Context, collectionID string) ([]files.StoredRegisteredMetaData, error) {
+func (store *Store) GetFilesMetadata(ctx context.Context, collectionID, bundleID string) ([]files.StoredRegisteredMetaData, error) {
 	files := make([]files.StoredRegisteredMetaData, 0)
-	_, err := store.metadataCollection.Find(ctx, bson.M{fieldCollectionID: collectionID}, &files)
-	if err != nil {
-		return nil, err
-	}
 
-	// get the collection metadata, and if they're not present, return the files unchanged
-	collection, err := store.GetCollectionPublishedMetadata(ctx, collectionID)
-	if err != nil {
-		return files, nil
-	}
+	if collectionID != "" {
+		_, err := store.metadataCollection.Find(ctx, bson.M{fieldCollectionID: collectionID}, &files)
+		if err != nil {
+			return nil, err
+		}
 
-	// we got the collection published metadata, so apply them to all the files in the collection
-	for i := 0; i < len(files); i++ {
-		store.PatchFilePublishMetadata(&files[i], &collection)
+		// get the collection metadata, and if they're not present, return the files unchanged
+		collection, err := store.GetCollectionPublishedMetadata(ctx, collectionID)
+		if err != nil {
+			return files, nil
+		}
+
+		// we got the collection published metadata, so apply them to all the files in the collection
+		for i := 0; i < len(files); i++ {
+			store.PatchFilePublishMetadata(&files[i], &collection)
+		}
+	} else if bundleID != "" {
+		_, err := store.metadataCollection.Find(ctx, bson.M{fieldBundleID: bundleID}, &files)
+		if err != nil {
+			return nil, err
+		}
+
+		// get the bundle metadata, and if they're not present, return the files unchanged
+		bundle, err := store.GetBundlePublishedMetadata(ctx, bundleID)
+		if err != nil {
+			return files, nil
+		}
+
+		// we got the bundle published metadata, so apply them to all the files in the collection
+		for i := 0; i < len(files); i++ {
+			store.PatchFilePublishBundleMetadata(&files[i], &bundle)
+		}
 	}
 
 	return files, nil
@@ -113,4 +138,36 @@ func (store *Store) PatchFilePublishMetadata(metadata *files.StoredRegisteredMet
 	metadata.State = StatePublished
 	metadata.PublishedAt = collection.PublishedAt
 	metadata.LastModified = collection.LastModified
+}
+
+// For the optimisation purposes, we store the Florence collection publishing information in a separate DB collection.
+// This makes the collection publishing instantaneous by removing a need to update the publish state of all the files
+// in the collection, which takes a very long time for large collections.
+// Because of this, we need to patch the file metadata in a specific case documented below.
+func (store *Store) PatchFilePublishBundleMetadata(metadata *files.StoredRegisteredMetaData, bundle *files.StoredBundle) {
+	if metadata == nil || bundle == nil {
+		return
+	}
+	// sanity check - collection data should only apply if the collection of the file matches
+	// the collection passed in the parameter
+	if metadata.BundleID == nil || *metadata.BundleID != bundle.ID {
+		return
+	}
+
+	// collection state should only affect the file metadata if the file is in uploaded state
+	if metadata.State != StateUploaded {
+		return
+	}
+	// collection state should only affect the file metadata if the collection is in published state
+	if bundle.State != StatePublished {
+		return
+	}
+
+	// We now know the file is uploaded and the collection is published. This means the file
+	// should be considered published.
+	// Also, collection publishing always happens after uploading the file and so the publishing
+	// and modification date of the file should be adjusted to match that of the collection.
+	metadata.State = StatePublished
+	metadata.PublishedAt = bundle.PublishedAt
+	metadata.LastModified = bundle.LastModified
 }

@@ -45,6 +45,9 @@ func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I am in web mode$`, c.iAmInWebMode)
 	ctx.Step(`^I set the collection ID to "([^"]*)" for file "([^"]*)"$`, c.iSetTheCollectionIDToForFile)
 	ctx.Step(`^I get files in the collection "([^"]*)"$`, c.iGetFilesInTheCollection)
+	ctx.Step(`^I set the bundle ID to "([^"]*)" for file "([^"]*)"$`, c.iSetTheBundleIDToForFile)
+	ctx.Step(`^I get files in the bundle "([^"]*)"$`, c.iGetFilesInTheBundle)
+	ctx.Step(`^I get files with both collection_id "([^"]*)" and bundle_id "([^"]*)"$`, c.iGetFilesWithBothCollectionAndBundleID)
 }
 
 func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {
@@ -457,4 +460,17 @@ func (c *FilesAPIComponent) iAmInWebMode() error {
 
 func (c *FilesAPIComponent) iGetFilesInTheCollection(collectionID string) error {
 	return c.APIFeature.IGet(fmt.Sprintf("/files?collection_id=%s", collectionID))
+}
+
+func (c *FilesAPIComponent) iSetTheBundleIDToForFile(bundleID, path string) error {
+	json := fmt.Sprintf(`{"bundle_id": %q}`, bundleID)
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+}
+
+func (c *FilesAPIComponent) iGetFilesInTheBundle(bundleID string) error {
+	return c.APIFeature.IGet(fmt.Sprintf("/files?bundle_id=%s", bundleID))
+}
+
+func (c *FilesAPIComponent) iGetFilesWithBothCollectionAndBundleID(collectionID, bundleID string) error {
+	return c.APIFeature.IGet(fmt.Sprintf("/files?collection_id=%s&bundle_id=%s", collectionID, bundleID))
 }

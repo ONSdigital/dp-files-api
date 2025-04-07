@@ -46,16 +46,29 @@ paths:
     get:
       tags:
         - File upload started
-      summary: POST's metadata for a file when an upload has started
+      summary: GET metadata for files by collection or bundle ID
       security:
         - Bearer: []
       produces:
         - application/json
+      parameters:
+        - name: collection_id
+          in: query
+          required: false
+          type: string
+          description: "ID of the collection to retrieve files for"
+        - name: bundle_id
+          in: query
+          required: false
+          type: string
+          description: "ID of the bundle to retrieve files for"
       responses:
         200:
           $ref: '#/definitions/MetaDataCollection'
+        400:
+          $ref: '#/definitions/Error'
         403:
-          description: Authoristion Failed - Check logs
+          description: Authorisation Failed - Check logs
         500:
           $ref: '#/responses/InternalError'
 
@@ -242,6 +255,10 @@ definitions:
         type: string
         description: "The collection ID to which the file is attached"
         example: "1234-asdfg-54321-qwerty"
+      bundle_id:
+        type: string
+        description: "The bundle ID to which the file is attached"
+        example: "bundle-789-xyz"
       title:
         type: string
         description: "The title given to the file"
@@ -317,6 +334,10 @@ definitions:
         type: string
         description: "The collection ID to which the file is attached"
         example: "1234-asdfg-54321-qwerty"
+      bundle_id:
+        type: string
+        description: "The bundle ID to which the file is attached"
+        example: "bundle-789-xyz"
       title:
         type: string
         description: "The title given to the file"

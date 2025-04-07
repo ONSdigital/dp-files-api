@@ -17,4 +17,5 @@ var (
 	ErrCollectionMetadataNotRegistered = errors.New("collection metadata not registered")
 	ErrBundleMetadataNotRegistered     = errors.New("bundle metadata not registered")
 	ErrEtagMismatchWhilePublishing     = errors.New("etag mismatch")
+	ErrBundleIDAlreadySet              = errors.New("bundle ID already set")
 )
