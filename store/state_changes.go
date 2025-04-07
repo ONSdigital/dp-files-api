@@ -35,7 +35,7 @@ const (
 // @Failure      500
 // @Router       /files [post]
 //
-//nolint:gocyclo // cyclomatic complexity is high (> 20) // acceptable for now
+//nolint:gocyclo,gocognit // cyclomatic and cognitive complexity is high // acceptable for now
 func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 	logdata := log.Data{"path": metaData.Path}
 
@@ -47,25 +47,25 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 		return errFindingMetadata
 	}
 
-	if m.State == StateUploaded && (*m.CollectionID == *metaData.CollectionID || m.BundleID == metaData.BundleID) {
-		log.Info(ctx, "File upload already registered: skipping registration of file metadata", logdata)
-		return nil
-	}
-
-	// delete existing file metadata if file upload comes from a different collection
-	if m.State == StateUploaded && (*m.CollectionID != *metaData.CollectionID || m.BundleID != metaData.BundleID) {
-		result, err := store.metadataCollection.Delete(ctx, bson.M{fieldPath: metaData.Path})
-		if err != nil {
-			log.Error(ctx, "error while deleting metadata", err, logdata)
-			return err
-		}
-		if result.DeletedCount > 0 {
-			log.Info(ctx, "deleted existing file metadata", logdata)
-		}
-	}
-
-	// check to see if collectionID exists and is not-published
 	if metaData.CollectionID != nil {
+		if m.State == StateUploaded && *m.CollectionID == *metaData.CollectionID {
+			log.Info(ctx, "File upload already registered: skipping registration of file metadata", logdata)
+			return nil
+		}
+
+		// delete existing file metadata if file upload comes from a different collection
+		if m.State == StateUploaded && *m.CollectionID != *metaData.CollectionID {
+			result, err := store.metadataCollection.Delete(ctx, bson.M{fieldPath: metaData.Path})
+			if err != nil {
+				log.Error(ctx, "error while deleting metadata", err, logdata)
+				return err
+			}
+			if result.DeletedCount > 0 {
+				log.Info(ctx, "deleted existing file metadata", logdata)
+			}
+		}
+
+		// check to see if collectionID exists and is not-published
 		logdata["collection_id"] = *metaData.CollectionID
 		published, err := store.IsCollectionPublished(ctx, *metaData.CollectionID)
 		if err != nil {
@@ -78,8 +78,25 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 		}
 	}
 
-	// check to see if bundleID exists and is not-published
 	if metaData.BundleID != nil {
+		if m.State == StateUploaded && *m.BundleID == *metaData.BundleID {
+			log.Info(ctx, "File upload already registered: skipping registration of file metadata", logdata)
+			return nil
+		}
+
+		// delete existing file metadata if file upload comes from a different bundle
+		if m.State == StateUploaded && *m.BundleID != *metaData.BundleID {
+			result, err := store.metadataCollection.Delete(ctx, bson.M{fieldPath: metaData.Path})
+			if err != nil {
+				log.Error(ctx, "error while deleting metadata", err, logdata)
+				return err
+			}
+			if result.DeletedCount > 0 {
+				log.Info(ctx, "deleted existing file metadata", logdata)
+			}
+		}
+
+		// check to see if bundleID exists and is not-published
 		logdata["bundle_id"] = *metaData.BundleID
 		published, err := store.IsBundlePublished(ctx, *metaData.BundleID)
 		if err != nil {
@@ -91,6 +108,7 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 			return ErrBundleAlreadyPublished
 		}
 	}
+
 	now := store.clock.GetCurrentTime()
 	metaData.CreatedAt = now
 	metaData.LastModified = now
@@ -145,11 +163,6 @@ func (store *Store) MarkFilePublished(ctx context.Context, path string) error {
 		return err
 	}
 	logdata["metadata"] = m
-
-	if m.CollectionID == nil {
-		log.Error(ctx, "file had no collection id", ErrCollectionIDNotSet, logdata)
-		return ErrCollectionIDNotSet
-	}
 
 	if m.State != StateUploaded {
 		log.Error(ctx, fmt.Sprintf("mark file published: file was not in state %s", StateUploaded),
@@ -206,10 +219,12 @@ func (store *Store) updateFileState(ctx context.Context, path, etag, toState, ex
 	logdata["actualCurrentState"] = metadata.State
 
 	var isCollectionPublished bool
-	isCollectionPublished, err = store.IsCollectionPublished(ctx, *metadata.CollectionID) // also moved
-	if err != nil {
-		log.Error(ctx, "is collection published: caught db error", err, logdata)
-		return err
+	if metadata.CollectionID != nil {
+		isCollectionPublished, err = store.IsCollectionPublished(ctx, *metadata.CollectionID) // also moved
+		if err != nil {
+			log.Error(ctx, "is collection published: caught db error", err, logdata)
+			return err
+		}
 	}
 
 	// update only timestamps if we are already in uploaded state

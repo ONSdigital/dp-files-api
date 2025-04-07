@@ -73,10 +73,12 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload, cfg.MongoConfig.QueryTimeout)
 		getMultipleFiles := api.HandlerGetFilesMetadata(store.GetFilesMetadata)
 		collectionPublished := api.HandleMarkCollectionPublished(store.MarkCollectionPublished)
+		bundlePublished := api.HandleMarkBundlePublished(store.MarkBundlePublished)
 
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:create", register)).Methods(http.MethodPost)
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:read", getMultipleFiles)).Methods(http.MethodGet)
 		r.Path("/collection/{collectionID}").HandlerFunc(authMiddleware.Require("static-files:update", collectionPublished)).Methods(http.MethodPatch)
+		r.Path("/bundle/{bundleID}").HandlerFunc(authMiddleware.Require("static-files:update", bundlePublished)).Methods(http.MethodPatch)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:read", getSingleFile)).Methods(http.MethodGet)
 
 		patchRequestHandlers := api.PatchRequestHandlers{
@@ -96,6 +98,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path("/files").HandlerFunc(forbiddenHandler).Methods(http.MethodPost)
 		r.Path(filesURI).HandlerFunc(forbiddenHandler).Methods(http.MethodPatch)
 		r.Path("/collection/{collectionID}").HandlerFunc(forbiddenHandler).Methods(http.MethodPatch)
+		r.Path("/bundle/{bundle-id}").HandlerFunc(forbiddenHandler).Methods(http.MethodPatch)
 
 		// simple scenario - web mode where users are not authenticated - allowed based on publishing status
 		r.Path(filesURI).HandlerFunc(getSingleFile).Methods(http.MethodGet)

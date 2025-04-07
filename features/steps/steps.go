@@ -34,11 +34,12 @@ func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the file upload "([^"]*)" is marked as complete with the etag "([^"]*)"$`, c.theFileUploadIsMarkedAsCompleteWithTheEtag)
 	ctx.Step(`^the file "([^"]*)" is marked as published$`, c.theFileIsMarkedAsPublished)
 	ctx.Step(`^the file "([^"]*)" is marked as moved with etag "([^"]*)"$`, c.theFileIsMarkedAsMoved)
-	ctx.Step(`^the following document entry should be look like:$`, c.theFollowingDocumentEntryShouldBeLookLike)
+	ctx.Step(`^the following document entry should look like:$`, c.theFollowingDocumentEntryShouldLookLike)
 	ctx.Step(`^the file upload "([^"]*)" has not been registered$`, c.theFileUploadHasNotBeenRegistered)
 	ctx.Step(`^the file metadata is requested for the file "([^"]*)"$`, c.theFileMetadataIsRequested)
 	ctx.Step(`^the file "([^"]*)" has not been registered$`, c.theFileHasNotBeenRegistered)
 	ctx.Step(`^I publish the collection "([^"]*)"$`, c.iPublishTheCollection)
+	ctx.Step(`^I publish the bundle "([^"]*)"$`, c.iPublishTheBundle)
 	ctx.Step(`^the file upload "([^"]*)" has been published with:$`, c.theFileUploadHasBeenPublishedWith)
 	ctx.Step(`^the following PUBLISHED message is sent to Kakfa:$`, c.theFollowingPublishedMessageIsSent)
 	ctx.Step(`^Kafka Consumer Group is running$`, c.kafkaConsumerGroupIsRunning)
@@ -312,7 +313,7 @@ func (c *FilesAPIComponent) theFileMetadataIsRequested(filepath string) error {
 	return c.APIFeature.IGet(fmt.Sprintf("/files/%s", filepath))
 }
 
-func (c *FilesAPIComponent) theFollowingDocumentEntryShouldBeLookLike(table *godog.Table) error {
+func (c *FilesAPIComponent) theFollowingDocumentEntryShouldLookLike(table *godog.Table) error {
 	ctx := context.Background()
 
 	metaData := files.StoredRegisteredMetaData{}
@@ -350,10 +351,26 @@ func (c *FilesAPIComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 		}
 	}
 
+	if metaData.BundleID != nil && metaData.State == store.StatePublished {
+		dbBundle := files.StoredBundle{}
+		res = c.mongoClient.Database("files").Collection("bundles").FindOne(ctx, bson.M{"id": *metaData.BundleID})
+		_ = res.Decode(&dbBundle)
+
+		if dbBundle.State == store.StatePublished {
+			metaData.LastModified = dbBundle.LastModified
+			// metaData.PublishedAt = dbBundle.PublishedAt // TODO: uncomment when PublishedAt is added to StoredBundle struct
+		}
+	}
+
 	isPublishable, _ := strconv.ParseBool(expectedMetaData.IsPublishable)
 	sizeInBytes, _ := strconv.ParseUint(expectedMetaData.SizeInBytes, 10, 64)
 	assert.Equal(c.APIFeature, isPublishable, metaData.IsPublishable)
-	assert.Equal(c.APIFeature, expectedMetaData.CollectionID, *metaData.CollectionID)
+	if expectedMetaData.CollectionID != "" {
+		assert.Equal(c.APIFeature, expectedMetaData.CollectionID, *metaData.CollectionID)
+	}
+	if expectedMetaData.BundleID != "" {
+		assert.Equal(c.APIFeature, expectedMetaData.BundleID, *metaData.BundleID)
+	}
 	assert.Equal(c.APIFeature, expectedMetaData.Title, metaData.Title)
 	assert.Equal(c.APIFeature, sizeInBytes, metaData.SizeInBytes)
 	assert.Equal(c.APIFeature, expectedMetaData.Type, metaData.Type)
@@ -363,7 +380,8 @@ func (c *FilesAPIComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 	assert.Equal(c.APIFeature, expectedMetaData.Etag, metaData.Etag)
 	assert.Equal(c.APIFeature, expectedMetaData.CreatedAt, metaData.CreatedAt.Format(time.RFC3339), "CREATED AT")
 	assert.Equal(c.APIFeature, expectedMetaData.LastModified, metaData.LastModified.Format(time.RFC3339), "LAST MODIFIED")
-	if expectedMetaData.PublishedAt != "" {
+	// TODO: remove expectedMetaData.BundleID == "" check once PublishedAt is added to StoredBundle struct
+	if expectedMetaData.PublishedAt != "" && expectedMetaData.BundleID == "" {
 		assert.Equal(c.APIFeature, expectedMetaData.PublishedAt, metaData.PublishedAt.Format(time.RFC3339), "PUBLISHED AT")
 	}
 	if expectedMetaData.MovedAt != "" {
@@ -376,6 +394,14 @@ func (c *FilesAPIComponent) theFollowingDocumentEntryShouldBeLookLike(table *god
 func (c *FilesAPIComponent) iPublishTheCollection(collectionID string) error {
 	body := fmt.Sprintf(`{"state": %q}`, store.StatePublished)
 	err := c.APIFeature.IPatch(fmt.Sprintf("/collection/%s", collectionID), &messages.PickleDocString{MediaType: "application/json", Content: body})
+	assert.NoError(c.APIFeature, err)
+
+	return c.APIFeature.StepError()
+}
+
+func (c *FilesAPIComponent) iPublishTheBundle(bundleID string) error {
+	body := fmt.Sprintf(`{"state": %q}`, store.StatePublished)
+	err := c.APIFeature.IPatch(fmt.Sprintf("/bundle/%s", bundleID), &messages.PickleDocString{MediaType: "application/json", Content: body})
 	assert.NoError(c.APIFeature, err)
 
 	return c.APIFeature.StepError()

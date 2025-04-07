@@ -138,6 +138,29 @@ paths:
           $ref: '#/definitions/Error'
         500:
           $ref: '#/responses/InternalError'
+    
+  /bundle/{bundleID}:
+    patch:
+      summary: Publish all files in a bundle
+      security:
+        - Bearer: [ ]
+      parameters:
+        - name: bundleID
+          description: The ID of the bundle to be published
+          type: string
+          required: true
+          in: path
+      produces:
+        - application/json
+      responses:
+        201:
+          description: OK
+        404:
+          $ref: '#/definitions/Error'
+        409:
+          $ref: '#/definitions/Error'
+        500:
+          $ref: '#/responses/InternalError'
 
   /health:
     get:

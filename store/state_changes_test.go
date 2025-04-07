@@ -124,7 +124,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenBundleAlreadyPublished() {
 	suite.ErrorIs(err, store.ErrBundleAlreadyPublished)
 }
 
-func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
+func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExistsCollection() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
@@ -143,6 +143,33 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExists() {
 
 	cfg, _ := config.Get()
 	subject := store.NewStore(&alwaysFindsExistingCollection, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("File upload already registered: skipping registration of file metadata", logEvent)
+	suite.NoError(err)
+}
+
+func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExistsBundle() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
+	metadata.State = store.StateUploaded
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	alwaysFindsExistingCollection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+	emptyCollection := mock.MongoCollectionMock{
+		FindOneFunc: func(ctx context.Context, filter, result interface{}, opts ...mongodriver.FindOption) error {
+			return mongodriver.ErrNoDocumentFound
+		},
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&alwaysFindsExistingCollection, nil, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -641,10 +668,9 @@ func (suite *StoreSuite) TestMarkFilePublishedCollectionIDNil() {
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
-
-	suite.Equal("file had no collection id", logEvent)
+	suite.Equal("mark file published: file was not in state UPLOADED", logEvent)
 	suite.Error(err)
-	suite.ErrorIs(err, store.ErrCollectionIDNotSet)
+	suite.ErrorIs(err, store.ErrFileNotInUploadedState)
 }
 
 func (suite *StoreSuite) TestMarkFilePublishedStateUploaded() {

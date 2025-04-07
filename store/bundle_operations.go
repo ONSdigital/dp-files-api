@@ -4,14 +4,77 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"strconv"
+	"sync"
 
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
+	"github.com/ONSdigital/dp-net/v2/request"
 	"github.com/ONSdigital/log.go/v2/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
+func (store *Store) MarkBundlePublished(ctx context.Context, bundleID string) error {
+	logdata := log.Data{"bundle_id": bundleID}
+
+	empty, err := store.IsBundleEmpty(ctx, bundleID)
+	if err != nil {
+		log.Error(ctx, "failed to check if bundle is empty", err, logdata)
+		return err
+	}
+	if empty {
+		log.Error(ctx, "bundle empty check fail", ErrNoFilesInBundle, logdata)
+		return ErrNoFilesInBundle
+	}
+
+	allUploaded, err := store.IsBundleUploaded(ctx, bundleID)
+	if err != nil {
+		log.Error(ctx, "failed to check if bundle is uploaded", err, logdata)
+		return err
+	}
+	if !allUploaded {
+		log.Error(ctx, "bundle uploaded check fail", ErrFileNotInUploadedState, logdata)
+		return ErrFileNotInUploadedState
+	}
+
+	err = store.updateBundleState(ctx, bundleID, StatePublished)
+	if err != nil {
+		return err
+	}
+
+	requestID := request.GetRequestId(ctx)
+	newCtx := request.WithRequestId(context.Background(), requestID)
+	go store.NotifyBundlePublished(newCtx, bundleID)
+
+	return nil
+}
+
+func (store *Store) IsBundleUploaded(ctx context.Context, bundleID string) (bool, error) {
+	published, err := store.IsBundlePublished(ctx, bundleID)
+	if err != nil {
+		return false, err
+	}
+	if published {
+		return false, nil
+	}
+
+	metadata := files.StoredRegisteredMetaData{}
+	err = store.metadataCollection.FindOne(ctx, bson.M{"$and": []bson.M{
+		{fieldBundleID: bundleID},
+		{fieldState: bson.M{"$ne": StateUploaded}},
+	}}, &metadata)
+	if err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			return true, nil
+		}
+		return false, err
+	}
+
+	return false, nil
+}
 
 func (store *Store) IsBundlePublished(ctx context.Context, bundleID string) (bool, error) {
 	bundle, err := store.GetBundlePublishedMetadata(ctx, bundleID)
@@ -29,6 +92,34 @@ func (store *Store) IsBundlePublished(ctx context.Context, bundleID string) (boo
 		return true, nil
 	}
 	return false, nil
+}
+
+func (store *Store) updateBundleState(ctx context.Context, bundleID, state string) error {
+	logdata := log.Data{"bundle_id": bundleID, "state": state}
+
+	now := store.clock.GetCurrentTime()
+
+	fields := bson.D{
+		{Key: fieldState, Value: state},
+		{Key: fieldLastModified, Value: now},
+	}
+
+	// TODO: uncomment when PublishedAt is added to StoredBundle struct
+	// if state == StatePublished {
+	// 	fields = append(fields, bson.E{Key: fieldPublishedAt, Value: now})
+	// }
+
+	_, err := store.bundlesCollection.Upsert(
+		ctx,
+		bson.M{fieldID: bundleID},
+		bson.D{
+			{Key: "$set", Value: fields},
+		})
+	if err != nil {
+		log.Error(ctx, fmt.Sprintf("failed to change bundle %v to %s state", bundleID, state), err, logdata)
+		return err
+	}
+	return nil
 }
 
 func (store *Store) GetBundlePublishedMetadata(ctx context.Context, id string) (files.StoredBundle, error) {
@@ -141,4 +232,79 @@ func (store *Store) UpdateBundleID(ctx context.Context, path, bundleID string) e
 		})
 
 	return err
+}
+
+func (store *Store) NotifyBundlePublished(ctx context.Context, bundleID string) {
+	// ignoring err as this would have been done previously
+	totalCount, _ := store.metadataCollection.Count(ctx, bson.M{fieldBundleID: bundleID})
+	log.Info(ctx, "notify bundle published start", log.Data{"bundle_id": bundleID, "total_files": totalCount})
+	// balance the number of batches Vs batch size
+	batchSize := store.cfg.MinBatchSize
+	numBatches := int(math.Ceil(float64(totalCount) / float64(batchSize)))
+	if numBatches > store.cfg.MaxNumBatches {
+		numBatches = store.cfg.MaxNumBatches
+		batchSize = int(math.Ceil(float64(totalCount) / float64(numBatches)))
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(numBatches)
+	for i := 0; i < numBatches; i++ {
+		offset := i * batchSize
+		cursor, err := store.metadataCollection.FindCursor(ctx, bson.M{fieldBundleID: bundleID}, mongodriver.Offset(offset))
+		if err != nil {
+			wg.Done()
+			log.Error(ctx, "BatchSendKafkaMessages: failed to query collection", err, log.Data{"bundle_id": bundleID})
+			continue
+		}
+		go store.BatchSendBundleKafkaMessages(ctx, cursor, &wg, bundleID, offset, batchSize, i)
+	}
+	wg.Wait()
+
+	log.Info(ctx, "notify bundle published end", log.Data{"bundle_id": bundleID})
+}
+
+func (store *Store) BatchSendBundleKafkaMessages(
+	ctx context.Context,
+	cursor mongodriver.Cursor,
+	wg *sync.WaitGroup,
+	bundleID string,
+	offset,
+	batchSize,
+	batchNum int,
+) {
+	defer wg.Done()
+	ld := log.Data{"bundle_id": bundleID, "offset": offset, "batch_size": batchSize, "batch_num": batchNum}
+	log.Info(ctx, "BatchSendBundleKafkaMessages", ld)
+	defer func() {
+		if err := cursor.Close(ctx); err != nil {
+			log.Error(ctx, "BatchSendBundleKafkaMessages: failed to close cursor", err, ld)
+		}
+	}()
+
+	for i := 0; i < batchSize; i++ {
+		if cursor.Next(ctx) {
+			var m files.StoredRegisteredMetaData
+			if err := cursor.Decode(&m); err != nil {
+				log.Error(ctx, "BatchSendBundleKafkaMessages: failed to decode cursor", err, ld)
+				continue
+			}
+			fp := &files.FilePublished{
+				Path:        m.Path,
+				Type:        m.Type,
+				Etag:        m.Etag,
+				SizeInBytes: strconv.FormatUint(m.SizeInBytes, 10),
+			}
+			if err := store.kafka.Send(files.AvroSchema, fp); err != nil {
+				log.Error(ctx, "BatchSendBundleKafkaMessages: can't send message to kafka", err, log.Data{"metadata": m})
+			}
+		} else {
+			break
+		}
+	}
+	if err := cursor.Err(); err != nil {
+		log.Error(ctx, "BatchSendBundleKafkaMessages: cursor error", err, ld)
+	}
+
+	log.Info(ctx, "BatchSendBundleKafkaMessages end", ld)
+
 }
