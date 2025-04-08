@@ -28,9 +28,13 @@ func (suite *StoreSuite) TestRegisterFileUploadCollectionPublishedCheckError() {
 		FindOneFunc: CollectionFindOneReturnsError(expectedError),
 	}
 
+	existingMetadata, _ := bson.Marshal(files.StoredRegisteredMetaData{
+		CollectionID: func() *string { id := "different-id"; return &id }(),
+	})
+
 	metadataCollection := mock.MongoCollectionMock{
 		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
-		FindOneFunc: CollectionFindOneSucceeds(),
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(existingMetadata),
 	}
 
 	cfg, _ := config.Get()
@@ -53,9 +57,13 @@ func (suite *StoreSuite) TestRegisterFileUploadBundlePublishedCheckError() {
 		FindOneFunc: CollectionFindOneReturnsError(expectedError),
 	}
 
+	existingMetadata, _ := bson.Marshal(files.StoredRegisteredMetaData{
+		BundleID: func() *string { id := "different-id"; return &id }(),
+	})
+
 	metadataCollection := mock.MongoCollectionMock{
 		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
-		FindOneFunc: CollectionFindOneSucceeds(),
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(existingMetadata),
 	}
 
 	cfg, _ := config.Get()
@@ -80,9 +88,13 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenCollectionAlreadyPublished() 
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(coll), // collection is PUBLISHED
 	}
 
+	existingMetadata, _ := bson.Marshal(files.StoredRegisteredMetaData{
+		CollectionID: func() *string { id := "different-id"; return &id }(),
+	})
+
 	metadataCollection := mock.MongoCollectionMock{
 		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
-		FindOneFunc: CollectionFindOneSucceeds(),
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(existingMetadata),
 	}
 
 	cfg, _ := config.Get()
@@ -109,9 +121,13 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenBundleAlreadyPublished() {
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(bundle), // bundle is PUBLISHED
 	}
 
+	existingMetadata, _ := bson.Marshal(files.StoredRegisteredMetaData{
+		BundleID: func() *string { id := "different-id"; return &id }(),
+	})
+
 	metadataCollection := mock.MongoCollectionMock{
 		UpdateFunc:  CollectionUpdateManyReturnsNilAndNil(),
-		FindOneFunc: CollectionFindOneSucceeds(),
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(existingMetadata),
 	}
 
 	cfg, _ := config.Get()

@@ -9,6 +9,7 @@ import (
 	"github.com/go-playground/validator"
 
 	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/ONSdigital/dp-files-api/store"
 )
 
 type RegisterFileUpload func(ctx context.Context, metaData files.StoredRegisteredMetaData) error
@@ -30,6 +31,11 @@ func HandlerRegisterUploadStarted(register RegisterFileUpload, deadlineDuration 
 		rm, err := getRegisterMetadataFromRequest(req)
 		if err != nil {
 			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
+			return
+		}
+
+		if rm.CollectionID != nil && rm.BundleID != nil {
+			writeError(w, buildErrors(store.ErrBothCollectionAndBundleIDSet, "BothCollectionAndBundleIDSet"), http.StatusBadRequest)
 			return
 		}
 

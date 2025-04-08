@@ -44,6 +44,8 @@ func handleError(w http.ResponseWriter, err error) {
 		writeError(w, buildErrors(err, "EmptyCollection"), http.StatusNotFound)
 	case store.ErrFileIsNotPublishable:
 		writeError(w, buildErrors(err, "FileNotPublishable"), http.StatusConflict)
+	case store.ErrBothCollectionAndBundleIDSet:
+		writeError(w, buildErrors(err, "BothCollectionAndBundleIDSet"), http.StatusBadRequest)
 	default:
 		writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)
 	}
