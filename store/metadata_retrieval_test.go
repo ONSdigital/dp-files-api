@@ -127,7 +127,6 @@ func (suite *StoreSuite) TestGetFileMetadataWithBundleID() {
 		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 	}
 
-	publishedAt := suite.generateTestTime(1)
 	lastModified := suite.generateTestTime(2)
 	bundle := files.StoredBundle{
 		ID:           bundleID,
@@ -147,7 +146,6 @@ func (suite *StoreSuite) TestGetFileMetadataWithBundleID() {
 
 	suite.NoError(err)
 	suite.Equal(store.StatePublished, actualMetadata.State)
-	suite.Equal(publishedAt, *actualMetadata.PublishedAt)
 	suite.Equal(lastModified, actualMetadata.LastModified)
 }
 
@@ -669,7 +667,6 @@ func (suite *StoreSuite) TestPatchBundleMetadataSuccess() {
 	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	bundleID := testBundleID
-	publishedAt := suite.generateTestTime(1)
 	lastModified := suite.generateTestTime(2)
 	metadata := files.StoredRegisteredMetaData{
 		Path:     "path1",
@@ -686,7 +683,6 @@ func (suite *StoreSuite) TestPatchBundleMetadataSuccess() {
 		Path:         "path1",
 		State:        store.StatePublished,
 		BundleID:     &bundleID,
-		PublishedAt:  &publishedAt,
 		LastModified: lastModified,
 	}
 
