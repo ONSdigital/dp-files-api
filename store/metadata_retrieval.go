@@ -154,7 +154,7 @@ func (store *Store) PatchFilePublishBundleMetadata(metadata *files.StoredRegiste
 		return
 	}
 
-	// bundke state should only affect the file metadata if the file is in uploaded state
+	// bundle state should only affect the file metadata if the file is in uploaded state
 	if metadata.State != StateUploaded {
 		return
 	}
