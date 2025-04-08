@@ -140,34 +140,33 @@ func (store *Store) PatchFilePublishMetadata(metadata *files.StoredRegisteredMet
 	metadata.LastModified = collection.LastModified
 }
 
-// For the optimisation purposes, we store the Florence collection publishing information in a separate DB collection.
-// This makes the collection publishing instantaneous by removing a need to update the publish state of all the files
-// in the collection, which takes a very long time for large collections.
+// For the optimisation purposes, we store the bundle publishing information in a separate DB collection.
+// This makes the bundle publishing instantaneous by removing a need to update the publish state of all the files
+// in the bundle, which takes a very long time for large bundles.
 // Because of this, we need to patch the file metadata in a specific case documented below.
 func (store *Store) PatchFilePublishBundleMetadata(metadata *files.StoredRegisteredMetaData, bundle *files.StoredBundle) {
 	if metadata == nil || bundle == nil {
 		return
 	}
-	// sanity check - collection data should only apply if the collection of the file matches
-	// the collection passed in the parameter
+	// sanity check - bundle data should only apply if the bundle of the file matches
+	// the bundle passed in the parameter
 	if metadata.BundleID == nil || *metadata.BundleID != bundle.ID {
 		return
 	}
 
-	// collection state should only affect the file metadata if the file is in uploaded state
+	// bundke state should only affect the file metadata if the file is in uploaded state
 	if metadata.State != StateUploaded {
 		return
 	}
-	// collection state should only affect the file metadata if the collection is in published state
+	// bundle state should only affect the file metadata if the bundle is in published state
 	if bundle.State != StatePublished {
 		return
 	}
 
-	// We now know the file is uploaded and the collection is published. This means the file
+	// We now know the file is uploaded and the bundle is published. This means the file
 	// should be considered published.
-	// Also, collection publishing always happens after uploading the file and so the publishing
-	// and modification date of the file should be adjusted to match that of the collection.
+	// Also, bundle publishing always happens after uploading the file and so the publishing
+	// and modification date of the file should be adjusted to match that of the bundle.
 	metadata.State = StatePublished
-	metadata.PublishedAt = bundle.PublishedAt
 	metadata.LastModified = bundle.LastModified
 }

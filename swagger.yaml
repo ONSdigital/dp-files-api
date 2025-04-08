@@ -45,7 +45,7 @@ paths:
           $ref: '#/responses/InternalError'
     get:
       tags:
-        - File upload started
+        - Fetch files from collection or bundle
       summary: GET metadata for files by collection or bundle ID
       security:
         - Bearer: []

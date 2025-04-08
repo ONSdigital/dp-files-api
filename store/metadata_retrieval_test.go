@@ -132,7 +132,6 @@ func (suite *StoreSuite) TestGetFileMetadataWithBundleID() {
 	bundle := files.StoredBundle{
 		ID:           bundleID,
 		State:        store.StatePublished,
-		PublishedAt:  &publishedAt,
 		LastModified: lastModified,
 	}
 	bundleBytes, _ := bson.Marshal(bundle)
@@ -363,17 +362,13 @@ func (suite *StoreSuite) TestGetFilesMetadataWithBundlePatching() {
 
 	expectedMetadata := []files.StoredRegisteredMetaData{metadata1, metadata2}
 	expectedMetadata[0].State = store.StatePublished
-	expectedMetadata[0].PublishedAt = bundle.PublishedAt
 	expectedMetadata[1].State = store.StatePublished
-	expectedMetadata[1].PublishedAt = bundle.PublishedAt
 
 	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, "", suite.defaultBundleID)
 
 	suite.NoError(err)
 	suite.NotEqual(metadata1.State, bundle.State)
-	suite.NotEqual(metadata1.PublishedAt, bundle.PublishedAt)
 	suite.NotEqual(metadata2.State, bundle.State)
-	suite.NotEqual(metadata2.PublishedAt, bundle.PublishedAt)
 	suite.Exactly(expectedMetadata, actualMetadata)
 }
 
@@ -684,7 +679,6 @@ func (suite *StoreSuite) TestPatchBundleMetadataSuccess() {
 	bundle := &files.StoredBundle{
 		ID:           bundleID,
 		State:        store.StatePublished,
-		PublishedAt:  &publishedAt,
 		LastModified: lastModified,
 	}
 

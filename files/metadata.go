@@ -31,10 +31,9 @@ type StoredCollection struct {
 }
 
 type StoredBundle struct {
-	ID           string     `bson:"id" json:"id"`
-	State        string     `bson:"state" json:"state"`
-	LastModified time.Time  `bson:"last_modified" json:"-"`
-	PublishedAt  *time.Time `bson:"published_at,omitempty" json:"-"`
+	ID           string    `bson:"id" json:"id"`
+	State        string    `bson:"state" json:"state"`
+	LastModified time.Time `bson:"last_modified" json:"-"`
 }
 
 type FileEtagChange struct {
