@@ -750,3 +750,62 @@ func (suite *StoreSuite) TestUpdateBundleIDUpdateSuccess() {
 
 	suite.NoError(err)
 }
+
+func (suite *StoreSuite) TestUpdateBundleIDRemoveBundleID() {
+	metadata := suite.generateBundleMetadata("existing-bundle-id")
+	metadata.State = store.StateUploaded
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	collectionWithFileHavingBundleID := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+		UpdateFunc:  CollectionUpdateReturnsNilAndNil(),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithFileHavingBundleID, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.UpdateBundleID(suite.defaultContext, suite.path, "")
+
+	suite.NoError(err)
+	suite.Equal(1, len(collectionWithFileHavingBundleID.UpdateCalls()))
+}
+
+func (suite *StoreSuite) TestUpdateBundleIDRemoveBundleIDNoExistingBundle() {
+	metadata := suite.generateBundleMetadata("")
+	metadata.State = store.StateUploaded
+	metadata.BundleID = nil
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	collectionWithFileHavingNoBundleID := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithFileHavingNoBundleID, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.UpdateBundleID(suite.defaultContext, suite.path, "")
+
+	suite.NoError(err)
+	suite.Equal(0, len(collectionWithFileHavingNoBundleID.UpdateCalls()))
+}
+
+func (suite *StoreSuite) TestUpdateBundleIDRemoveBundleIDUpdateError() {
+	metadata := suite.generateBundleMetadata("existing-bundle-id")
+	metadata.State = store.StateUploaded
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	expectedError := errors.New("an error occurred during update")
+
+	collectionWithFileHavingBundleID := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+		UpdateFunc:  CollectionUpdateReturnsNilAndError(expectedError),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithFileHavingBundleID, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.UpdateBundleID(suite.defaultContext, suite.path, "")
+
+	suite.Error(err)
+	suite.ErrorIs(err, expectedError)
+}

@@ -205,13 +205,32 @@ func (store *Store) UpdateBundleID(ctx context.Context, path, bundleID string) e
 		return err
 	}
 
+	if bundleID == "" {
+		if metadata.BundleID == nil {
+			return nil
+		}
+
+		_, err := store.metadataCollection.Update(
+			ctx,
+			bson.M{"path": path},
+			bson.D{
+				{Key: "$unset", Value: bson.D{
+					{Key: "bundle_id", Value: ""},
+				}},
+			})
+
+		if err != nil {
+			log.Error(ctx, "failed to remove bundle ID", err, logdata)
+		}
+		return err
+	}
+
 	if metadata.BundleID != nil {
 		logdata["bundle_id"] = *metadata.BundleID
 		log.Error(ctx, "update bundle ID: bundle ID already set", ErrBundleIDAlreadySet, logdata)
 		return ErrBundleIDAlreadySet
 	}
 
-	// check to see if bundleID exists and is not-published
 	published, err := store.IsBundlePublished(ctx, bundleID)
 	if err != nil {
 		log.Error(ctx, "update bundle ID: caught db error", err, logdata)
