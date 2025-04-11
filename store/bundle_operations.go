@@ -231,6 +231,7 @@ func (store *Store) UpdateBundleID(ctx context.Context, path, bundleID string) e
 		return ErrBundleIDAlreadySet
 	}
 
+	// check to see if bundleID exists and is not-published
 	published, err := store.IsBundlePublished(ctx, bundleID)
 	if err != nil {
 		log.Error(ctx, "update bundle ID: caught db error", err, logdata)
