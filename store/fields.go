@@ -4,6 +4,7 @@ const (
 	fieldID                = "id"
 	fieldPath              = "path"
 	fieldCollectionID      = "collection_id"
+	fieldBundleID          = "bundle_id"
 	fieldEtag              = "etag"
 	fieldState             = "state"
 	fieldLastModified      = "last_modified"

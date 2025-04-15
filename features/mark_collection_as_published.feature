@@ -31,7 +31,7 @@ Feature: Publishing file to Kafka from a collection ID
     And Kafka Consumer Group is running
     When I publish the collection "1234-asdfg-54321-qwerty"
     Then the HTTP status code should be "201"
-    And the following document entry should be look like:
+    And the following document entry should look like:
       | Path              | images/meme.jpg                                                           |
       | IsPublishable     | true                                                                      |
       | CollectionID      | 1234-asdfg-54321-qwerty                                                   |
@@ -46,7 +46,7 @@ Feature: Publishing file to Kafka from a collection ID
       | PublishedAt       | 2021-10-19T09:30:30Z                                                      |
       | Etag              | 123456789                                                                 |
       | State             | PUBLISHED                                                                 |
-    And the following document entry should be look like:
+    And the following document entry should look like:
       | Path              | images/other-meme.jpg                                                     |
       | IsPublishable     | true                                                                      |
       | CollectionID      | 1234-asdfg-54321-qwerty                                                   |
@@ -116,7 +116,7 @@ Feature: Publishing file to Kafka from a collection ID
       | Etag              | 123456789                                                                 |
     When I publish the collection "1234-asdfg-54321-qwerty"
     Then the HTTP status code should be "409"
-    And the following document entry should be look like:
+    And the following document entry should look like:
       | Path              | images/other-meme.jpg                                                     |
       | IsPublishable     | true                                                                      |
       | CollectionID      | 1234-asdfg-54321-qwerty                                                   |

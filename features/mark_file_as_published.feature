@@ -18,7 +18,7 @@ Feature: Mark single file as published
     And Kafka Consumer Group is running
     When the file "images/meme.jpg" is marked as published
     Then the HTTP status code should be "200"
-    And the following document entry should be look like:
+    And the following document entry should look like:
       | Path              | images/meme.jpg                                                           |
       | IsPublishable     | true                                                                      |
       | CollectionID      | 1234-asdfg-54321-qwerty                                                   |
@@ -72,7 +72,7 @@ Feature: Mark single file as published
       | State             | UPLOADED                                                                  |
       | Etag              | 123456789                                                                 |
     When the file "images/meme.jpg" is marked as published
-    Then the HTTP status code should be "409"
+    Then the HTTP status code should be "200"
 
   Scenario: The one where the file does not exists
     Given I am an authorised user

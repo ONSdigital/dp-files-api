@@ -15,7 +15,7 @@ Feature: Set Optional Collection ID after creating file metadata
       | Etag              | 123456789                                                                 |
     When I set the collection ID to "1234-asdfg-54321-qwerty" for file "images/meme.jpg"
     Then the HTTP status code should be "200"
-    And the following document entry should be look like:
+    And the following document entry should look like:
       | Path              | images/meme.jpg                                                           |
       | IsPublishable     | true                                                                      |
       | CollectionID      | 1234-asdfg-54321-qwerty                                                   |
@@ -64,7 +64,7 @@ Feature: Set Optional Collection ID after creating file metadata
       | Etag              | 123456789                                                                 |
     When I set the collection ID to "98765-ytrewq-654321-gfdsa" for file "images/meme.jpg"
     Then the HTTP status code should be "400"
-    And the following document entry should be look like:
+    And the following document entry should look like:
       | Path              | images/meme.jpg                                                           |
       | IsPublishable     | true                                                                      |
       | CollectionID      | 1234-asdfg-54321-qwerty                                                   |

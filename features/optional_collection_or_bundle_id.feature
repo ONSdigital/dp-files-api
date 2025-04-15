@@ -1,5 +1,5 @@
-Feature: Optional Collection ID
-  Scenario: The one where the collection ID is not sent with the file meta data
+Feature: Optional Collection or Bundle ID
+  Scenario: The one where neither the Collection or Bundle ID is sent with the file meta data
     Given I am an authorised user
     When the file upload is registered with payload:
         """

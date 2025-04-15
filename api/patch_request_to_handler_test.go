@@ -26,10 +26,12 @@ type PatchRequestToHandlerSuite struct {
 
 func (suite *PatchRequestToHandlerSuite) SetupTest() {
 	collectionID := "123456"
+	bundleID := "bundleID"
 	stateMoved := "MOVED"
 	statePublished := "PUBLISHED"
 	stateUploaded := "UPLOADED"
 	collectionUpdateHandlerBody := "collectionUpdateHandler"
+	bundleUpdateHandlerBody := "bundleUpdateHandler"
 	movedHandlerBody := "movedHandler"
 	publishedHandlerBody := "publishedHandler"
 	uploadCompleteHandlerBody := "uploadCompleteHandler"
@@ -40,6 +42,7 @@ func (suite *PatchRequestToHandlerSuite) SetupTest() {
 
 	suite.TestStates = []patchRequestMetadataStates{
 		{Metadata: api.StateMetadata{CollectionID: &collectionID}, ExpectedBody: collectionUpdateHandlerBody},
+		{Metadata: api.StateMetadata{BundleID: &bundleID}, ExpectedBody: bundleUpdateHandlerBody},
 		{Metadata: api.StateMetadata{State: &stateMoved}, ExpectedBody: movedHandlerBody},
 		{Metadata: api.StateMetadata{State: &statePublished}, ExpectedBody: publishedHandlerBody},
 		{Metadata: api.StateMetadata{State: &stateUploaded}, ExpectedBody: uploadCompleteHandlerBody},
@@ -50,6 +53,7 @@ func (suite *PatchRequestToHandlerSuite) SetupTest() {
 		Published:        generatePatchRequestHandler(publishedHandlerBody),
 		Moved:            generatePatchRequestHandler(movedHandlerBody),
 		CollectionUpdate: generatePatchRequestHandler(collectionUpdateHandlerBody),
+		BundleUpdate:     generatePatchRequestHandler(bundleUpdateHandlerBody),
 	}
 }
 
@@ -81,6 +85,7 @@ func (suite *PatchRequestToHandlerSuite) TestPatchRequestToHandlerPassesBodyToSu
 		Published:        testHandler,
 		Moved:            testHandler,
 		CollectionUpdate: testHandler,
+		BundleUpdate:     testHandler,
 	}
 
 	for _, state := range suite.TestStates {

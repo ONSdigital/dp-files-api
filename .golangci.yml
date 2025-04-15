@@ -89,6 +89,7 @@ issues:
         - errcheck
         - dupl
         - gosec
+        - goconst
     # Allow dot import in test files for goconvey
     - path: _test.go
       text: "dot-imports"

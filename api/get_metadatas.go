@@ -10,21 +10,34 @@ import (
 	"github.com/ONSdigital/log.go/v2/log"
 )
 
-type GetFilesMetadata func(ctx context.Context, collectionID string) ([]files.StoredRegisteredMetaData, error)
+type GetFilesMetadata func(ctx context.Context, collectionID, bundleID string) ([]files.StoredRegisteredMetaData, error)
 
 func HandlerGetFilesMetadata(getFilesMetadata GetFilesMetadata) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		collectionID := req.URL.Query().Get("collection_id")
+		bundleID := req.URL.Query().Get("bundle_id")
 
-		if collectionID == "" {
-			err := errors.New("missing collection ID")
+		if collectionID == "" && bundleID == "" {
+			err := errors.New("missing required ID: either collection_id or bundle_id must be provided")
 			writeError(w, buildErrors(err, "BadRequest"), http.StatusBadRequest)
 			return
 		}
 
-		fm, err := getFilesMetadata(req.Context(), collectionID)
+		if collectionID != "" && bundleID != "" {
+			err := errors.New("only one of collection_id or bundle_id should be provided")
+			writeError(w, buildErrors(err, "BadRequest"), http.StatusBadRequest)
+			return
+		}
+
+		fm, err := getFilesMetadata(req.Context(), collectionID, bundleID)
 		if err != nil {
-			log.Error(req.Context(), "file metadata fetch failed", err, log.Data{"collection": collectionID})
+			idType := "collection"
+			idValue := collectionID
+			if bundleID != "" {
+				idType = "bundle"
+				idValue = bundleID
+			}
+			log.Error(req.Context(), "file metadata fetch failed", err, log.Data{idType: idValue})
 			handleError(w, err)
 			return
 		}

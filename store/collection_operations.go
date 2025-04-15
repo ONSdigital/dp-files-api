@@ -24,7 +24,7 @@ func (store *Store) IsCollectionPublished(ctx context.Context, collectionID stri
 		// to the older method that checks the file statuses (if all files in the collection are marked
 		// as published, we consider the collection published).
 		if errors.Is(err, ErrCollectionMetadataNotRegistered) {
-			return store.AreAllFilesPublished(ctx, collectionID)
+			return store.AreAllCollectionFilesPublished(ctx, collectionID)
 		}
 		// we've hit an unexpected error
 		return false, fmt.Errorf("collection published check: %w", err)
@@ -35,10 +35,10 @@ func (store *Store) IsCollectionPublished(ctx context.Context, collectionID stri
 	return false, nil
 }
 
-func (store *Store) AreAllFilesPublished(ctx context.Context, collectionID string) (bool, error) {
+func (store *Store) AreAllCollectionFilesPublished(ctx context.Context, collectionID string) (bool, error) {
 	empty, err := store.IsCollectionEmpty(ctx, collectionID)
 	if err != nil {
-		return false, fmt.Errorf("AreAllFilesPublished empty collection check: %w", err)
+		return false, fmt.Errorf("AreAllCollectionFilesPublished empty collection check: %w", err)
 	}
 	if empty {
 		return false, nil
@@ -54,7 +54,7 @@ func (store *Store) AreAllFilesPublished(ctx context.Context, collectionID strin
 		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
 			return true, nil
 		}
-		return false, fmt.Errorf("AreAllFilesPublished check: %w", err)
+		return false, fmt.Errorf("AreAllCollectionFilesPublished check: %w", err)
 	}
 	return false, nil
 }
@@ -258,14 +258,14 @@ func (store *Store) NotifyCollectionPublished(ctx context.Context, collectionID 
 			log.Error(ctx, "BatchSendKafkaMessages: failed to query collection", err, log.Data{"collection_id": collectionID})
 			continue
 		}
-		go store.BatchSendKafkaMessages(ctx, cursor, &wg, collectionID, offset, batchSize, i)
+		go store.BatchSendCollectionKafkaMessages(ctx, cursor, &wg, collectionID, offset, batchSize, i)
 	}
 	wg.Wait()
 
 	log.Info(ctx, "notify collection published end", log.Data{"collection_id": collectionID})
 }
 
-func (store *Store) BatchSendKafkaMessages(
+func (store *Store) BatchSendCollectionKafkaMessages(
 	ctx context.Context,
 	cursor mongodriver.Cursor,
 	wg *sync.WaitGroup,
@@ -276,10 +276,10 @@ func (store *Store) BatchSendKafkaMessages(
 ) {
 	defer wg.Done()
 	ld := log.Data{"collection_id": collectionID, "offset": offset, "batch_size": batchSize, "batch_num": batchNum}
-	log.Info(ctx, "BatchSendKafkaMessages", ld)
+	log.Info(ctx, "BatchSendCollectionKafkaMessages", ld)
 	defer func() {
 		if err := cursor.Close(ctx); err != nil {
-			log.Error(ctx, "BatchSendKafkaMessages: failed to close cursor", err, ld)
+			log.Error(ctx, "BatchSendCollectionKafkaMessages: failed to close cursor", err, ld)
 		}
 	}()
 
@@ -287,7 +287,7 @@ func (store *Store) BatchSendKafkaMessages(
 		if cursor.Next(ctx) {
 			var m files.StoredRegisteredMetaData
 			if err := cursor.Decode(&m); err != nil {
-				log.Error(ctx, "BatchSendKafkaMessages: failed to decode cursor", err, ld)
+				log.Error(ctx, "BatchSendCollectionKafkaMessages: failed to decode cursor", err, ld)
 				continue
 			}
 			fp := &files.FilePublished{
@@ -297,15 +297,15 @@ func (store *Store) BatchSendKafkaMessages(
 				SizeInBytes: strconv.FormatUint(m.SizeInBytes, 10),
 			}
 			if err := store.kafka.Send(files.AvroSchema, fp); err != nil {
-				log.Error(ctx, "BatchSendKafkaMessages: can't send message to kafka", err, log.Data{"metadata": m})
+				log.Error(ctx, "BatchSendCollectionKafkaMessages: can't send message to kafka", err, log.Data{"metadata": m})
 			}
 		} else {
 			break
 		}
 	}
 	if err := cursor.Err(); err != nil {
-		log.Error(ctx, "BatchSendKafkaMessages: cursor error", err, ld)
+		log.Error(ctx, "BatchSendCollectionKafkaMessages: cursor error", err, ld)
 	}
 
-	log.Info(ctx, "BatchSendKafkaMessages end", ld)
+	log.Info(ctx, "BatchSendCollectionKafkaMessages end", ld)
 }

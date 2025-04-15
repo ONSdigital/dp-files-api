@@ -11,6 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+var testBundleID = "bundle1"
+
 func (suite *StoreSuite) TestGetFileMetadataNotFoundError() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
@@ -20,7 +22,7 @@ func (suite *StoreSuite) TestGetFileMetadataNotFoundError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	_, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -35,14 +37,14 @@ func (suite *StoreSuite) TestGetFileMetadataOtherError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	_, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	suite.EqualError(err, "find error")
 }
 
 func (suite *StoreSuite) TestGetFileMetadataNoCollectionPatching() {
-	expectedMetadata := suite.generateMetadata(suite.defaultCollectionID)
+	expectedMetadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 
 	metadataBytes, _ := bson.Marshal(expectedMetadata)
 
@@ -51,7 +53,7 @@ func (suite *StoreSuite) TestGetFileMetadataNoCollectionPatching() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	actualMetadata, _ := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	suite.Exactly(expectedMetadata, actualMetadata)
@@ -61,7 +63,7 @@ func (suite *StoreSuite) TestGetFileMetadataCollectionError() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
-	expectedMetadata := suite.generateMetadata(suite.defaultCollectionID)
+	expectedMetadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	expectedMetadata.State = store.StateUploaded
 	metadataBytes, _ := bson.Marshal(expectedMetadata)
 
@@ -73,7 +75,7 @@ func (suite *StoreSuite) TestGetFileMetadataCollectionError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	actualMetadata, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -84,7 +86,7 @@ func (suite *StoreSuite) TestGetFileMetadataCollectionError() {
 }
 
 func (suite *StoreSuite) TestGetFileMetadataWithCollectionPatching() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata.State = store.StateUploaded
 	metadataBytes, _ := bson.Marshal(metadata)
 
@@ -99,7 +101,7 @@ func (suite *StoreSuite) TestGetFileMetadataWithCollectionPatching() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	actualMetadata, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
 
 	suite.NoError(err)
@@ -111,10 +113,73 @@ func (suite *StoreSuite) TestGetFileMetadataWithCollectionPatching() {
 	suite.NotEqual(metadata.LastModified, actualMetadata.LastModified)
 }
 
+func (suite *StoreSuite) TestGetFileMetadataWithBundleID() {
+	bundleID := testBundleID
+	expectedMetadata := files.StoredRegisteredMetaData{
+		Path:     suite.path,
+		State:    store.StateUploaded,
+		BundleID: &bundleID,
+	}
+
+	metadataBytes, _ := bson.Marshal(expectedMetadata)
+
+	metadataColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+
+	lastModified := suite.generateTestTime(2)
+	bundle := files.StoredBundle{
+		ID:           bundleID,
+		State:        store.StatePublished,
+		LastModified: lastModified,
+	}
+	bundleBytes, _ := bson.Marshal(bundle)
+
+	bundleColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(bundleBytes),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataColl, nil, &bundleColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	actualMetadata, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
+
+	suite.NoError(err)
+	suite.Equal(store.StatePublished, actualMetadata.State)
+	suite.Equal(lastModified, actualMetadata.LastModified)
+}
+
+func (suite *StoreSuite) TestGetFileMetadataWithBundleError() {
+	bundleID := testBundleID
+	expectedMetadata := files.StoredRegisteredMetaData{
+		Path:     suite.path,
+		State:    store.StateUploaded,
+		BundleID: &bundleID,
+	}
+
+	metadataBytes, _ := bson.Marshal(expectedMetadata)
+
+	metadataColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+
+	bundleColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(errors.New("bundle error")),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataColl, nil, &bundleColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	actualMetadata, err := subject.GetFileMetadata(suite.defaultContext, suite.path)
+
+	suite.NoError(err)
+	suite.Equal(expectedMetadata, actualMetadata)
+}
+
 func (suite *StoreSuite) TestGetFilesMetadataNoPatching() {
-	metadata1 := suite.generateMetadata(suite.defaultCollectionID)
+	metadata1 := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata1.Path += "1"
-	metadata2 := suite.generateMetadata(suite.defaultCollectionID)
+	metadata2 := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata2.Path += "2"
 
 	metadataColl := mock.MongoCollectionMock{
@@ -128,20 +193,20 @@ func (suite *StoreSuite) TestGetFilesMetadataNoPatching() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	expectedMetadata := []files.StoredRegisteredMetaData{metadata1, metadata2}
-	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID)
+	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID, "")
 
 	suite.NoError(err)
 	suite.Exactly(expectedMetadata, actualMetadata)
 }
 
 func (suite *StoreSuite) TestGetFilesMetadataWithPatching() {
-	metadata1 := suite.generateMetadata(suite.defaultCollectionID)
+	metadata1 := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata1.Path += "1"
 	metadata1.State = store.StateUploaded
-	metadata2 := suite.generateMetadata(suite.defaultCollectionID)
+	metadata2 := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata2.Path += "2"
 	metadata2.State = store.StateUploaded
 
@@ -159,7 +224,7 @@ func (suite *StoreSuite) TestGetFilesMetadataWithPatching() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	expectedMetadata := []files.StoredRegisteredMetaData{metadata1, metadata2}
 	expectedMetadata[0].State = store.StatePublished
@@ -169,7 +234,7 @@ func (suite *StoreSuite) TestGetFilesMetadataWithPatching() {
 	expectedMetadata[1].PublishedAt = collection.PublishedAt
 	expectedMetadata[1].LastModified = collection.LastModified
 
-	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID)
+	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID, "")
 
 	suite.NoError(err)
 	suite.NotEqual(metadata1.State, collection.State)
@@ -193,10 +258,10 @@ func (suite *StoreSuite) TestGetFilesMetadataNoResult() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	expectedMetadata := make([]files.StoredRegisteredMetaData, 0)
-	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, "INVALID_COLLECTION_ID")
+	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, "INVALID_COLLECTION_ID", "")
 
 	suite.NoError(err)
 	suite.Exactly(expectedMetadata, actualMetadata)
@@ -211,16 +276,16 @@ func (suite *StoreSuite) TestGetFilesMetadataFindError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
-	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID)
+	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID, "")
 
 	suite.EqualError(err, "find error")
 	suite.Nil(actualMetadata)
 }
 
 func (suite *StoreSuite) TestGetFilesMetadataCollectionError() {
-	metadata := suite.generateMetadata(suite.defaultCollectionID)
+	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadataColl := mock.MongoCollectionMock{
 		FindFunc: CollectionFindReturnsMetadataOnFilter(
 			[]files.StoredRegisteredMetaData{metadata},
@@ -232,16 +297,140 @@ func (suite *StoreSuite) TestGetFilesMetadataCollectionError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, &collectionColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
-	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID)
+	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, suite.defaultCollectionID, "")
 
 	suite.NoError(err)
 	suite.Exactly([]files.StoredRegisteredMetaData{metadata}, actualMetadata)
 }
 
+// New tests for GetFilesMetadata with Bundle ID
+func (suite *StoreSuite) TestGetFilesMetadataWithBundleID() {
+	metadata1 := suite.generateBundleMetadata(suite.defaultBundleID)
+	metadata1.Path += "1"
+	metadata1.State = store.StateUploaded
+	metadata2 := suite.generateBundleMetadata(suite.defaultBundleID)
+	metadata2.Path += "2"
+	metadata2.State = store.StateUploaded
+
+	metadataColl := mock.MongoCollectionMock{
+		FindFunc: CollectionFindReturnsMetadataOnFilter(
+			[]files.StoredRegisteredMetaData{metadata1, metadata2},
+			bson.M{"bundle_id": suite.defaultBundleID},
+		),
+	}
+	bundleColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(nil),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataColl, nil, &bundleColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	expectedMetadata := []files.StoredRegisteredMetaData{metadata1, metadata2}
+	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, "", suite.defaultBundleID)
+
+	suite.NoError(err)
+	suite.Exactly(expectedMetadata, actualMetadata)
+}
+
+func (suite *StoreSuite) TestGetFilesMetadataWithBundlePatching() {
+	metadata1 := suite.generateBundleMetadata(suite.defaultBundleID)
+	metadata1.Path += "1"
+	metadata1.State = store.StateUploaded
+	metadata2 := suite.generateBundleMetadata(suite.defaultBundleID)
+	metadata2.Path += "2"
+	metadata2.State = store.StateUploaded
+
+	bundle := suite.generatePublishedBundleInfo(suite.defaultBundleID)
+	bundleBytes, _ := bson.Marshal(bundle)
+
+	metadataColl := mock.MongoCollectionMock{
+		FindFunc: CollectionFindReturnsMetadataOnFilter(
+			[]files.StoredRegisteredMetaData{metadata1, metadata2},
+			bson.M{"bundle_id": suite.defaultBundleID},
+		),
+	}
+	bundleColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(bundleBytes),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataColl, nil, &bundleColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	expectedMetadata := []files.StoredRegisteredMetaData{metadata1, metadata2}
+	expectedMetadata[0].State = store.StatePublished
+	expectedMetadata[1].State = store.StatePublished
+
+	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, "", suite.defaultBundleID)
+
+	suite.NoError(err)
+	suite.NotEqual(metadata1.State, bundle.State)
+	suite.NotEqual(metadata2.State, bundle.State)
+	suite.Exactly(expectedMetadata, actualMetadata)
+}
+
+func (suite *StoreSuite) TestGetFilesMetadataWithBundleError() {
+	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
+	metadataColl := mock.MongoCollectionMock{
+		FindFunc: CollectionFindReturnsMetadataOnFilter(
+			[]files.StoredRegisteredMetaData{metadata},
+			bson.M{"bundle_id": suite.defaultBundleID},
+		),
+	}
+	bundleColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(errors.New("bundle error")),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataColl, nil, &bundleColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, "", suite.defaultBundleID)
+
+	suite.NoError(err)
+	suite.Exactly([]files.StoredRegisteredMetaData{metadata}, actualMetadata)
+}
+
+func (suite *StoreSuite) TestGetFilesMetadataBundleFindError() {
+	metadataColl := mock.MongoCollectionMock{
+		FindFunc: CollectionFindReturnsValueAndError(0, errors.New("find error")),
+	}
+	bundleColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(nil),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataColl, nil, &bundleColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, "", suite.defaultBundleID)
+
+	suite.EqualError(err, "find error")
+	suite.Nil(actualMetadata)
+}
+
+func (suite *StoreSuite) TestGetFilesMetadataBundleNoResult() {
+	metadataColl := mock.MongoCollectionMock{
+		FindFunc: CollectionFindReturnsMetadataOnFilter(
+			[]files.StoredRegisteredMetaData{},
+			bson.M{"bundle_id": "INVALID_BUNDLE_ID"},
+		),
+	}
+	bundleColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(nil),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataColl, nil, &bundleColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	expectedMetadata := make([]files.StoredRegisteredMetaData, 0)
+	actualMetadata, err := subject.GetFilesMetadata(suite.defaultContext, "", "INVALID_BUNDLE_ID")
+
+	suite.NoError(err)
+	suite.Exactly(expectedMetadata, actualMetadata)
+}
+
 func (suite *StoreSuite) TestPatchMetadataNilMetadata() {
-	subject := store.NewStore(nil, nil, nil, suite.defaultClock, nil, nil)
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	var metadata *files.StoredRegisteredMetaData
 	collection := &files.StoredCollection{}
@@ -251,7 +440,7 @@ func (suite *StoreSuite) TestPatchMetadataNilMetadata() {
 }
 
 func (suite *StoreSuite) TestPatchMetadataNilCollection() {
-	subject := store.NewStore(nil, nil, nil, suite.defaultClock, nil, nil)
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	collectionID := "coll1"
 	metadata := files.StoredRegisteredMetaData{
@@ -266,7 +455,7 @@ func (suite *StoreSuite) TestPatchMetadataNilCollection() {
 }
 
 func (suite *StoreSuite) TestPatchMetadataNilCollectionID() {
-	subject := store.NewStore(nil, nil, nil, suite.defaultClock, nil, nil)
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	metadata := files.StoredRegisteredMetaData{
 		Path:  "path1",
@@ -284,7 +473,7 @@ func (suite *StoreSuite) TestPatchMetadataNilCollectionID() {
 }
 
 func (suite *StoreSuite) TestPatchMetadataCollectionIDMismatch() {
-	subject := store.NewStore(nil, nil, nil, suite.defaultClock, nil, nil)
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	collectionID := "coll1"
 	metadata := files.StoredRegisteredMetaData{
@@ -304,7 +493,7 @@ func (suite *StoreSuite) TestPatchMetadataCollectionIDMismatch() {
 }
 
 func (suite *StoreSuite) TestPatchMetadataBadState() {
-	subject := store.NewStore(nil, nil, nil, suite.defaultClock, nil, nil)
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	collectionID := "coll1"
 	metadata := files.StoredRegisteredMetaData{
@@ -324,7 +513,7 @@ func (suite *StoreSuite) TestPatchMetadataBadState() {
 }
 
 func (suite *StoreSuite) TestPatchMetadataBadCollectionState() {
-	subject := store.NewStore(nil, nil, nil, suite.defaultClock, nil, nil)
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	collectionID := "coll1"
 	metadata := files.StoredRegisteredMetaData{
@@ -343,7 +532,7 @@ func (suite *StoreSuite) TestPatchMetadataBadCollectionState() {
 }
 
 func (suite *StoreSuite) TestPatchMetadataSuccess() {
-	subject := store.NewStore(nil, nil, nil, suite.defaultClock, nil, nil)
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
 	collectionID := "coll1"
 	publishedAt := suite.generateTestTime(1)
@@ -369,5 +558,134 @@ func (suite *StoreSuite) TestPatchMetadataSuccess() {
 	}
 
 	subject.PatchFilePublishMetadata(&metadata, collection)
+	suite.Exactly(metadataExpected, metadata)
+}
+
+func (suite *StoreSuite) TestPatchBundleMetadataNilMetadata() {
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
+
+	var metadata *files.StoredRegisteredMetaData
+	bundle := &files.StoredBundle{}
+
+	subject.PatchFilePublishBundleMetadata(metadata, bundle)
+	suite.Nil(metadata)
+}
+
+func (suite *StoreSuite) TestPatchBundleMetadataNilBundle() {
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
+
+	bundleID := testBundleID
+	metadata := files.StoredRegisteredMetaData{
+		Path:     "path1",
+		State:    store.StateUploaded,
+		BundleID: &bundleID,
+	}
+	metadataExpected := metadata
+
+	subject.PatchFilePublishBundleMetadata(&metadata, nil)
+	suite.Exactly(metadataExpected, metadata)
+}
+
+func (suite *StoreSuite) TestPatchBundleMetadataNilBundleID() {
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
+
+	metadata := files.StoredRegisteredMetaData{
+		Path:  "path1",
+		State: store.StateUploaded,
+	}
+	bundle := &files.StoredBundle{
+		ID:    testBundleID,
+		State: store.StatePublished,
+	}
+
+	metadataExpected := metadata
+
+	subject.PatchFilePublishBundleMetadata(&metadata, bundle)
+	suite.Exactly(metadataExpected, metadata)
+}
+
+func (suite *StoreSuite) TestPatchBundleMetadataBundleIDMismatch() {
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
+
+	bundleID := testBundleID
+	metadata := files.StoredRegisteredMetaData{
+		Path:     "path1",
+		State:    store.StateUploaded,
+		BundleID: &bundleID,
+	}
+	bundle := &files.StoredBundle{
+		ID:    "a-different-bundle-id",
+		State: store.StatePublished,
+	}
+
+	metadataExpected := metadata
+
+	subject.PatchFilePublishBundleMetadata(&metadata, bundle)
+	suite.Exactly(metadataExpected, metadata)
+}
+
+func (suite *StoreSuite) TestPatchBundleMetadataBadState() {
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
+
+	bundleID := testBundleID
+	metadata := files.StoredRegisteredMetaData{
+		Path:     "path1",
+		State:    store.StateMoved,
+		BundleID: &bundleID,
+	}
+	bundle := &files.StoredBundle{
+		ID:    bundleID,
+		State: store.StatePublished,
+	}
+
+	metadataExpected := metadata
+
+	subject.PatchFilePublishBundleMetadata(&metadata, bundle)
+	suite.Exactly(metadataExpected, metadata)
+}
+
+func (suite *StoreSuite) TestPatchBundleMetadataBadBundleState() {
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
+
+	bundleID := testBundleID
+	metadata := files.StoredRegisteredMetaData{
+		Path:     "path1",
+		State:    store.StateUploaded,
+		BundleID: &bundleID,
+	}
+	bundle := &files.StoredBundle{
+		ID: bundleID,
+	}
+
+	metadataExpected := metadata
+
+	subject.PatchFilePublishBundleMetadata(&metadata, bundle)
+	suite.Exactly(metadataExpected, metadata)
+}
+
+func (suite *StoreSuite) TestPatchBundleMetadataSuccess() {
+	subject := store.NewStore(nil, nil, nil, nil, suite.defaultClock, nil, nil)
+
+	bundleID := testBundleID
+	lastModified := suite.generateTestTime(2)
+	metadata := files.StoredRegisteredMetaData{
+		Path:     "path1",
+		State:    store.StateUploaded,
+		BundleID: &bundleID,
+	}
+	bundle := &files.StoredBundle{
+		ID:           bundleID,
+		State:        store.StatePublished,
+		LastModified: lastModified,
+	}
+
+	metadataExpected := files.StoredRegisteredMetaData{
+		Path:         "path1",
+		State:        store.StatePublished,
+		BundleID:     &bundleID,
+		LastModified: lastModified,
+	}
+
+	subject.PatchFilePublishBundleMetadata(&metadata, bundle)
 	suite.Exactly(metadataExpected, metadata)
 }

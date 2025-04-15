@@ -30,6 +30,7 @@ type StoreSuite struct {
 	suite.Suite
 	logInterceptor       LogInterceptor
 	defaultCollectionID  string
+	defaultBundleID      string
 	path                 string
 	defaultContext       context.Context
 	defaultClock         steps.TestClock
@@ -47,6 +48,7 @@ type CollectionFindOneFunc func(ctx context.Context, filter interface{}, result 
 type CollectionUpdateFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
 type CollectionUpdateManyFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
 type CollectionInsertFunc func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error)
+type BundleFindOneFunc func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error
 type KafkaSendFunc func(schema *avro.Schema, event interface{}) error
 
 func CollectionFindReturnsValueAndError(value int, expectedError error) CollectionFindFunc {
@@ -61,6 +63,14 @@ func CollectionFindOneSetsResultAndReturnsNil(metadataBytes []byte) CollectionFi
 		return nil
 	}
 }
+
+func BundleFindOneSetsResultAndReturnsNil(metadataBytes []byte) BundleFindOneFunc {
+	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+		bson.Unmarshal(metadataBytes, result)
+		return nil
+	}
+}
+
 func CollectionFindOneSucceeds() CollectionFindOneFunc {
 	metadata := files.StoredRegisteredMetaData{}
 	metadataBytes, _ := bson.Marshal(metadata)
@@ -68,7 +78,20 @@ func CollectionFindOneSucceeds() CollectionFindOneFunc {
 	return CollectionFindOneSetsResultAndReturnsNil(metadataBytes)
 }
 
+func BundleFindOneSucceeds() BundleFindOneFunc {
+	metadata := files.StoredRegisteredMetaData{}
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	return BundleFindOneSetsResultAndReturnsNil(metadataBytes)
+}
+
 func CollectionFindOneReturnsError(expectedError error) CollectionFindOneFunc {
+	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+		return expectedError
+	}
+}
+
+func BundleFindOneReturnsError(expectedError error) BundleFindOneFunc {
 	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
 		return expectedError
 	}
@@ -211,6 +234,8 @@ func KafkaSendReturnsNil() KafkaSendFunc {
 
 func (suite *StoreSuite) SetupTest() {
 	suite.defaultCollectionID = "123456"
+	suite.defaultBundleID = "789"
+
 	suite.path = "test.txt"
 	suite.defaultContext = context.Background()
 	suite.defaultClock = steps.TestClock{}
@@ -241,7 +266,7 @@ func (suite *StoreSuite) generateTestTime(addedDuration time.Duration) time.Time
 	return time.Now().Add(time.Second * addedDuration).Round(time.Second).UTC()
 }
 
-func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegisteredMetaData {
+func (suite *StoreSuite) generateCollectionMetadata(collectionID string) files.StoredRegisteredMetaData {
 	createdAt := suite.generateTestTime(1)
 	lastModified := suite.generateTestTime(2)
 	uploadCompletedAt := suite.generateTestTime(3)
@@ -267,6 +292,32 @@ func (suite *StoreSuite) generateMetadata(collectionID string) files.StoredRegis
 	}
 }
 
+func (suite *StoreSuite) generateBundleMetadata(bundleID string) files.StoredRegisteredMetaData {
+	createdAt := suite.generateTestTime(1)
+	lastModified := suite.generateTestTime(2)
+	uploadCompletedAt := suite.generateTestTime(3)
+	publishedAt := suite.generateTestTime(4)
+	movedAt := suite.generateTestTime(5)
+
+	return files.StoredRegisteredMetaData{
+		Path:              suite.path,
+		IsPublishable:     true,
+		BundleID:          &bundleID,
+		Title:             "Test file",
+		SizeInBytes:       10,
+		Type:              "text/plain",
+		Licence:           "MIT",
+		LicenceURL:        "https://opensource.org/licenses/MIT",
+		CreatedAt:         createdAt,
+		LastModified:      lastModified,
+		UploadCompletedAt: &uploadCompletedAt,
+		PublishedAt:       &publishedAt,
+		MovedAt:           &movedAt,
+		State:             store.StateMoved,
+		Etag:              "1234567",
+	}
+}
+
 func (suite *StoreSuite) generatePublishedCollectionInfo(collectionID string) files.StoredCollection {
 	lastModified := suite.generateTestTime(10)
 	publishedAt := suite.generateTestTime(11)
@@ -276,6 +327,14 @@ func (suite *StoreSuite) generatePublishedCollectionInfo(collectionID string) fi
 		LastModified: lastModified,
 		PublishedAt:  &publishedAt,
 		State:        store.StatePublished,
+	}
+}
+
+func (suite *StoreSuite) generatePublishedBundleInfo(bundleID string) files.StoredBundle {
+	return files.StoredBundle{
+		ID:           bundleID,
+		State:        store.StatePublished,
+		LastModified: suite.generateTestTime(2),
 	}
 }
 

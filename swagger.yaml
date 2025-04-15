@@ -45,17 +45,30 @@ paths:
           $ref: '#/responses/InternalError'
     get:
       tags:
-        - File upload started
-      summary: POST's metadata for a file when an upload has started
+        - Fetch files from collection or bundle
+      summary: GET metadata for files by collection or bundle ID
       security:
         - Bearer: []
       produces:
         - application/json
+      parameters:
+        - name: collection_id
+          in: query
+          required: false
+          type: string
+          description: "ID of the collection to retrieve files for"
+        - name: bundle_id
+          in: query
+          required: false
+          type: string
+          description: "ID of the bundle to retrieve files for"
       responses:
         200:
           $ref: '#/definitions/MetaDataCollection'
+        400:
+          $ref: '#/definitions/Error'
         403:
-          description: Authoristion Failed - Check logs
+          description: Authorisation Failed - Check logs
         500:
           $ref: '#/responses/InternalError'
 
@@ -111,6 +124,29 @@ paths:
       parameters:
         - name: collectionID
           description: The ID of the collection to be published
+          type: string
+          required: true
+          in: path
+      produces:
+        - application/json
+      responses:
+        201:
+          description: OK
+        404:
+          $ref: '#/definitions/Error'
+        409:
+          $ref: '#/definitions/Error'
+        500:
+          $ref: '#/responses/InternalError'
+    
+  /bundle/{bundleID}:
+    patch:
+      summary: Publish all files in a bundle
+      security:
+        - Bearer: [ ]
+      parameters:
+        - name: bundleID
+          description: The ID of the bundle to be published
           type: string
           required: true
           in: path
@@ -242,6 +278,10 @@ definitions:
         type: string
         description: "The collection ID to which the file is attached"
         example: "1234-asdfg-54321-qwerty"
+      bundle_id:
+        type: string
+        description: "The bundle ID to which the file is attached"
+        example: "bundle-789-xyz"
       title:
         type: string
         description: "The title given to the file"
@@ -317,6 +357,10 @@ definitions:
         type: string
         description: "The collection ID to which the file is attached"
         example: "1234-asdfg-54321-qwerty"
+      bundle_id:
+        type: string
+        description: "The bundle ID to which the file is attached"
+        example: "bundle-789-xyz"
       title:
         type: string
         description: "The title given to the file"

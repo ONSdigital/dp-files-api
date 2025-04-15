@@ -30,6 +30,8 @@ func handleError(w http.ResponseWriter, err error) {
 		writeError(w, buildErrors(err, "DuplicateFileError"), http.StatusBadRequest)
 	case store.ErrCollectionIDAlreadySet:
 		writeError(w, buildErrors(err, "CollectionIDAlreadySet"), http.StatusBadRequest)
+	case store.ErrBundleIDAlreadySet:
+		writeError(w, buildErrors(err, "BundleIDAlreadySet"), http.StatusBadRequest)
 	case store.ErrFileNotRegistered:
 		writeError(w, buildErrors(err, "FileNotRegistered"), http.StatusNotFound)
 	case store.ErrFileNotInCreatedState,
@@ -42,11 +44,12 @@ func handleError(w http.ResponseWriter, err error) {
 		writeError(w, buildErrors(err, "EmptyCollection"), http.StatusNotFound)
 	case store.ErrFileIsNotPublishable:
 		writeError(w, buildErrors(err, "FileNotPublishable"), http.StatusConflict)
+	case store.ErrBothCollectionAndBundleIDSet:
+		writeError(w, buildErrors(err, "BothCollectionAndBundleIDSet"), http.StatusBadRequest)
 	default:
 		writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)
 	}
 }
-
 func buildValidationErrors(validationErrs validator.ValidationErrors) jsonErrors {
 	jsonErrs := jsonErrors{Error: []jsonError{}}
 
