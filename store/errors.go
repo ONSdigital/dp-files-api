@@ -20,4 +20,5 @@ var (
 	ErrEtagMismatchWhilePublishing     = errors.New("etag mismatch")
 	ErrBundleIDAlreadySet              = errors.New("bundle ID already set")
 	ErrBothCollectionAndBundleIDSet    = errors.New("cannot set both collection and bundle ID")
+	ErrFileMoved                       = errors.New("record cannot be updated as the file is MOVED")
 )
