@@ -205,6 +205,11 @@ func (store *Store) UpdateBundleID(ctx context.Context, path, bundleID string) e
 		return err
 	}
 
+	if metadata.State == StateMoved {
+		log.Error(ctx, "update bundle ID: attempted to operate on a moved file", ErrFileMoved, logdata)
+		return ErrFileMoved
+	}
+
 	if bundleID == "" {
 		if metadata.BundleID == nil {
 			return nil
@@ -223,12 +228,6 @@ func (store *Store) UpdateBundleID(ctx context.Context, path, bundleID string) e
 			log.Error(ctx, "failed to remove bundle ID", err, logdata)
 		}
 		return err
-	}
-
-	if metadata.BundleID != nil {
-		logdata["bundle_id"] = *metadata.BundleID
-		log.Error(ctx, "update bundle ID: bundle ID already set", ErrBundleIDAlreadySet, logdata)
-		return ErrBundleIDAlreadySet
 	}
 
 	// check to see if bundleID exists and is not-published

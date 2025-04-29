@@ -26,5 +26,6 @@ func HandlerUpdateBundleID(updateBundleID UpdateBundleID) http.HandlerFunc {
 			handleError(w, err)
 			return
 		}
+		w.WriteHeader(http.StatusOK)
 	}
 }

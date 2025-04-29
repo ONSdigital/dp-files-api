@@ -618,7 +618,7 @@ func (suite *StoreSuite) TestUpdateBundleIDFindReturnsUnspecifiedError() {
 	suite.ErrorIs(err, expectedError)
 }
 
-func (suite *StoreSuite) TestUpdateBundleIDBundleIDAlreadySet() {
+func (suite *StoreSuite) TestUpdateBundleIDFileIsInMovedState() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
 
@@ -635,9 +635,31 @@ func (suite *StoreSuite) TestUpdateBundleIDBundleIDAlreadySet() {
 	err := subject.UpdateBundleID(suite.defaultContext, suite.path, suite.defaultBundleID)
 	logEvent := suite.logInterceptor.GetLogEvent()
 
-	suite.Equal("update bundle ID: bundle ID already set", logEvent)
+	suite.Equal("update bundle ID: attempted to operate on a moved file", logEvent)
 	suite.Error(err)
-	suite.ErrorIs(err, store.ErrBundleIDAlreadySet)
+	suite.ErrorIs(err, store.ErrFileMoved)
+}
+
+func (suite *StoreSuite) TestUpdateBundleIDtoEmptyStringFileIsInMovedState() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	collectionWithUploadedFile := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	err := subject.UpdateBundleID(suite.defaultContext, suite.path, "")
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("update bundle ID: attempted to operate on a moved file", logEvent)
+	suite.Error(err)
+	suite.ErrorIs(err, store.ErrFileMoved)
 }
 
 func (suite *StoreSuite) TestUpdateBundleIDBundleCheckFail() {
