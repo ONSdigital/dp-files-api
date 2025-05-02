@@ -280,3 +280,66 @@ func (store *Store) updateFileState(ctx context.Context, path, etag, toState, ex
 
 	return err
 }
+
+func (store *Store) RemoveFile(ctx context.Context, path string) error {
+	logData := log.Data{"path": path}
+
+	metadata, err := store.GetFileMetadata(ctx, path)
+	if err != nil {
+		if errors.Is(err, ErrFileNotRegistered) {
+			log.Error(ctx, "remove file: attempted to operate on unregistered file", err, logData)
+			return ErrFileNotRegistered
+		}
+		log.Error(ctx, "remove file: failed finding file metadata", err, logData)
+		return err
+	}
+
+	if metadata.State == StateMoved {
+		log.Error(ctx, "remove file: attempted to operate on a published file", ErrFileIsPublished, logData)
+		return ErrFileIsPublished
+	}
+
+	if metadata.State == StateUploaded {
+
+		// delete the file from s3
+		err = store.s3client.Delete(ctx, path)
+		if err != nil {
+			log.Error(ctx, "remove file: error while deleting file from s3", err, logData)
+			return err
+		}
+		log.Info(ctx, "remove file: file deleted from s3", logData)
+
+		// delete the file metadata
+		result, err := store.metadataCollection.Delete(ctx, bson.M{fieldPath: path})
+		if err != nil {
+			log.Error(ctx, "remove file: error while deleting metadata", err, logData)
+			return err
+		}
+		if result.DeletedCount > 0 {
+			log.Info(ctx, "remove file: metadata deleted", logData)
+		}
+
+		// if the file is the only one associated with a bundle then the bundle record is removed from the database
+		if metadata.BundleID != nil {
+			var m []files.StoredRegisteredMetaData
+			_, err = store.metadataCollection.Find(ctx, bson.M{fieldBundleID: *metadata.BundleID}, &m)
+			if err != nil && !errors.Is(err, mongodriver.ErrNoDocumentFound) {
+				log.Error(ctx, "remove file: error while finding metadata", err, logData)
+				return err
+			}
+			if len(m) == 0 {
+				result, err = store.bundlesCollection.Delete(ctx, bson.M{fieldID: *metadata.BundleID})
+				if err != nil {
+					log.Error(ctx, "remove file: error while deleting bundle record", err, logData)
+					return err
+				}
+				if result.DeletedCount > 0 {
+					log.Info(ctx, "remove file: bundle record deleted", logData)
+				}
+			}
+		}
+		return nil
+	}
+
+	return nil
+}
