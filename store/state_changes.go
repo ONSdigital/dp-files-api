@@ -300,7 +300,6 @@ func (store *Store) RemoveFile(ctx context.Context, path string) error {
 	}
 
 	if metadata.State == StateUploaded {
-
 		// delete the file from s3
 		err = store.s3client.Delete(ctx, path)
 		if err != nil {

@@ -4,17 +4,18 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/ONSdigital/dp-files-api/api"
-	"github.com/ONSdigital/dp-files-api/store"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/ONSdigital/dp-files-api/api"
+	"github.com/ONSdigital/dp-files-api/store"
 )
 
 func TestHandleRemoveFileUnsuccessful(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", http.NoBody)
 
 	errFunc := func(ctx context.Context, path string) error {
 		return errors.New("it's all gone very wrong")
@@ -34,7 +35,7 @@ func TestHandleRemoveFileUnsuccessful(t *testing.T) {
 
 func TestHandleRemoveFileFileNotRegistered(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", http.NoBody)
 
 	errFunc := func(ctx context.Context, path string) error {
 		return store.ErrFileNotRegistered
@@ -55,7 +56,7 @@ func TestHandleRemoveFileFileNotRegistered(t *testing.T) {
 
 func TestHandleRemoveFileFileIsPublished(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", http.NoBody)
 
 	errFunc := func(ctx context.Context, path string) error {
 		return store.ErrFileIsPublished
@@ -76,7 +77,7 @@ func TestHandleRemoveFileFileIsPublished(t *testing.T) {
 
 func TestHandleRemoveFileSuccessful(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", http.NoBody)
 
 	errFunc := func(ctx context.Context, path string) error {
 		return nil
