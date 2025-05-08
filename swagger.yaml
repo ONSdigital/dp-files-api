@@ -90,7 +90,7 @@ paths:
         400:
           $ref: '#/definitions/Error'
         403:
-          description: Authoristion Failed - Check logs
+          description: Authorization Failed - Check logs
         409:
           $ref: '#/definitions/Error'
         500:
@@ -110,11 +110,33 @@ paths:
         200:
           $ref: '#/definitions/MetaData'
         403:
-          description: Authoristion Failed - Check logs
+          description: Authorization Failed - Check logs
         404:
           $ref: '#/definitions/Error'
         500:
           $ref: '#/responses/InternalError'
+
+    delete:
+        tags:
+            - Delete file metadata
+        summary: DELETE a distribution from a version of a dataset series
+        security:
+            - Bearer: []
+        produces:
+            - application/json
+        parameters:
+            - $ref: '#/parameters/file_path'
+        responses:
+            204:
+              description: File and metadata successfully deleted
+            403:
+              description: Authorization Failed - Check logs
+            404:
+              description: File not found
+            409:
+              description: File is already published
+            500:
+              $ref: '#/responses/InternalError'
 
   /collection/{collectionID}:
     patch:
