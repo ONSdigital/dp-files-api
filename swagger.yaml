@@ -119,7 +119,7 @@ paths:
     delete:
         tags:
             - Delete file metadata
-        summary: DELETE a distribution from a version of a dataset series
+        summary: Deletes a file from the pre-publish bucket and associated metadata
         security:
             - Bearer: []
         produces:
