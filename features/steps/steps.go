@@ -49,6 +49,7 @@ func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I set the bundle ID to "([^"]*)" for file "([^"]*)"$`, c.iSetTheBundleIDToForFile)
 	ctx.Step(`^I get files in the bundle "([^"]*)"$`, c.iGetFilesInTheBundle)
 	ctx.Step(`^I get files with both collection_id "([^"]*)" and bundle_id "([^"]*)"$`, c.iGetFilesWithBothCollectionAndBundleID)
+	ctx.Step(`^the file upload "([^"]*)" is removed$`, c.theFileUploadIsRemoved)
 }
 
 func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {
@@ -311,6 +312,10 @@ func (c *FilesAPIComponent) iSetTheCollectionIDToForFile(collectionID, path stri
 
 func (c *FilesAPIComponent) theFileMetadataIsRequested(filepath string) error {
 	return c.APIFeature.IGet(fmt.Sprintf("/files/%s", filepath))
+}
+
+func (c *FilesAPIComponent) theFileUploadIsRemoved(path string) error {
+	return c.APIFeature.IDelete(fmt.Sprintf("/files/%s", path))
 }
 
 func (c *FilesAPIComponent) theFollowingDocumentEntryShouldLookLike(table *godog.Table) error {

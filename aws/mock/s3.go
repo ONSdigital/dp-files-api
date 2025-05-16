@@ -24,6 +24,9 @@ var _ aws.S3Clienter = &S3ClienterMock{}
 //			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
 //				panic("mock out the Checker method")
 //			},
+//			DeleteFunc: func(ctx context.Context, key string) error {
+//				panic("mock out the Delete method")
+//			},
 //			HeadFunc: func(ctx context.Context, key string) (*s3.HeadObjectOutput, error) {
 //				panic("mock out the Head method")
 //			},
@@ -37,6 +40,9 @@ type S3ClienterMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
 
+	// DeleteFunc mocks the Delete method.
+	DeleteFunc func(ctx context.Context, key string) error
+
 	// HeadFunc mocks the Head method.
 	HeadFunc func(ctx context.Context, key string) (*s3.HeadObjectOutput, error)
 
@@ -49,6 +55,13 @@ type S3ClienterMock struct {
 			// State is the state argument value.
 			State *healthcheck.CheckState
 		}
+		// Delete holds details about calls to the Delete method.
+		Delete []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Key is the key argument value.
+			Key string
+		}
 		// Head holds details about calls to the Head method.
 		Head []struct {
 			// Ctx is the ctx argument value.
@@ -58,6 +71,7 @@ type S3ClienterMock struct {
 		}
 	}
 	lockChecker sync.RWMutex
+	lockDelete  sync.RWMutex
 	lockHead    sync.RWMutex
 }
 
@@ -94,6 +108,42 @@ func (mock *S3ClienterMock) CheckerCalls() []struct {
 	mock.lockChecker.RLock()
 	calls = mock.calls.Checker
 	mock.lockChecker.RUnlock()
+	return calls
+}
+
+// Delete calls DeleteFunc.
+func (mock *S3ClienterMock) Delete(ctx context.Context, key string) error {
+	if mock.DeleteFunc == nil {
+		panic("S3ClienterMock.DeleteFunc: method is nil but S3Clienter.Delete was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		Key string
+	}{
+		Ctx: ctx,
+		Key: key,
+	}
+	mock.lockDelete.Lock()
+	mock.calls.Delete = append(mock.calls.Delete, callInfo)
+	mock.lockDelete.Unlock()
+	return mock.DeleteFunc(ctx, key)
+}
+
+// DeleteCalls gets all the calls that were made to Delete.
+// Check the length with:
+//
+//	len(mockedS3Clienter.DeleteCalls())
+func (mock *S3ClienterMock) DeleteCalls() []struct {
+	Ctx context.Context
+	Key string
+} {
+	var calls []struct {
+		Ctx context.Context
+		Key string
+	}
+	mock.lockDelete.RLock()
+	calls = mock.calls.Delete
+	mock.lockDelete.RUnlock()
 	return calls
 }
 

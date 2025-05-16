@@ -48,6 +48,8 @@ func handleError(w http.ResponseWriter, err error) {
 		writeError(w, buildErrors(err, "BothCollectionAndBundleIDSet"), http.StatusBadRequest)
 	case store.ErrFileMoved:
 		writeError(w, buildErrors(err, "FileMoved"), http.StatusConflict)
+	case store.ErrFileIsPublished:
+		writeError(w, buildErrors(err, "FileIsPublished"), http.StatusConflict)
 	default:
 		writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)
 	}

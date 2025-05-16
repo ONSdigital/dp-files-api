@@ -12,4 +12,5 @@ import (
 type S3Clienter interface {
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
 	Head(ctx context.Context, key string) (*s3.HeadObjectOutput, error)
+	Delete(ctx context.Context, key string) error
 }
