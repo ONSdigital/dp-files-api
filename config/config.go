@@ -98,15 +98,7 @@ func Get() (*Config, error) {
 			SecSkipVerify:             false,
 			StaticFilePublishedTopic:  "static-file-published-v2",
 		},
-		AuthConfig: AuthConfig{
-			Enabled:                        true,
-			PermissionsAPIURL:              "http://localhost:25400",
-			IdentityWebKeySetURL:           "http://localhost:25600",
-			PermissionsCacheUpdateInterval: time.Minute * 5,
-			PermissionsMaxCacheTime:        time.Minute * 15,
-			IdentityClientMaxRetries:       2,
-			ZebedeeURL:                     "http://localhost:8082",
-		},
+		AuthConfig: *authorisation.NewDefaultConfig(),
 	}
 
 	return cfg, envconfig.Process("", cfg)
