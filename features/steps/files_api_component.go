@@ -17,7 +17,7 @@ import (
 	componenttest "github.com/ONSdigital/dp-component-test"
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/service"
-	dphttp "github.com/ONSdigital/dp-net/v2/http"
+	dphttp "github.com/ONSdigital/dp-net/v3/http"
 	"github.com/ONSdigital/log.go/v2/log"
 )
 

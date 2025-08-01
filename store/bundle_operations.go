@@ -11,7 +11,7 @@ import (
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
 	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
-	"github.com/ONSdigital/dp-net/v2/request"
+	"github.com/ONSdigital/dp-net/v3/request"
 	"github.com/ONSdigital/log.go/v2/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
