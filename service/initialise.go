@@ -107,11 +107,7 @@ func (e *ExternalServiceList) createS3(ctx context.Context) (err error) {
 }
 
 func (e *ExternalServiceList) createAuthMiddleware() (err error) {
-	if e.cfg.AuthConfig.Enabled {
-		e.authMiddleware, err = auth.NewMiddlewareFromConfig(context.Background(), &e.cfg.AuthConfig, nil)
-	} else {
-		e.authMiddleware, err = auth.NewFeatureFlaggedMiddleware(context.Background(), &e.cfg.AuthConfig, nil)
-	}
+	e.authMiddleware, err = auth.NewFeatureFlaggedMiddleware(context.Background(), &e.cfg.AuthConfig, nil)
 	return
 }
 
