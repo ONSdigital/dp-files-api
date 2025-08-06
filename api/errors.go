@@ -27,7 +27,7 @@ func handleError(w http.ResponseWriter, err error) {
 
 	switch err {
 	case store.ErrDuplicateFile:
-		writeError(w, buildErrors(err, "DuplicateFileError"), http.StatusBadRequest)
+		writeError(w, buildErrors(err, "DuplicateFileError"), http.StatusConflict)
 	case store.ErrCollectionIDAlreadySet:
 		writeError(w, buildErrors(err, "CollectionIDAlreadySet"), http.StatusBadRequest)
 	case store.ErrBundleIDAlreadySet:

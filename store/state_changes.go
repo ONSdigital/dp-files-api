@@ -44,7 +44,7 @@ func (store *Store) RegisterFileUpload(ctx context.Context, metaData files.Store
 	errFindingMetadata := store.metadataCollection.FindOne(ctx, bson.M{fieldPath: metaData.Path}, &m)
 	if errFindingMetadata != nil && !errors.Is(errFindingMetadata, mongodriver.ErrNoDocumentFound) {
 		log.Error(ctx, "error while finding metadata", errFindingMetadata, logdata)
-		return errFindingMetadata
+		return ErrDuplicateFile
 	}
 
 	if metaData.CollectionID != nil && m.CollectionID != nil {
