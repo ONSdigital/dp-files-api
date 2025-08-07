@@ -32,7 +32,7 @@ require (
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/ONSdigital/dis-redis v0.3.0 // indirect
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.267.0 // indirect
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.268.0 // indirect
 	github.com/ONSdigital/dp-mongodb-in-memory v1.8.1 // indirect
 	github.com/ONSdigital/dp-net/v2 v2.22.0 // indirect
 	github.com/ONSdigital/dp-permissions-api v1.3.0 // indirect
