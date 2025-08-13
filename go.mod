@@ -2,32 +2,20 @@ module github.com/ONSdigital/dp-files-api
 
 go 1.24
 
-// to avoid [CVE-2022-29153] CWE-918: Server-Side Request Forgery (SSRF)
-exclude github.com/hashicorp/consul/api v1.1.0
-
-// to avoid [CVE-2022-29153] CWE-918: Server-Side Request Forgery (SSRF)
-exclude github.com/hashicorp/consul/sdk v0.16.2
-
-// to avoid [CVE-2021-3121] CWE-129: Improper Validation of Array Index
-exclude github.com/gogo/protobuf v1.2.1
-
-// to avoid [CVE-2022-21698] CWE-400: Uncontrolled Resource Consumption ('Resource Exhaustion') & [CVE-2023-45142] CWE-770: Allocation of Resources Without Limits or Throttling
-exclude github.com/prometheus/client_golang v0.9.3
-
 require (
-	github.com/ONSdigital/dp-authorisation/v2 v2.32.0
-	github.com/ONSdigital/dp-component-test v0.19.0
-	github.com/ONSdigital/dp-healthcheck v1.6.3
-	github.com/ONSdigital/dp-kafka/v3 v3.10.0
+	github.com/ONSdigital/dp-authorisation/v2 v2.32.3
+	github.com/ONSdigital/dp-component-test v0.25.0
+	github.com/ONSdigital/dp-healthcheck v1.6.4
+	github.com/ONSdigital/dp-kafka/v3 v3.11.0
 	github.com/ONSdigital/dp-mongodb/v3 v3.8.0
-	github.com/ONSdigital/dp-net/v2 v2.22.0
+	github.com/ONSdigital/dp-net/v3 v3.3.0
 	github.com/ONSdigital/dp-s3/v3 v3.3.0
-	github.com/ONSdigital/log.go/v2 v2.4.4
-	github.com/aws/aws-sdk-go-v2 v1.36.3
-	github.com/aws/aws-sdk-go-v2/config v1.29.13
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.66
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.79.0
-	github.com/cucumber/godog v0.15.0
+	github.com/ONSdigital/log.go/v2 v2.4.6
+	github.com/aws/aws-sdk-go-v2 v1.37.1
+	github.com/aws/aws-sdk-go-v2/config v1.30.2
+	github.com/aws/aws-sdk-go-v2/credentials v1.18.2
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.85.1
+	github.com/cucumber/godog v0.15.1
 	github.com/cucumber/messages/go/v21 v21.0.1
 	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/gorilla/mux v1.8.1
@@ -37,57 +25,62 @@ require (
 	github.com/smartystreets/goconvey v1.8.1
 	github.com/square/mongo-lock v0.0.0-20230808145049-cfcf499f6bf0
 	github.com/stretchr/testify v1.10.0
-	github.com/swaggo/swag v1.16.4
-	go.mongodb.org/mongo-driver v1.17.3
+	github.com/swaggo/swag v1.16.6
+	go.mongodb.org/mongo-driver v1.17.4
 )
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.266.0 // indirect
-	github.com/ONSdigital/dp-mongodb-in-memory v1.8.0 // indirect
-	github.com/ONSdigital/dp-net/v3 v3.1.2 // indirect
-	github.com/ONSdigital/dp-permissions-api v0.27.0 // indirect
+	github.com/ONSdigital/dis-redis v0.3.0 // indirect
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.269.0 // indirect
+	github.com/ONSdigital/dp-mongodb-in-memory v1.8.1 // indirect
+	github.com/ONSdigital/dp-net/v2 v2.22.0 // indirect
+	github.com/ONSdigital/dp-permissions-api v1.3.0 // indirect
 	github.com/Shopify/sarama v1.38.1 // indirect
-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.65 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.34 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.34 // indirect
+	github.com/alicebob/miniredis/v2 v2.35.0 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.0 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.1 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.18.2 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.1 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.34 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.7.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.15 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.15 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.25.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.30.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.33.18 // indirect
-	github.com/aws/smithy-go v1.22.3 // indirect
-	github.com/chromedp/cdproto v0.0.0-20250304222902-64be311ed8b0 // indirect
-	github.com/chromedp/chromedp v0.13.1 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.8.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.26.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.31.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.35.1 // indirect
+	github.com/aws/smithy-go v1.22.5 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/chromedp/cdproto v0.0.0-20250724212937-08a3db8b4327 // indirect
+	github.com/chromedp/chromedp v0.14.0 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/cucumber/gherkin/go/v26 v26.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/eapache/go-resiliency v1.7.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/go-avro/avro v0.0.0-20171219232920-444163702c11 // indirect
-	github.com/go-json-experiment/json v0.0.0-20250223041408-d3c622f1b874 // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/go-json-experiment/json v0.0.0-20250725192818-e39067aee2d2 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-openapi/jsonpointer v0.21.0 // indirect
+	github.com/go-openapi/jsonpointer v0.21.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/spec v0.21.0 // indirect
-	github.com/go-openapi/swag v0.23.0 // indirect
+	github.com/go-openapi/swag v0.23.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
+	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -114,24 +107,27 @@ require (
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
+	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
+	github.com/redis/go-redis/v9 v9.11.0 // indirect
 	github.com/smarty/assertions v1.16.0 // indirect
-	github.com/spf13/afero v1.12.0 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/spf13/afero v1.14.0 // indirect
+	github.com/spf13/pflag v1.0.7 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/otel v1.35.0 // indirect
-	go.opentelemetry.io/otel/metric v1.35.0 // indirect
-	go.opentelemetry.io/otel/trace v1.35.0 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
-	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/sync v0.13.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
-	golang.org/x/tools v0.31.0 // indirect
+	go.opentelemetry.io/otel v1.37.0 // indirect
+	go.opentelemetry.io/otel/metric v1.37.0 // indirect
+	go.opentelemetry.io/otel/trace v1.37.0 // indirect
+	golang.org/x/crypto v0.40.0 // indirect
+	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
+	golang.org/x/tools v0.35.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

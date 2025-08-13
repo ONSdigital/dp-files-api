@@ -74,7 +74,7 @@ Feature: Register new file upload
           "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
         }
         """
-    Then the HTTP status code should be "400"
+    Then the HTTP status code should be "409"
 
   Scenario: Attempting to register a file with a path that is already register
     Given I am not an authorised user

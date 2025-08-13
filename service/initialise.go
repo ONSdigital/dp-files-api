@@ -8,7 +8,7 @@ import (
 	"github.com/ONSdigital/dp-files-api/aws"
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	dphttp "github.com/ONSdigital/dp-net/v2/http"
+	dphttp "github.com/ONSdigital/dp-net/v3/http"
 	dps3 "github.com/ONSdigital/dp-s3/v3"
 	"github.com/ONSdigital/log.go/v2/log"
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
@@ -108,7 +108,6 @@ func (e *ExternalServiceList) createS3(ctx context.Context) (err error) {
 
 func (e *ExternalServiceList) createAuthMiddleware() (err error) {
 	e.authMiddleware, err = auth.NewFeatureFlaggedMiddleware(context.Background(), &e.cfg.AuthConfig, nil)
-
 	return
 }
 
