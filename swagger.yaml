@@ -23,6 +23,67 @@ tags:
   - name: "private"
 
 paths:
+  /file-events:
+    get:
+      tags:
+        - Get list of file access events
+      summary: Audit log of file access events.
+      security:
+        - Bearer: []
+      produces:
+        - application/json
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          type: integer
+          description: "Maximum number of items that will be returned. A value of zero will return zero items."
+        - name: offset
+          in: query
+          required: false
+          type: integer
+          description: "Starting index of the items array that will be returned. By default it is zero, meaning that the returned items will start from the beginning."
+        - name: after
+          in: query
+          required: false
+          type: string
+          format: date-time
+          description: "The date from which to query file access events."
+        - name: before
+          in: query
+          required: false
+          type: string
+          format: date-time
+          description: "The date to which to query file access events."
+        - name: path
+          in: query
+          required: false
+          type: string
+          description: "The file path on which to query file access events."
+      responses:
+        200:
+          description: The list of file access events.
+          headers:
+            ETag:
+              description: The RFC9110 ETag header field. Defines the unique entity tag for the current state of the resource. This is used for setting the `If-Match` and `If-None-Match` headers on subsequent requests.
+              type: string
+              pattern: ^(?:W/)?"(?:[!#-~])+"$
+            Cache-Control:
+              description: The RFC9111 Cache-Control header field for the response which instructs how to handle caching the resource.
+              type: string
+          schema:
+            $ref: "#/definitions/EventsList"
+        400:
+          $ref: "#/responses/InvalidRequest"
+        401:
+          $ref: "#/responses/UnauthorisedError"
+        403:
+          $ref: "#/responses/ForbiddenError"
+        404:
+          $ref: "#/responses/NotFound"
+        500:
+          $ref: "#/responses/InternalErrorEvent"
+
   /files:
     post:
       tags:
@@ -205,6 +266,26 @@ paths:
 responses:
   InternalError:
     description: "Failed to process the request due to an internal error"
+  ForbiddenError:
+    description: "Access denied."
+    schema:
+      $ref: "#/definitions/ErrorList"
+  InternalErrorEvent:
+    description: "Failed to process the request due to an internal error."
+    schema:
+      $ref: "#/definitions/ErrorList"
+  InvalidRequest:
+    description: "Unable to process request due to a malformed or invalid request body or query parameter."
+    schema:
+      $ref: "#/definitions/ErrorList"
+  NotFound:
+    description: "The requested resource does not exist."
+    schema:
+      $ref: "#/definitions/ErrorList"
+  UnauthorisedError:
+    description: "Authentication information is missing or invalid."
+    schema:
+      $ref: "#/definitions/ErrorList"
 
 
 definitions:
@@ -338,6 +419,113 @@ definitions:
         type: string
         description: "The etag for the file"
         example: "194577a7e20bdcc7afbb718f502c134c"
+
+  Event:
+    description: Details of a specific file access event forming part of the audit log for users downloading a file.
+    type: object
+    readOnly: true
+    required:
+      - user_id
+      - action
+      - resource
+    properties:
+      created_at:
+        description: The date and time the event occurred.
+        type: string
+        format: date-time
+      requested_by:
+        description: The user who made the request.
+        type: object
+        required:
+          - id
+        properties:
+          id:
+            description: The ID of the user.
+            type: string
+            example: 0889d599-3f0e-4564-9d6e-9455a6b73da7
+          email:
+            description: The email of the user. This is only populated if the user is a human user.
+            type: string
+            format: email
+            example: publisher@ons.gov.uk
+      action:
+        description: The action taken by the user.
+        type: string
+        example: READ
+        enum:
+          - CREATE
+          - READ
+          - UPDATE
+          - DELETE
+      resource:
+        description: The path of the API resource that was called.
+        type: string
+        example: /downloads-new/dataset-upload/myfile.csv
+      file:
+        description: |
+          The metadata object for the file that was accessed.
+
+          This will be the `MetaData` object.
+        type: object
+        example:
+          path: dataset-upload/myfile.csv
+          is_publishable: true
+          bundle_id: de3bc0b6-d6c4-4e20-917e-95d7ea8c91dc
+          title: CPI CSV file for August 2025
+          size_in_bytes: 14794
+          type: text/csv
+          licence: OGL v3
+          licence_url: http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3
+          etag: 1234567890asdfghjk
+          status: UPLOADED
+  
+  EventsList:
+    description: "The list of access events which form the audit log for users downloading a file."
+    type: object
+    readOnly: true
+    allOf:
+      - $ref: "#/definitions/PaginationFields"
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: "#/definitions/Event"
+
+  ErrorList:
+    description: "A list of errors that occurred."
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          $ref: "#/definitions/Error"
+  
+  PaginationFields:
+    type: object
+    properties:
+      count:
+        description: "The number of items returned."
+        readOnly: true
+        type: integer
+        example: 20
+      limit:
+        description: "The number of items requested."
+        type: integer
+        default: 20
+        minimum: 0
+        maximum: 1000
+      offset:
+        description: "The offset of the first item to retrieve, starting at 0. Use this parameter as a pagination mechanism along with the limit parameter"
+        type: integer
+        example: 0
+        default: 0
+      total_count:
+        description: "The total number of items available."
+        readOnly: true
+        type: integer
+        example: 123
+
   MetaDataCollection:
     type: object
     description: "Collection of File metadata"
@@ -449,3 +637,4 @@ parameters:
     required: true
     schema:
       $ref: '#/definitions/ChangeFileState'
+
