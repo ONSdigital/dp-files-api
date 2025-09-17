@@ -637,4 +637,3 @@ parameters:
     required: true
     schema:
       $ref: '#/definitions/ChangeFileState'
-
