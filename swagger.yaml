@@ -269,23 +269,23 @@ responses:
   ForbiddenError:
     description: "Access denied."
     schema:
-      $ref: "#/definitions/ErrorList"
+      $ref: "#/definitions/Error"
   InternalErrorEvent:
     description: "Failed to process the request due to an internal error."
     schema:
-      $ref: "#/definitions/ErrorList"
+      $ref: "#/definitions/Error"
   InvalidRequest:
     description: "Unable to process request due to a malformed or invalid request body or query parameter."
     schema:
-      $ref: "#/definitions/ErrorList"
+      $ref: "#/definitions/Error"
   NotFound:
     description: "The requested resource does not exist."
     schema:
-      $ref: "#/definitions/ErrorList"
+      $ref: "#/definitions/Error"
   UnauthorisedError:
     description: "Authentication information is missing or invalid."
     schema:
-      $ref: "#/definitions/ErrorList"
+      $ref: "#/definitions/Error"
 
 
 definitions:
@@ -425,9 +425,10 @@ definitions:
     type: object
     readOnly: true
     required:
-      - user_id
+      - requested_by
       - action
       - resource
+      - file
     properties:
       created_at:
         description: The date and time the event occurred.
@@ -462,22 +463,7 @@ definitions:
         type: string
         example: /downloads-new/dataset-upload/myfile.csv
       file:
-        description: |
-          The metadata object for the file that was accessed.
-
-          This will be the `MetaData` object.
-        type: object
-        example:
-          path: dataset-upload/myfile.csv
-          is_publishable: true
-          bundle_id: de3bc0b6-d6c4-4e20-917e-95d7ea8c91dc
-          title: CPI CSV file for August 2025
-          size_in_bytes: 14794
-          type: text/csv
-          licence: OGL v3
-          licence_url: http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3
-          etag: 1234567890asdfghjk
-          status: UPLOADED
+        $ref: "#/definitions/MetaData"
   
   EventsList:
     description: "The list of access events which form the audit log for users downloading a file."
@@ -491,15 +477,6 @@ definitions:
             type: array
             items:
               $ref: "#/definitions/Event"
-
-  ErrorList:
-    description: "A list of errors that occurred."
-    type: object
-    properties:
-      errors:
-        type: array
-        items:
-          $ref: "#/definitions/Error"
   
   PaginationFields:
     type: object
@@ -516,7 +493,7 @@ definitions:
         minimum: 0
         maximum: 1000
       offset:
-        description: "The offset of the first item to retrieve, starting at 0. Use this parameter as a pagination mechanism along with the limit parameter"
+        description: "The offset of the first item to retrieve, starting at 0. Use this parameter as a pagination mechanism along with the limit parameter."
         type: integer
         example: 0
         default: 0
