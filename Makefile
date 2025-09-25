@@ -11,7 +11,7 @@ all: audit test build
 
 .PHONY: audit
 audit:
-	go list -json -m all | nancy sleuth
+	dis-vulncheck
 
 .PHONY: lint
 lint:
@@ -46,7 +46,7 @@ test-component:
 .PHONY: docker-test
 docker-test-component:
 	docker-compose -f docker-compose-services.yml -f docker-compose.yml down
-	docker build -f Dockerfile . -t template_test --target=test
+	docker build -f Dockerfile.test . -t template_test --target=test
 	docker-compose -f docker-compose-services.yml -f docker-compose.yml up -d
 	docker-compose -f docker-compose-services.yml -f docker-compose.yml exec -T dp-files-api make test-component
 	docker-compose -f docker-compose-services.yml -f docker-compose.yml down
