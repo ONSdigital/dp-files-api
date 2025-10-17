@@ -12,12 +12,13 @@ type Store struct {
 	metadataCollection    mongo.MongoCollection
 	collectionsCollection mongo.MongoCollection
 	bundlesCollection     mongo.MongoCollection
+	fileEventsCollection  mongo.MongoCollection
 	kafka                 kafka.IProducer
 	clock                 clock.Clock
 	s3client              aws.S3Clienter
 	cfg                   *config.Config
 }
 
-func NewStore(metadataCollection, collectionsCollection, bundlesCollection mongo.MongoCollection, kafkaProducer kafka.IProducer, clk clock.Clock, c aws.S3Clienter, cfg *config.Config) *Store {
-	return &Store{metadataCollection, collectionsCollection, bundlesCollection, kafkaProducer, clk, c, cfg}
+func NewStore(metadataCollection, collectionsCollection, bundlesCollection, fileEventsCollection mongo.MongoCollection, kafkaProducer kafka.IProducer, clk clock.Clock, c aws.S3Clienter, cfg *config.Config) *Store {
+	return &Store{metadataCollection, collectionsCollection, bundlesCollection, fileEventsCollection, kafkaProducer, clk, c, cfg}
 }

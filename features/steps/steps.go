@@ -50,6 +50,8 @@ func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I get files in the bundle "([^"]*)"$`, c.iGetFilesInTheBundle)
 	ctx.Step(`^I get files with both collection_id "([^"]*)" and bundle_id "([^"]*)"$`, c.iGetFilesWithBothCollectionAndBundleID)
 	ctx.Step(`^the file upload "([^"]*)" is removed$`, c.theFileUploadIsRemoved)
+	ctx.Step(`^I create a file event with payload:$`, c.iCreateFileEvent)
+	ctx.Step(`^the file event should be created in the database$`, c.theFileEventShouldBeCreatedInTheDatabase)
 }
 
 func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {

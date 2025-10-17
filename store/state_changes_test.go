@@ -38,7 +38,7 @@ func (suite *StoreSuite) TestRegisterFileUploadCollectionPublishedCheckError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataCollection, &collCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataCollection, &collCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("collection published check error"))
@@ -67,7 +67,7 @@ func (suite *StoreSuite) TestRegisterFileUploadBundlePublishedCheckError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataCollection, nil, &bundleCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataCollection, nil, &bundleCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("bundle published check error"))
@@ -98,7 +98,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenCollectionAlreadyPublished() 
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataCollection, &collCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataCollection, &collCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -131,7 +131,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenBundleAlreadyPublished() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataCollection, nil, &bundleCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataCollection, nil, &bundleCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -158,7 +158,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExistsCollecti
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&alwaysFindsExistingCollection, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&alwaysFindsExistingCollection, &emptyCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -185,7 +185,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFilePathAlreadyExistsBundle()
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&alwaysFindsExistingCollection, nil, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&alwaysFindsExistingCollection, nil, nil, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -233,7 +233,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenFileDoesNotAlreadyExist() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsZero, &collCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsZero, &collCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.NoError(err)
@@ -259,7 +259,7 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertReturnsError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -289,7 +289,7 @@ func (suite *StoreSuite) TestRegisterFileUploadInsertSucceeds() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -319,7 +319,7 @@ func (suite *StoreSuite) TestRegisterFileUploadRegisterCollectionFails() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsZero, &emptyCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("failed to register collection"))
@@ -348,7 +348,7 @@ func (suite *StoreSuite) TestRegisterFileUploadRegisterBundleFails() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsZero, nil, &emptyCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsZero, nil, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RegisterFileUpload(suite.defaultContext, metadata)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("failed to register bundle"))
@@ -385,7 +385,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenNotInCreatedState() {
 		}
 
 		cfg, _ := config.Get()
-		subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+		subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 		err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
 		logEvents := suite.logInterceptor.GetLogEvents("update file state: state mismatch")
@@ -414,7 +414,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenFileNotExists() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
 	logEvents := suite.logInterceptor.GetLogEvents("update file state: attempted to operate on unregistered file")
@@ -442,7 +442,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteFailsWhenUpdateReturnsError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.Error(err)
@@ -466,7 +466,7 @@ func (suite *StoreSuite) TestMarkUploadCompleteSucceeds() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkUploadComplete(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.NoError(err)
@@ -502,7 +502,7 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenNotInCreatedState() {
 		}
 
 		cfg, _ := config.Get()
-		subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+		subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 		err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 		logEvents := suite.logInterceptor.GetLogEvents("update file state: state mismatch")
@@ -526,7 +526,7 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenFileNotExists() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	logEvents := suite.logInterceptor.GetLogEvents("update file state: attempted to operate on unregistered file")
@@ -562,7 +562,7 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenUpdateReturnsError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
 	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.Error(err)
@@ -592,7 +592,7 @@ func (suite *StoreSuite) TestMarkFileMovedEtagMismatch() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
 	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.ErrorIs(err, store.ErrEtagMismatchWhilePublishing, "the actual err was %v", err)
@@ -621,7 +621,7 @@ func (suite *StoreSuite) TestMarkFileMovedSucceeds() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &collectionsCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
 	err := subject.MarkFileMoved(suite.defaultContext, suite.etagReference(metadata))
 
 	suite.NoError(err)
@@ -636,7 +636,7 @@ func (suite *StoreSuite) TestMarkFilePublishedFindReturnsErrNoDocumentFound() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	logEvents := suite.logInterceptor.GetLogEvents("mark file as published: attempted to operate on unregistered file")
@@ -657,7 +657,7 @@ func (suite *StoreSuite) TestMarkFilePublishedFindReturnsUnspecifiedError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -680,7 +680,7 @@ func (suite *StoreSuite) TestMarkFilePublishedCollectionIDNil() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -709,7 +709,7 @@ func (suite *StoreSuite) TestMarkFilePublishedStateUploaded() {
 		}
 
 		cfg, _ := config.Get()
-		subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+		subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 		err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
 		logEvent := suite.logInterceptor.GetLogEvent()
@@ -738,7 +738,7 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateReturnsError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
@@ -767,7 +767,7 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaReturnsError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, &kafkaMock, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
@@ -796,7 +796,7 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaDoesNotReturnError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, &kafkaMock, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, &emptyCollection, nil, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkFilePublished(suite.defaultContext, suite.path)
 
@@ -816,7 +816,7 @@ func (suite *StoreSuite) TestRemoveFile_TestUnregisteredFile() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RemoveFile(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -839,7 +839,7 @@ func (suite *StoreSuite) TestRemoveFile_TestFailFindingFileMetadata() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RemoveFile(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -863,7 +863,7 @@ func (suite *StoreSuite) TestRemoveFile_MetadataInMovedState() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 	err := subject.RemoveFile(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -900,7 +900,7 @@ func (suite *StoreSuite) TestRemoveFile_S3Error() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
 	err := subject.RemoveFile(suite.defaultContext, suite.path)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -939,7 +939,7 @@ func (suite *StoreSuite) TestRemoveFile_MetadataCollectionDeleteReturnAnError() 
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
 	err := subject.RemoveFile(suite.defaultContext, suite.path)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("remove file: error while deleting metadata"))
@@ -980,7 +980,7 @@ func (suite *StoreSuite) TestRemoveFile_TestErrorWhileFindingMetadata() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
 	err := subject.RemoveFile(suite.defaultContext, suite.path)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("remove file: error while finding metadata"))
@@ -1024,7 +1024,7 @@ func (suite *StoreSuite) TestRemoveFile_TestErrorWhileDeletingBundleRecord() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
 	err := subject.RemoveFile(suite.defaultContext, suite.path)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("remove file: error while deleting bundle record"))
@@ -1068,7 +1068,7 @@ func (suite *StoreSuite) TestRemoveFile_TestBundleRecordDeletedSuccessfully() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
 	err := subject.RemoveFile(suite.defaultContext, suite.path)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("remove file: bundle record deleted"))
