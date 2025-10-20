@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/ONSdigital/dp-files-api/sdk"
@@ -19,6 +20,11 @@ func HandlerCreateFileEvent(createFileEvent CreateFileEvent) http.HandlerFunc {
 			return
 		}
 
+		if err := validateFileEvent(&event); err != nil {
+			writeError(w, buildErrors(err, "InvalidRequest"), http.StatusBadRequest)
+			return
+		}
+
 		if err := createFileEvent(req.Context(), &event); err != nil {
 			handleError(w, err)
 			return
@@ -32,4 +38,20 @@ func HandlerCreateFileEvent(createFileEvent CreateFileEvent) http.HandlerFunc {
 			return
 		}
 	}
+}
+
+func validateFileEvent(event *sdk.FileEvent) error {
+	if event.RequestedBy == nil || event.RequestedBy.ID == "" {
+		return errors.New("requested_by.id is required")
+	}
+	if event.Action == "" {
+		return errors.New("action is required")
+	}
+	if event.Resource == "" {
+		return errors.New("resource is required")
+	}
+	if event.File == nil || event.File.Path == "" {
+		return errors.New("file.path is required")
+	}
+	return nil
 }

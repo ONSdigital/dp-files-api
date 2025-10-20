@@ -60,3 +60,85 @@ func TestCreateFileEventSuccess(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, rec.Code)
 	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
 }
+
+func TestCreateFileEventWithEmptyJSON(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/file-events", strings.NewReader(`{}`))
+
+	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *sdk.FileEvent) error {
+		return nil
+	})
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestCreateFileEventWithMissingRequestedBy(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/file-events", strings.NewReader(`{
+		"action": "READ",
+		"resource": "/downloads/file.csv",
+		"file": {"path": "file.csv", "type": "csv"}
+	}`))
+
+	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *sdk.FileEvent) error {
+		return nil
+	})
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestCreateFileEventWithMissingAction(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/file-events", strings.NewReader(`{
+		"requested_by": {"id": "user123"},
+		"resource": "/downloads/file.csv",
+		"file": {"path": "file.csv", "type": "csv"}
+	}`))
+
+	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *sdk.FileEvent) error {
+		return nil
+	})
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestCreateFileEventWithMissingResource(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/file-events", strings.NewReader(`{
+		"requested_by": {"id": "user123"},
+		"action": "READ",
+		"file": {"path": "file.csv", "type": "csv"}
+	}`))
+
+	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *sdk.FileEvent) error {
+		return nil
+	})
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestCreateFileEventWithMissingFilePath(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/file-events", strings.NewReader(`{
+		"requested_by": {"id": "user123"},
+		"action": "READ",
+		"resource": "/downloads/file.csv",
+		"file": {"type": "csv"}
+	}`))
+
+	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *sdk.FileEvent) error {
+		return nil
+	})
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
