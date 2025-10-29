@@ -16,7 +16,7 @@ import (
 
 func TestGetFileEventsSuccess(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events", http.NoBody)
 
 	mockEventsList := &sdk.EventsList{
 		Count:      1,
@@ -38,7 +38,7 @@ func TestGetFileEventsSuccess(t *testing.T) {
 
 func TestGetFileEventsWithLimitAndOffset(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=10&offset=5", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=10&offset=5", http.NoBody)
 
 	h := api.HandlerGetFileEvents(func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
 		assert.Equal(t, 10, limit)
@@ -53,7 +53,7 @@ func TestGetFileEventsWithLimitAndOffset(t *testing.T) {
 
 func TestGetFileEventsWithPath(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events?path=test-file.csv", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events?path=test-file.csv", http.NoBody)
 
 	h := api.HandlerGetFileEvents(func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
 		assert.Equal(t, "test-file.csv", path)
@@ -67,7 +67,7 @@ func TestGetFileEventsWithPath(t *testing.T) {
 
 func TestGetFileEventsWithAfterAndBefore(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events?after=2025-01-01T00:00:00Z&before=2025-12-31T23:59:59Z", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events?after=2025-01-01T00:00:00Z&before=2025-12-31T23:59:59Z", http.NoBody)
 
 	h := api.HandlerGetFileEvents(func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
 		assert.NotNil(t, after)
@@ -84,7 +84,7 @@ func TestGetFileEventsWithAfterAndBefore(t *testing.T) {
 
 func TestGetFileEventsWithInvalidLimit(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=abc", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=abc", http.NoBody)
 
 	h := api.HandlerGetFileEvents(func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
 		return nil, nil
@@ -97,7 +97,7 @@ func TestGetFileEventsWithInvalidLimit(t *testing.T) {
 
 func TestGetFileEventsWithLimitTooLarge(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=2000", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=2000", http.NoBody)
 
 	h := api.HandlerGetFileEvents(func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
 		return nil, nil
@@ -110,7 +110,7 @@ func TestGetFileEventsWithLimitTooLarge(t *testing.T) {
 
 func TestGetFileEventsWithNegativeLimit(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=-5", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=-5", http.NoBody)
 
 	h := api.HandlerGetFileEvents(func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
 		return nil, nil
@@ -123,7 +123,7 @@ func TestGetFileEventsWithNegativeLimit(t *testing.T) {
 
 func TestGetFileEventsWithInvalidOffset(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events?offset=xyz", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events?offset=xyz", http.NoBody)
 
 	h := api.HandlerGetFileEvents(func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
 		return nil, nil
@@ -136,7 +136,7 @@ func TestGetFileEventsWithInvalidOffset(t *testing.T) {
 
 func TestGetFileEventsWithNegativeOffset(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events?offset=-10", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events?offset=-10", http.NoBody)
 
 	h := api.HandlerGetFileEvents(func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
 		return nil, nil
@@ -149,7 +149,7 @@ func TestGetFileEventsWithNegativeOffset(t *testing.T) {
 
 func TestGetFileEventsWithInvalidAfterDatetime(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events?after=not-a-date", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events?after=not-a-date", http.NoBody)
 
 	h := api.HandlerGetFileEvents(func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
 		return nil, nil
@@ -162,7 +162,7 @@ func TestGetFileEventsWithInvalidAfterDatetime(t *testing.T) {
 
 func TestGetFileEventsWithInvalidBeforeDatetime(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events?before=invalid-datetime", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events?before=invalid-datetime", http.NoBody)
 
 	h := api.HandlerGetFileEvents(func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
 		return nil, nil
@@ -175,7 +175,7 @@ func TestGetFileEventsWithInvalidBeforeDatetime(t *testing.T) {
 
 func TestGetFileEventsWithPathNotFound(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events?path=nonexistent-file.csv", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events?path=nonexistent-file.csv", http.NoBody)
 
 	h := api.HandlerGetFileEvents(func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
 		return nil, store.ErrPathNotFound
@@ -188,7 +188,7 @@ func TestGetFileEventsWithPathNotFound(t *testing.T) {
 
 func TestGetFileEventsWithStoreError(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events", http.NoBody)
 
 	h := api.HandlerGetFileEvents(func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
 		return nil, errors.New("database error")
@@ -201,7 +201,7 @@ func TestGetFileEventsWithStoreError(t *testing.T) {
 
 func TestGetFileEventsDefaultPagination(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events", http.NoBody)
 
 	h := api.HandlerGetFileEvents(func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
 		assert.Equal(t, 20, limit)
@@ -219,7 +219,7 @@ func TestGetFileEventsDefaultPagination(t *testing.T) {
 
 func TestGetFileEventsWithAllQueryParams(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=50&offset=10&path=data.csv&after=2025-01-01T00:00:00Z&before=2025-12-31T23:59:59Z", nil)
+	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=50&offset=10&path=data.csv&after=2025-01-01T00:00:00Z&before=2025-12-31T23:59:59Z", http.NoBody)
 
 	h := api.HandlerGetFileEvents(func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
 		assert.Equal(t, 50, limit)

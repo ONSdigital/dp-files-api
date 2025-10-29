@@ -45,9 +45,9 @@ func HandlerGetFileEvents(getFileEvents GetFileEvents) http.HandlerFunc {
 	}
 }
 
-func parsePaginationParams(req *http.Request) (int, int, error) {
-	limit := 20
-	offset := 0
+func parsePaginationParams(req *http.Request) (limit, offset int, err error) {
+	limit = 20
+	offset = 0
 
 	if limitStr := req.URL.Query().Get("limit"); limitStr != "" {
 		val, err := strconv.Atoi(limitStr)
@@ -68,9 +68,7 @@ func parsePaginationParams(req *http.Request) (int, int, error) {
 	return limit, offset, nil
 }
 
-func parseDateTimeParams(req *http.Request) (*time.Time, *time.Time, error) {
-	var after, before *time.Time
-
+func parseDateTimeParams(req *http.Request) (after, before *time.Time, err error) {
 	if afterStr := req.URL.Query().Get("after"); afterStr != "" {
 		t, err := time.Parse(time.RFC3339, afterStr)
 		if err != nil {
