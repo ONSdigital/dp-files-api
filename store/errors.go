@@ -22,4 +22,5 @@ var (
 	ErrBothCollectionAndBundleIDSet    = errors.New("cannot set both collection and bundle ID")
 	ErrFileMoved                       = errors.New("record cannot be updated as the file is MOVED")
 	ErrFileIsPublished                 = errors.New("cannot delete file as it is already published")
+	ErrPathNotFound                    = errors.New("the requested resource does not exist")
 )
