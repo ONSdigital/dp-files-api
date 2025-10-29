@@ -79,7 +79,7 @@ func TestValidateUploadComplete(t *testing.T) {
 
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
 
-			expectedResponse := fmt.Sprintf(`{"errors": [{"errorCode": "ValidationError", "description": %q}]}`, test.expectedErrorDescription)
+			expectedResponse := fmt.Sprintf(`{"errors": [{"code": "ValidationError", "description": %q}]}`, test.expectedErrorDescription)
 			response, _ := io.ReadAll(rec.Body)
 			assert.JSONEq(t, expectedResponse, string(response))
 		})

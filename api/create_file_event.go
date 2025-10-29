@@ -16,12 +16,12 @@ func HandlerCreateFileEvent(createFileEvent CreateFileEvent) http.HandlerFunc {
 		var event sdk.FileEvent
 
 		if err := json.NewDecoder(req.Body).Decode(&event); err != nil {
-			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
+			writeError(w, buildGenericError("BadJson", "The JSON is not in a valid format"), http.StatusBadRequest)
 			return
 		}
 
 		if err := validateFileEvent(&event); err != nil {
-			writeError(w, buildErrors(err, "InvalidRequest"), http.StatusBadRequest)
+			writeError(w, buildGenericError("InvalidRequest", "Unable to process request due to a malformed or invalid request body or query parameter"), http.StatusBadRequest)
 			return
 		}
 
@@ -54,4 +54,8 @@ func validateFileEvent(event *sdk.FileEvent) error {
 		return errors.New("file.path is required")
 	}
 	return nil
+}
+
+func buildGenericError(code, description string) jsonErrors {
+	return jsonErrors{Error: []jsonError{{Code: code, Description: description}}}
 }

@@ -11,7 +11,7 @@ import (
 )
 
 type jsonError struct {
-	Code        string `json:"errorCode"`
+	Code        string `json:"code"`
 	Description string `json:"description"`
 }
 
