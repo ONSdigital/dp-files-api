@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/sdk"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,11 +25,11 @@ func TestCreateFileEvent_Success(t *testing.T) {
 
 	client := sdk.New(server.URL, "test-token")
 
-	event := sdk.FileEvent{
-		RequestedBy: &sdk.RequestedBy{ID: "user123"},
-		Action:      sdk.ActionRead,
+	event := files.FileEvent{
+		RequestedBy: &files.RequestedBy{ID: "user123"},
+		Action:      files.ActionRead,
 		Resource:    "/downloads/file.csv",
-		File:        &sdk.FileMetaData{Path: "file.csv", Type: "csv"},
+		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
 	}
 
 	err := client.CreateFileEvent(context.Background(), event)
@@ -45,7 +46,7 @@ func TestCreateFileEvent_BadRequest(t *testing.T) {
 
 	client := sdk.New(server.URL, "test-token")
 
-	event := sdk.FileEvent{}
+	event := files.FileEvent{}
 
 	err := client.CreateFileEvent(context.Background(), event)
 
@@ -62,11 +63,11 @@ func TestCreateFileEvent_Unauthorised(t *testing.T) {
 
 	client := sdk.New(server.URL, "invalid-token")
 
-	event := sdk.FileEvent{
-		RequestedBy: &sdk.RequestedBy{ID: "user123"},
-		Action:      sdk.ActionRead,
+	event := files.FileEvent{
+		RequestedBy: &files.RequestedBy{ID: "user123"},
+		Action:      files.ActionRead,
 		Resource:    "/downloads/file.csv",
-		File:        &sdk.FileMetaData{Path: "file.csv", Type: "csv"},
+		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
 	}
 
 	err := client.CreateFileEvent(context.Background(), event)
@@ -84,11 +85,11 @@ func TestCreateFileEvent_Forbidden(t *testing.T) {
 
 	client := sdk.New(server.URL, "test-token")
 
-	event := sdk.FileEvent{
-		RequestedBy: &sdk.RequestedBy{ID: "user123"},
-		Action:      sdk.ActionRead,
+	event := files.FileEvent{
+		RequestedBy: &files.RequestedBy{ID: "user123"},
+		Action:      files.ActionRead,
 		Resource:    "/downloads/file.csv",
-		File:        &sdk.FileMetaData{Path: "file.csv", Type: "csv"},
+		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
 	}
 
 	err := client.CreateFileEvent(context.Background(), event)
@@ -106,11 +107,11 @@ func TestCreateFileEvent_ServerError(t *testing.T) {
 
 	client := sdk.New(server.URL, "test-token")
 
-	event := sdk.FileEvent{
-		RequestedBy: &sdk.RequestedBy{ID: "user123"},
-		Action:      sdk.ActionRead,
+	event := files.FileEvent{
+		RequestedBy: &files.RequestedBy{ID: "user123"},
+		Action:      files.ActionRead,
 		Resource:    "/downloads/file.csv",
-		File:        &sdk.FileMetaData{Path: "file.csv", Type: "csv"},
+		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
 	}
 
 	err := client.CreateFileEvent(context.Background(), event)
@@ -122,11 +123,11 @@ func TestCreateFileEvent_ServerError(t *testing.T) {
 func TestCreateFileEvent_NetworkError(t *testing.T) {
 	client := sdk.New("http://localhost:99999", "test-token")
 
-	event := sdk.FileEvent{
-		RequestedBy: &sdk.RequestedBy{ID: "user123"},
-		Action:      sdk.ActionRead,
+	event := files.FileEvent{
+		RequestedBy: &files.RequestedBy{ID: "user123"},
+		Action:      files.ActionRead,
 		Resource:    "/downloads/file.csv",
-		File:        &sdk.FileMetaData{Path: "file.csv", Type: "csv"},
+		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
 	}
 
 	err := client.CreateFileEvent(context.Background(), event)
@@ -146,11 +147,11 @@ func TestCreateFileEvent_VerifyRequestBody(t *testing.T) {
 
 	client := sdk.New(server.URL, "test-token")
 
-	event := sdk.FileEvent{
-		RequestedBy: &sdk.RequestedBy{ID: "user123", Email: "user@example.com"},
-		Action:      sdk.ActionRead,
+	event := files.FileEvent{
+		RequestedBy: &files.RequestedBy{ID: "user123", Email: "user@example.com"},
+		Action:      files.ActionRead,
 		Resource:    "/downloads/file.csv",
-		File:        &sdk.FileMetaData{Path: "file.csv", Type: "text/csv"},
+		File:        &files.FileMetaData{Path: "file.csv", Type: "text/csv"},
 	}
 
 	err := client.CreateFileEvent(context.Background(), event)
@@ -160,4 +161,69 @@ func TestCreateFileEvent_VerifyRequestBody(t *testing.T) {
 	assert.Contains(t, string(capturedBody), "user@example.com")
 	assert.Contains(t, string(capturedBody), "READ")
 	assert.Contains(t, string(capturedBody), "/downloads/file.csv")
+}
+
+func TestCreateFileEvent_EmptyErrorResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"errors":[]}`))
+	}))
+	defer server.Close()
+
+	client := sdk.New(server.URL, "test-token")
+
+	event := files.FileEvent{
+		RequestedBy: &files.RequestedBy{ID: "user123"},
+		Action:      files.ActionRead,
+		Resource:    "/downloads/file.csv",
+		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
+	}
+
+	err := client.CreateFileEvent(context.Background(), event)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), `{"errors":[]}`)
+}
+
+func TestCreateFileEvent_EmptyBodyError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	client := sdk.New(server.URL, "test-token")
+
+	event := files.FileEvent{
+		RequestedBy: &files.RequestedBy{ID: "user123"},
+		Action:      files.ActionRead,
+		Resource:    "/downloads/file.csv",
+		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
+	}
+
+	err := client.CreateFileEvent(context.Background(), event)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "API returned status 500 with no error message")
+}
+
+func TestCreateFileEvent_PlainTextError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Server Error"))
+	}))
+	defer server.Close()
+
+	client := sdk.New(server.URL, "test-token")
+
+	event := files.FileEvent{
+		RequestedBy: &files.RequestedBy{ID: "user123"},
+		Action:      files.ActionRead,
+		Resource:    "/downloads/file.csv",
+		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
+	}
+
+	err := client.CreateFileEvent(context.Background(), event)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Internal Server Error")
 }

@@ -3,12 +3,12 @@ package store
 import (
 	"context"
 
-	"github.com/ONSdigital/dp-files-api/sdk"
+	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/log.go/v2/log"
 )
 
 // CreateFileEvent inserts a new file event into the file_events collection
-func (store *Store) CreateFileEvent(ctx context.Context, event *sdk.FileEvent) error {
+func (store *Store) CreateFileEvent(ctx context.Context, event *files.FileEvent) error {
 	now := store.clock.GetCurrentTime()
 	event.CreatedAt = &now
 
