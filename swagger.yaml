@@ -614,7 +614,7 @@ definitions:
         items:
           type: object
           properties:
-            code:
+            errorCode:
               type: string
               example: BadJson
             description:
