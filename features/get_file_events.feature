@@ -249,19 +249,59 @@ Feature: Getting file events
 
   Scenario: Return 400 for invalid limit parameter
     When I GET "/file-events?limit=abc"
-    Then the HTTP status code should be "400"
+    Then I should receive the following JSON response with status "400":
+    """
+    {
+      "errors": [
+        {
+          "errorCode": "InvalidRequest",
+          "description": "unable to process request due to a malformed or invalid request body or query parameter"
+        }
+      ]
+    }
+    """
 
   Scenario: Return 400 for invalid offset parameter
     When I GET "/file-events?offset=-5"
-    Then the HTTP status code should be "400"
+    Then I should receive the following JSON response with status "400":
+    """
+    {
+      "errors": [
+        {
+          "errorCode": "InvalidRequest",
+          "description": "unable to process request due to a malformed or invalid request body or query parameter"
+        }
+      ]
+    }
+    """
 
   Scenario: Return 400 for invalid date format
     When I GET "/file-events?after=not-a-date"
-    Then the HTTP status code should be "400"
+    Then I should receive the following JSON response with status "400":
+    """
+    {
+      "errors": [
+        {
+          "errorCode": "InvalidRequest",
+          "description": "unable to process request due to a malformed or invalid request body or query parameter"
+        }
+      ]
+    }
+    """
 
   Scenario: Return 400 for limit exceeding maximum
     When I GET "/file-events?limit=2000"
-    Then the HTTP status code should be "400"
+    Then I should receive the following JSON response with status "400":
+    """
+    {
+      "errors": [
+        {
+          "errorCode": "InvalidRequest",
+          "description": "unable to process request due to a malformed or invalid request body or query parameter"
+        }
+      ]
+    }
+    """
 
   Scenario: Get empty results when no events match filters
     Given the following file events exist in the database:

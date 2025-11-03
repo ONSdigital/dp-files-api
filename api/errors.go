@@ -68,6 +68,7 @@ func buildValidationErrors(validationErrs validator.ValidationErrors) jsonErrors
 }
 
 func writeError(w http.ResponseWriter, errs jsonErrors, httpCode int) {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpCode)
 	_ = json.NewEncoder(w).Encode(&errs)
 }

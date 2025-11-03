@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/ONSdigital/dp-files-api/sdk"
+	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/cucumber/godog"
 	"github.com/rdumont/assistdog"
 	"github.com/stretchr/testify/assert"
@@ -86,7 +86,7 @@ func (c *FilesAPIComponent) theFollowingFileEventsExistInTheDatabase(table *godo
 }
 
 func (c *FilesAPIComponent) theResponseShouldContainFileEvents(expectedCount string) error {
-	var eventsList sdk.EventsList
+	var eventsList files.EventsList
 
 	body, err := io.ReadAll(c.APIFeature.HTTPResponse.Body)
 	assert.NoError(c.APIFeature, err)
@@ -114,7 +114,7 @@ func (c *FilesAPIComponent) theResponseShouldContainFileEvents(expectedCount str
 }
 
 func (c *FilesAPIComponent) theResponseShouldContainAtLeastFileEvent(minCount string) error {
-	var eventsList sdk.EventsList
+	var eventsList files.EventsList
 
 	body, err := io.ReadAll(c.APIFeature.HTTPResponse.Body)
 	assert.NoError(c.APIFeature, err)
@@ -136,7 +136,7 @@ func (c *FilesAPIComponent) theResponseShouldContainAtLeastFileEvent(minCount st
 }
 
 func (c *FilesAPIComponent) theResponseShouldHavePaginationWithLimitAndOffset(limit, offset string) error {
-	var eventsList sdk.EventsList
+	var eventsList files.EventsList
 
 	body, err := io.ReadAll(c.APIFeature.HTTPResponse.Body)
 	assert.NoError(c.APIFeature, err)
@@ -170,7 +170,7 @@ func (c *FilesAPIComponent) theResponseShouldHavePaginationWithLimitAndOffset(li
 }
 
 func (c *FilesAPIComponent) allReturnedEventsShouldHaveFilePath(expectedPath string) error {
-	var eventsList sdk.EventsList
+	var eventsList files.EventsList
 
 	body, err := io.ReadAll(c.APIFeature.HTTPResponse.Body)
 	assert.NoError(c.APIFeature, err)

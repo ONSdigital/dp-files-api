@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/ONSdigital/dp-files-api/api"
-	"github.com/ONSdigital/dp-files-api/sdk"
+	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,7 +17,7 @@ func TestCreateFileEventWithBadJSON(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/file-events", strings.NewReader("<json></json>"))
 
-	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *sdk.FileEvent) error { return nil })
+	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error { return nil })
 
 	h.ServeHTTP(rec, req)
 
@@ -33,7 +33,7 @@ func TestCreateFileEventWithStoreError(t *testing.T) {
 		"file": {"path": "file.csv", "type": "csv"}
 	}`))
 
-	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *sdk.FileEvent) error {
+	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return errors.New("database error")
 	})
 
@@ -51,7 +51,7 @@ func TestCreateFileEventSuccess(t *testing.T) {
 		"file": {"path": "file.csv", "type": "csv"}
 	}`))
 
-	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *sdk.FileEvent) error {
+	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return nil
 	})
 
@@ -65,7 +65,7 @@ func TestCreateFileEventWithEmptyJSON(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/file-events", strings.NewReader(`{}`))
 
-	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *sdk.FileEvent) error {
+	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return nil
 	})
 
@@ -82,7 +82,7 @@ func TestCreateFileEventWithMissingRequestedBy(t *testing.T) {
 		"file": {"path": "file.csv", "type": "csv"}
 	}`))
 
-	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *sdk.FileEvent) error {
+	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return nil
 	})
 
@@ -99,7 +99,7 @@ func TestCreateFileEventWithMissingAction(t *testing.T) {
 		"file": {"path": "file.csv", "type": "csv"}
 	}`))
 
-	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *sdk.FileEvent) error {
+	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return nil
 	})
 
@@ -116,7 +116,7 @@ func TestCreateFileEventWithMissingResource(t *testing.T) {
 		"file": {"path": "file.csv", "type": "csv"}
 	}`))
 
-	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *sdk.FileEvent) error {
+	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return nil
 	})
 
@@ -134,7 +134,7 @@ func TestCreateFileEventWithMissingFilePath(t *testing.T) {
 		"file": {"type": "csv"}
 	}`))
 
-	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *sdk.FileEvent) error {
+	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return nil
 	})
 

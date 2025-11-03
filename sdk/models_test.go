@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ONSdigital/dp-files-api/sdk"
+	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -13,15 +13,15 @@ func TestFileEventMarshalling(t *testing.T) {
 	now := time.Now()
 	collectionID := "test-collection"
 
-	event := sdk.FileEvent{
+	event := files.FileEvent{
 		CreatedAt: &now,
-		RequestedBy: &sdk.RequestedBy{
+		RequestedBy: &files.RequestedBy{
 			ID:    "user123",
 			Email: "user@example.com",
 		},
-		Action:   sdk.ActionRead,
+		Action:   files.ActionRead,
 		Resource: "/downloads/file.csv",
-		File: &sdk.FileMetaData{
+		File: &files.FileMetaData{
 			Path:         "file.csv",
 			Type:         "text/csv",
 			CollectionID: &collectionID,
@@ -43,21 +43,21 @@ func TestFileEventUnmarshalling(t *testing.T) {
 		"file": {"path": "test.xls", "type": "application/xls", "size_in_bytes": 2048}
 	}`
 
-	var event sdk.FileEvent
+	var event files.FileEvent
 	err := json.Unmarshal([]byte(jsonStr), &event)
 
 	assert.NoError(t, err)
 	assert.Equal(t, "user456", event.RequestedBy.ID)
 	assert.Equal(t, "test@example.com", event.RequestedBy.Email)
-	assert.Equal(t, sdk.ActionCreate, event.Action)
+	assert.Equal(t, files.ActionCreate, event.Action)
 	assert.Equal(t, "/files/test.xls", event.Resource)
 	assert.Equal(t, "test.xls", event.File.Path)
 	assert.Equal(t, uint64(2048), event.File.SizeInBytes)
 }
 
 func TestActionConstants(t *testing.T) {
-	assert.Equal(t, "CREATE", sdk.ActionCreate)
-	assert.Equal(t, "READ", sdk.ActionRead)
-	assert.Equal(t, "UPDATE", sdk.ActionUpdate)
-	assert.Equal(t, "DELETE", sdk.ActionDelete)
+	assert.Equal(t, "CREATE", files.ActionCreate)
+	assert.Equal(t, "READ", files.ActionRead)
+	assert.Equal(t, "UPDATE", files.ActionUpdate)
+	assert.Equal(t, "DELETE", files.ActionDelete)
 }

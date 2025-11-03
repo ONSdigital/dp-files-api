@@ -23,4 +23,5 @@ var (
 	ErrFileMoved                       = errors.New("record cannot be updated as the file is MOVED")
 	ErrFileIsPublished                 = errors.New("cannot delete file as it is already published")
 	ErrPathNotFound                    = errors.New("the requested resource does not exist")
+	ErrInvalidPagination               = errors.New("unable to process request due to a malformed or invalid request body or query parameter")
 )

@@ -4,14 +4,14 @@ import (
 	"context"
 	"time"
 
-	"github.com/ONSdigital/dp-files-api/sdk"
-	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
+	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/ONSdigital/log.go/v2/log"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 // CreateFileEvent inserts a new file event into the file_events collection
-func (store *Store) CreateFileEvent(ctx context.Context, event *sdk.FileEvent) error {
+func (store *Store) CreateFileEvent(ctx context.Context, event *files.FileEvent) error {
 	now := store.clock.GetCurrentTime()
 	event.CreatedAt = &now
 
@@ -28,7 +28,7 @@ func (store *Store) CreateFileEvent(ctx context.Context, event *sdk.FileEvent) e
 }
 
 // GetFileEvents retrieves file events with optional filters and pagination
-func (store *Store) GetFileEvents(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error) {
+func (store *Store) GetFileEvents(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
 	filter := bson.M{}
 
 	if path != "" {
@@ -63,19 +63,19 @@ func (store *Store) GetFileEvents(ctx context.Context, limit, offset int, path s
 		return nil, err
 	}
 
-	events := make([]sdk.FileEvent, 0)
+	events := make([]files.FileEvent, 0)
 
 	_, err = store.fileEventsCollection.Find(ctx, filter, &events,
-		mongodriver.Sort(bson.M{"created_at": -1}),
-		mongodriver.Offset(offset),
-		mongodriver.Limit(limit),
+		mongodb.Sort(bson.M{"created_at": -1}),
+		mongodb.Offset(offset),
+		mongodb.Limit(limit),
 	)
 	if err != nil {
 		log.Error(ctx, "failed to find file events", err)
 		return nil, err
 	}
 
-	eventsList := &sdk.EventsList{
+	eventsList := &files.EventsList{
 		Count:      len(events),
 		Limit:      limit,
 		Offset:     offset,

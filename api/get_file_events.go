@@ -3,15 +3,15 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/ONSdigital/dp-files-api/sdk"
+	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/ONSdigital/dp-files-api/store"
 )
 
-type GetFileEvents func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*sdk.EventsList, error)
+type GetFileEvents func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error)
 
 func HandlerGetFileEvents(getFileEvents GetFileEvents) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -52,7 +52,7 @@ func parsePaginationParams(req *http.Request) (limit, offset int, err error) {
 	if limitStr := req.URL.Query().Get("limit"); limitStr != "" {
 		val, err := strconv.Atoi(limitStr)
 		if err != nil || val < 0 || val > 1000 {
-			return 0, 0, errors.New("unable to process request due to a malformed or invalid request body or query parameter")
+			return 0, 0, store.ErrInvalidPagination
 		}
 		limit = val
 	}
@@ -60,7 +60,7 @@ func parsePaginationParams(req *http.Request) (limit, offset int, err error) {
 	if offsetStr := req.URL.Query().Get("offset"); offsetStr != "" {
 		val, err := strconv.Atoi(offsetStr)
 		if err != nil || val < 0 {
-			return 0, 0, errors.New("unable to process request due to a malformed or invalid request body or query parameter")
+			return 0, 0, store.ErrInvalidPagination
 		}
 		offset = val
 	}
@@ -72,7 +72,7 @@ func parseDateTimeParams(req *http.Request) (after, before *time.Time, err error
 	if afterStr := req.URL.Query().Get("after"); afterStr != "" {
 		t, err := time.Parse(time.RFC3339, afterStr)
 		if err != nil {
-			return nil, nil, errors.New("unable to process request due to a malformed or invalid request body or query parameter")
+			return nil, nil, store.ErrInvalidPagination
 		}
 		after = &t
 	}
@@ -80,7 +80,7 @@ func parseDateTimeParams(req *http.Request) (after, before *time.Time, err error
 	if beforeStr := req.URL.Query().Get("before"); beforeStr != "" {
 		t, err := time.Parse(time.RFC3339, beforeStr)
 		if err != nil {
-			return nil, nil, errors.New("unable to process request due to a malformed or invalid request body or query parameter")
+			return nil, nil, store.ErrInvalidPagination
 		}
 		before = &t
 	}
