@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ONSdigital/dp-files-api/files"
 	dpNetRequest "github.com/ONSdigital/dp-net/v3/request"
 )
 
 // CreateFileEvent creates a new file event in the audit log
-func (c *Client) CreateFileEvent(ctx context.Context, event FileEvent) error {
+func (c *Client) CreateFileEvent(ctx context.Context, event files.FileEvent) error {
 	payload, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("failed to marshal file event: %w", err)

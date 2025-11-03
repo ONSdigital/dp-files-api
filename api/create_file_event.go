@@ -6,14 +6,14 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/ONSdigital/dp-files-api/sdk"
+	"github.com/ONSdigital/dp-files-api/files"
 )
 
-type CreateFileEvent func(ctx context.Context, event *sdk.FileEvent) error
+type CreateFileEvent func(ctx context.Context, event *files.FileEvent) error
 
 func HandlerCreateFileEvent(createFileEvent CreateFileEvent) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		var event sdk.FileEvent
+		var event files.FileEvent
 
 		if err := json.NewDecoder(req.Body).Decode(&event); err != nil {
 			writeError(w, buildGenericError("BadJson", "The JSON is not in a valid format"), http.StatusBadRequest)
@@ -40,7 +40,7 @@ func HandlerCreateFileEvent(createFileEvent CreateFileEvent) http.HandlerFunc {
 	}
 }
 
-func validateFileEvent(event *sdk.FileEvent) error {
+func validateFileEvent(event *files.FileEvent) error {
 	if event.RequestedBy == nil || event.RequestedBy.ID == "" {
 		return errors.New("requested_by.id is required")
 	}
