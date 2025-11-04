@@ -52,6 +52,11 @@ func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the file upload "([^"]*)" is removed$`, c.theFileUploadIsRemoved)
 	ctx.Step(`^I create a file event with payload:$`, c.iCreateFileEvent)
 	ctx.Step(`^the file event should be created in the database$`, c.theFileEventShouldBeCreatedInTheDatabase)
+	ctx.Step(`^the following file events exist in the database:$`, c.theFollowingFileEventsExistInTheDatabase)
+	ctx.Step(`^the response should contain "([^"]*)" file events$`, c.theResponseShouldContainFileEvents)
+	ctx.Step(`^the response should contain at least "([^"]*)" file event$`, c.theResponseShouldContainAtLeastFileEvent)
+	ctx.Step(`^the response should have pagination with limit "([^"]*)" and offset "([^"]*)"$`, c.theResponseShouldHavePaginationWithLimitAndOffset)
+	ctx.Step(`^all returned events should have file path "([^"]*)"$`, c.allReturnedEventsShouldHaveFilePath)
 }
 
 func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {

@@ -50,10 +50,13 @@ func handleError(w http.ResponseWriter, err error) {
 		writeError(w, buildErrors(err, "FileMoved"), http.StatusConflict)
 	case store.ErrFileIsPublished:
 		writeError(w, buildErrors(err, "FileIsPublished"), http.StatusConflict)
+	case store.ErrPathNotFound:
+		writeError(w, buildErrors(err, "NotFound"), http.StatusNotFound)
 	default:
 		writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)
 	}
 }
+
 func buildValidationErrors(validationErrs validator.ValidationErrors) jsonErrors {
 	jsonErrs := jsonErrors{Error: []jsonError{}}
 
@@ -65,6 +68,7 @@ func buildValidationErrors(validationErrs validator.ValidationErrors) jsonErrors
 }
 
 func writeError(w http.ResponseWriter, errs jsonErrors, httpCode int) {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpCode)
 	_ = json.NewEncoder(w).Encode(&errs)
 }
