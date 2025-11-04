@@ -84,7 +84,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path("/collection/{collectionID}").HandlerFunc(authMiddleware.Require("static-files:update", collectionPublished)).Methods(http.MethodPatch)
 		r.Path("/bundle/{bundleID}").HandlerFunc(authMiddleware.Require("static-files:update", bundlePublished)).Methods(http.MethodPatch)
 		r.Path("/file-events").HandlerFunc(authMiddleware.Require("static-files:read", createFileEvent)).Methods(http.MethodPost)
-		r.Path("/file-events").HandlerFunc(authMiddleware.Require("static-files:read", getFileEvents)).Methods(http.MethodPost)
+		r.Path("/file-events").HandlerFunc(authMiddleware.Require("static-files:read", getFileEvents)).Methods(http.MethodGet)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:read", getSingleFile)).Methods(http.MethodGet)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:update", removeFile)).Methods(http.MethodDelete)
 
