@@ -19,7 +19,7 @@ func TestCreateFileEvent_Success(t *testing.T) {
 		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(`{"id":"123"}`))
+		w.Write([]byte(`{"id":"123","requested_by":{"id":"user123"},"action":"READ","resource":"/downloads/file.csv","file":{"path":"file.csv","type":"csv"}}`))
 	}))
 	defer server.Close()
 
@@ -32,9 +32,14 @@ func TestCreateFileEvent_Success(t *testing.T) {
 		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
 	}
 
-	err := client.CreateFileEvent(context.Background(), event)
+	createdEvent, err := client.CreateFileEvent(context.Background(), event)
 
 	assert.NoError(t, err)
+	assert.NotNil(t, createdEvent)
+	assert.Equal(t, "user123", createdEvent.RequestedBy.ID)
+	assert.Equal(t, files.ActionRead, createdEvent.Action)
+	assert.Equal(t, "/downloads/file.csv", createdEvent.Resource)
+	assert.Equal(t, "file.csv", createdEvent.File.Path)
 }
 
 func TestCreateFileEvent_BadRequest(t *testing.T) {
@@ -48,9 +53,10 @@ func TestCreateFileEvent_BadRequest(t *testing.T) {
 
 	event := files.FileEvent{}
 
-	err := client.CreateFileEvent(context.Background(), event)
+	createdEvent, err := client.CreateFileEvent(context.Background(), event)
 
 	assert.Error(t, err)
+	assert.Nil(t, createdEvent)
 	assert.Contains(t, err.Error(), "invalid request")
 }
 
@@ -70,9 +76,10 @@ func TestCreateFileEvent_Unauthorised(t *testing.T) {
 		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
 	}
 
-	err := client.CreateFileEvent(context.Background(), event)
+	createdEvent, err := client.CreateFileEvent(context.Background(), event)
 
 	assert.Error(t, err)
+	assert.Nil(t, createdEvent)
 	assert.Contains(t, err.Error(), "unauthorised")
 }
 
@@ -92,9 +99,10 @@ func TestCreateFileEvent_Forbidden(t *testing.T) {
 		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
 	}
 
-	err := client.CreateFileEvent(context.Background(), event)
+	createdEvent, err := client.CreateFileEvent(context.Background(), event)
 
 	assert.Error(t, err)
+	assert.Nil(t, createdEvent)
 	assert.Contains(t, err.Error(), "forbidden")
 }
 
@@ -114,9 +122,10 @@ func TestCreateFileEvent_ServerError(t *testing.T) {
 		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
 	}
 
-	err := client.CreateFileEvent(context.Background(), event)
+	createdEvent, err := client.CreateFileEvent(context.Background(), event)
 
 	assert.Error(t, err)
+	assert.Nil(t, createdEvent)
 	assert.Contains(t, err.Error(), "InternalError")
 }
 
@@ -130,9 +139,10 @@ func TestCreateFileEvent_NetworkError(t *testing.T) {
 		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
 	}
 
-	err := client.CreateFileEvent(context.Background(), event)
+	createdEvent, err := client.CreateFileEvent(context.Background(), event)
 
 	assert.Error(t, err)
+	assert.Nil(t, createdEvent)
 	assert.Contains(t, err.Error(), "failed to execute request")
 }
 
@@ -142,6 +152,7 @@ func TestCreateFileEvent_VerifyRequestBody(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedBody, _ = io.ReadAll(r.Body)
 		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(`{"requested_by":{"id":"user123","email":"user@example.com"},"action":"READ","resource":"/downloads/file.csv","file":{"path":"file.csv","type":"text/csv"}}`))
 	}))
 	defer server.Close()
 
@@ -154,9 +165,10 @@ func TestCreateFileEvent_VerifyRequestBody(t *testing.T) {
 		File:        &files.FileMetaData{Path: "file.csv", Type: "text/csv"},
 	}
 
-	err := client.CreateFileEvent(context.Background(), event)
+	createdEvent, err := client.CreateFileEvent(context.Background(), event)
 
 	assert.NoError(t, err)
+	assert.NotNil(t, createdEvent)
 	assert.Contains(t, string(capturedBody), "user123")
 	assert.Contains(t, string(capturedBody), "user@example.com")
 	assert.Contains(t, string(capturedBody), "READ")
@@ -179,9 +191,10 @@ func TestCreateFileEvent_EmptyErrorResponse(t *testing.T) {
 		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
 	}
 
-	err := client.CreateFileEvent(context.Background(), event)
+	createdEvent, err := client.CreateFileEvent(context.Background(), event)
 
 	assert.Error(t, err)
+	assert.Nil(t, createdEvent)
 	assert.Contains(t, err.Error(), `{"errors":[]}`)
 }
 
@@ -200,9 +213,10 @@ func TestCreateFileEvent_EmptyBodyError(t *testing.T) {
 		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
 	}
 
-	err := client.CreateFileEvent(context.Background(), event)
+	createdEvent, err := client.CreateFileEvent(context.Background(), event)
 
 	assert.Error(t, err)
+	assert.Nil(t, createdEvent)
 	assert.Contains(t, err.Error(), "API returned status 500 with no error message")
 }
 
@@ -222,8 +236,9 @@ func TestCreateFileEvent_PlainTextError(t *testing.T) {
 		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
 	}
 
-	err := client.CreateFileEvent(context.Background(), event)
+	createdEvent, err := client.CreateFileEvent(context.Background(), event)
 
 	assert.Error(t, err)
+	assert.Nil(t, createdEvent)
 	assert.Contains(t, err.Error(), "Internal Server Error")
 }
