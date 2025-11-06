@@ -60,6 +60,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		mongoClient.Collection(config.MetadataCollection),
 		mongoClient.Collection(config.CollectionsCollection),
 		mongoClient.Collection(config.BundlesCollection),
+		mongoClient.Collection(config.FileEventsCollection),
 		kafkaProducer,
 		serviceList.GetClock(),
 		s3Client,
@@ -75,11 +76,15 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		collectionPublished := api.HandleMarkCollectionPublished(store.MarkCollectionPublished)
 		bundlePublished := api.HandleMarkBundlePublished(store.MarkBundlePublished)
 		removeFile := api.HandleRemoveFile(store.RemoveFile)
+		createFileEvent := api.HandlerCreateFileEvent(store.CreateFileEvent)
+		getFileEvents := api.HandlerGetFileEvents(store.GetFileEvents)
 
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:create", register)).Methods(http.MethodPost)
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:read", getMultipleFiles)).Methods(http.MethodGet)
 		r.Path("/collection/{collectionID}").HandlerFunc(authMiddleware.Require("static-files:update", collectionPublished)).Methods(http.MethodPatch)
 		r.Path("/bundle/{bundleID}").HandlerFunc(authMiddleware.Require("static-files:update", bundlePublished)).Methods(http.MethodPatch)
+		r.Path("/file-events").HandlerFunc(authMiddleware.Require("static-files:read", createFileEvent)).Methods(http.MethodPost)
+		r.Path("/file-events").HandlerFunc(authMiddleware.Require("static-files:read", getFileEvents)).Methods(http.MethodGet)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:read", getSingleFile)).Methods(http.MethodGet)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:update", removeFile)).Methods(http.MethodDelete)
 

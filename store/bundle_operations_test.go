@@ -29,7 +29,7 @@ func (suite *StoreSuite) TestMarkBundlePublishedBundleEmptyCheckReturnsError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&bundleCountReturnsError, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&bundleCountReturnsError, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -49,7 +49,7 @@ func (suite *StoreSuite) TestMarkBundlePublishedBundleEmpty() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&bundleCountReturnsError, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&bundleCountReturnsError, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -72,7 +72,7 @@ func (suite *StoreSuite) TestMarkBundlePublishedWhenFileExistsInStateOtherThanUp
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, nil, &bundleCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, &bundleCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -100,7 +100,7 @@ func (suite *StoreSuite) TestMarkBundlePublishedBundleUploadedCheckReturnsError(
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsError, nil, &bundleCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsError, nil, &bundleCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -136,7 +136,7 @@ func (suite *StoreSuite) TestMarkBundlePublishedBundlePublishedCheckReturnsTrue(
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionCountReturnsError, nil, &bundleCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionCountReturnsError, nil, &bundleCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -165,7 +165,7 @@ func (suite *StoreSuite) TestMarkBundlePublishedPersistenceFailure() {
 		FindOneFunc: BundleFindOneSucceeds(), // bundle is not PUBLISHED
 	}
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, nil, &bundleColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, nil, &bundleColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -195,7 +195,7 @@ func (suite *StoreSuite) TestMarkBundlePublishedFindCalled() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataColl, nil, &bundleColl, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataColl, nil, &bundleColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.MarkBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -215,7 +215,7 @@ func (suite *StoreSuite) TestNotifyBundlePublishedFindErrored() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	subject.NotifyBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -257,7 +257,7 @@ func (suite *StoreSuite) TestNotifyBundlePublishedPersistenceSuccess() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, nil, nil, &kafkaMock, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, nil, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	subject.NotifyBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -306,7 +306,7 @@ func (suite *StoreSuite) TestBatchingWithLargeNumberOfFilesBundle() {
 		},
 	}
 
-	subject := store.NewStore(&collection, nil, nil, &kafkaMock, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, nil, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	subject.NotifyBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -347,7 +347,7 @@ func (suite *StoreSuite) TestNotifyBundlePublishedKafkaErrorDoesNotFailOperation
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, nil, nil, &kafkaMock, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, nil, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	subject.NotifyBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -378,7 +378,7 @@ func (suite *StoreSuite) TestNotifyBundlePublishedDecodeErrorDoesNotFailOperatio
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collection, nil, nil, &kafkaMock, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collection, nil, nil, nil, &kafkaMock, suite.defaultClock, nil, cfg)
 
 	subject.NotifyBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -401,7 +401,7 @@ func (suite *StoreSuite) TestGetBundlePublishedMetadataSuccess() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(nil, nil, &bundlesCollection, nil, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(nil, nil, &bundlesCollection, nil, nil, suite.defaultClock, nil, cfg)
 
 	actualBundle, err := subject.GetBundlePublishedMetadata(suite.defaultContext, suite.defaultBundleID)
 
@@ -415,7 +415,7 @@ func (suite *StoreSuite) TestGetBundlePublishedMetadataNotFound() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(nil, nil, &bundlesCollection, nil, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(nil, nil, &bundlesCollection, nil, nil, suite.defaultClock, nil, cfg)
 
 	actualBundle, err := subject.GetBundlePublishedMetadata(suite.defaultContext, "non-existent-bundle-id")
 
@@ -432,7 +432,7 @@ func (suite *StoreSuite) TestGetBundlePublishedMetadataUnexpectedError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(nil, nil, &bundlesCollection, nil, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(nil, nil, &bundlesCollection, nil, nil, suite.defaultClock, nil, cfg)
 
 	actualBundle, err := subject.GetBundlePublishedMetadata(suite.defaultContext, suite.defaultBundleID)
 
@@ -452,7 +452,7 @@ func (suite *StoreSuite) TestIsBundlePublishedSuccess() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(nil, nil, &bundlesCollection, nil, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(nil, nil, &bundlesCollection, nil, nil, suite.defaultClock, nil, cfg)
 
 	isPublished, err := subject.IsBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -472,7 +472,7 @@ func (suite *StoreSuite) TestIsBundlePublishedNotPublishedState() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(nil, nil, &bundlesCollection, nil, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(nil, nil, &bundlesCollection, nil, nil, suite.defaultClock, nil, cfg)
 
 	isPublished, err := subject.IsBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -495,7 +495,7 @@ func (suite *StoreSuite) TestIsBundlePublishedFallbackToFileCheckNotPublished() 
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataCollection, nil, &bundlesCollection, nil, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataCollection, nil, &bundlesCollection, nil, nil, suite.defaultClock, nil, cfg)
 
 	isPublished, err := subject.IsBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -511,7 +511,7 @@ func (suite *StoreSuite) TestIsBundlePublishedUnexpectedError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(nil, nil, &bundlesCollection, nil, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(nil, nil, &bundlesCollection, nil, nil, suite.defaultClock, nil, cfg)
 
 	isPublished, err := subject.IsBundlePublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -534,7 +534,7 @@ func (suite *StoreSuite) TestAreAllBundleFilesPublishedNotAllFilesPublished() {
 	bundlesCollection := mock.MongoCollectionMock{}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataCollection, nil, &bundlesCollection, nil, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataCollection, nil, &bundlesCollection, nil, nil, suite.defaultClock, nil, cfg)
 
 	isPublished, err := subject.AreAllBundleFilesPublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -549,7 +549,7 @@ func (suite *StoreSuite) TestAreAllBundleFilesPublishedEmptyBundle() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataCollection, nil, &bundlesCollection, nil, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataCollection, nil, &bundlesCollection, nil, nil, suite.defaultClock, nil, cfg)
 
 	isPublished, err := subject.AreAllBundleFilesPublished(suite.defaultContext, "empty-bundle-id")
 
@@ -567,7 +567,7 @@ func (suite *StoreSuite) TestAreAllBundleFilesPublishedUnexpectedError() {
 	bundlesCollection := mock.MongoCollectionMock{}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&metadataCollection, nil, &bundlesCollection, nil, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&metadataCollection, nil, &bundlesCollection, nil, nil, suite.defaultClock, nil, cfg)
 
 	isPublished, err := subject.AreAllBundleFilesPublished(suite.defaultContext, suite.defaultBundleID)
 
@@ -585,7 +585,7 @@ func (suite *StoreSuite) TestUpdateBundleIDFindReturnsErrNoDocumentFound() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateBundleID(suite.defaultContext, suite.path, suite.defaultBundleID)
 
@@ -607,7 +607,7 @@ func (suite *StoreSuite) TestUpdateBundleIDFindReturnsUnspecifiedError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateBundleID(suite.defaultContext, "", suite.defaultBundleID)
 
@@ -630,7 +630,7 @@ func (suite *StoreSuite) TestUpdateBundleIDFileIsInMovedState() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateBundleID(suite.defaultContext, suite.path, suite.defaultBundleID)
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -652,7 +652,7 @@ func (suite *StoreSuite) TestUpdateBundleIDtoEmptyStringFileIsInMovedState() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateBundleID(suite.defaultContext, suite.path, "")
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -683,7 +683,7 @@ func (suite *StoreSuite) TestUpdateBundleIDBundleCheckFail() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundleCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundleCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateBundleID(suite.defaultContext, suite.path, suite.defaultBundleID)
 
@@ -712,7 +712,7 @@ func (suite *StoreSuite) TestUpdateBundleIDBundleAlreadyPublished() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundleCollection, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundleCollection, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateBundleID(suite.defaultContext, suite.path, suite.defaultBundleID)
 	logEvent := suite.logInterceptor.GetLogEvent()
@@ -741,7 +741,7 @@ func (suite *StoreSuite) TestUpdateBundleIDUpdateReturnsError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &emptyBundle, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithUploadedFile, nil, &emptyBundle, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateBundleID(suite.defaultContext, suite.path, suite.defaultBundleID)
 
@@ -766,7 +766,7 @@ func (suite *StoreSuite) TestUpdateBundleIDUpdateSuccess() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionContainsOneUploadedFileWithNoBundleID, nil, &emptyBundle, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionContainsOneUploadedFileWithNoBundleID, nil, &emptyBundle, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateBundleID(suite.defaultContext, suite.path, suite.defaultBundleID)
 
@@ -784,7 +784,7 @@ func (suite *StoreSuite) TestUpdateBundleIDRemoveBundleID() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithFileHavingBundleID, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithFileHavingBundleID, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateBundleID(suite.defaultContext, suite.path, "")
 
@@ -803,7 +803,7 @@ func (suite *StoreSuite) TestUpdateBundleIDRemoveBundleIDNoExistingBundle() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithFileHavingNoBundleID, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithFileHavingNoBundleID, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateBundleID(suite.defaultContext, suite.path, "")
 
@@ -824,7 +824,7 @@ func (suite *StoreSuite) TestUpdateBundleIDRemoveBundleIDUpdateError() {
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithFileHavingBundleID, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	subject := store.NewStore(&collectionWithFileHavingBundleID, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
 
 	err := subject.UpdateBundleID(suite.defaultContext, suite.path, "")
 

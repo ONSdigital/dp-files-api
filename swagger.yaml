@@ -83,6 +83,36 @@ paths:
           $ref: "#/responses/NotFound"
         500:
           $ref: "#/responses/InternalErrorEvent"
+    post:
+      tags:
+        - Create file access event
+      summary: Log a file access event
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: event
+          in: body
+          required: true
+          description: "File access event to be logged"
+          schema:
+            $ref: '#/definitions/Event'
+      responses:
+        201:
+          description: File access event successfully created
+          schema:
+            $ref: '#/definitions/Event'
+        400:
+          $ref: "#/responses/InvalidRequest"
+        401:
+          $ref: "#/responses/UnauthorisedError"
+        403:
+          $ref: "#/responses/ForbiddenError"
+        500:
+          $ref: "#/responses/InternalErrorEvent"
 
   /files:
     post:
@@ -584,7 +614,7 @@ definitions:
         items:
           type: object
           properties:
-            code:
+            errorCode:
               type: string
               example: BadJson
             description:

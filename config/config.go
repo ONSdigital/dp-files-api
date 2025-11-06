@@ -50,6 +50,7 @@ const (
 	MetadataCollection    = "MetadataCollection"
 	CollectionsCollection = "CollectionsCollection"
 	BundlesCollection     = "BundlesCollection"
+	FileEventsCollection  = "FileEventsCollection"
 )
 
 // Get returns the default config with any modifications through environment
@@ -77,6 +78,7 @@ func Get() (*Config, error) {
 				MetadataCollection:    "metadata",
 				CollectionsCollection: "collections",
 				BundlesCollection:     "bundles",
+				FileEventsCollection:  "file_events",
 			},
 			IsStrongReadConcernEnabled:    false,
 			IsWriteConcernMajorityEnabled: true,

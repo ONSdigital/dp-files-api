@@ -123,6 +123,14 @@ func (c *FilesAPIComponent) Reset() {
 		log.Error(ctx, "failed to create index on bundles collection", err)
 		panic(err)
 	}
+
+	_ = c.mongoClient.Database("files").Collection("file_events").Drop(ctx)
+
+	if err := c.mongoClient.Database("files").CreateCollection(ctx, "file_events"); err != nil {
+		log.Error(ctx, "failed to create file_events collection", err)
+		panic(err)
+	}
+
 	c.isPublishing = true
 }
 
