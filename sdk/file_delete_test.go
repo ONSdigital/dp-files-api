@@ -55,14 +55,14 @@ func TestDeleteFile_Failure(t *testing.T) {
 	t.Parallel()
 
 	Convey("Given a files-api client that fails when Do() is called", t, func() {
-		mockClienter := newMockClienter(nil, expectedDoErr)
+		mockClienter := newMockClienter(nil, errExpectedDoFailure)
 		client := newMockFilesAPIClient(mockClienter)
 
 		Convey("When DeleteFile is called", func() {
 			err := client.DeleteFile(ctx, "/path/to/file.txt")
 
 			Convey("Then the expected error is returned", func() {
-				So(err, ShouldResemble, expectedDoErr)
+				So(err, ShouldResemble, errExpectedDoFailure)
 			})
 
 			Convey("And the mock clienter's Do method is called once", func() {
@@ -85,8 +85,8 @@ func TestDeleteFile_Failure(t *testing.T) {
 			Convey("Then the expected APIError is returned", func() {
 				expectedError := &APIError{
 					StatusCode: http.StatusNotFound,
-					Errors: &api.JsonErrors{
-						Error: []api.JsonError{
+					Errors: &api.JSONErrors{
+						Error: []api.JSONError{
 							{
 								Code:        "FileNotRegistered",
 								Description: "file not registered",

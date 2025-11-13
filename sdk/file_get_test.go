@@ -89,14 +89,14 @@ func TestGetFile_Failure(t *testing.T) {
 	t.Parallel()
 
 	Convey("Given a files-api client that fails when Do() is called", t, func() {
-		mockClienter := newMockClienter(nil, expectedDoErr)
+		mockClienter := newMockClienter(nil, errExpectedDoFailure)
 		client := newMockFilesAPIClient(mockClienter)
 
 		Convey("When GetFile is called", func() {
 			metadata, err := client.GetFile(ctx, "/path/to/file.txt")
 
 			Convey("Then the expected error is returned", func() {
-				So(err, ShouldResemble, expectedDoErr)
+				So(err, ShouldResemble, errExpectedDoFailure)
 			})
 
 			Convey("And no metadata is returned", func() {
@@ -123,8 +123,8 @@ func TestGetFile_Failure(t *testing.T) {
 			Convey("Then the expected API error is returned", func() {
 				expectedError := &APIError{
 					StatusCode: http.StatusNotFound,
-					Errors: &api.JsonErrors{
-						Error: []api.JsonError{
+					Errors: &api.JSONErrors{
+						Error: []api.JSONError{
 							{
 								Code:        "FileNotRegistered",
 								Description: "file not registered",

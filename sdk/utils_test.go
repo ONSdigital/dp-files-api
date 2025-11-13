@@ -16,9 +16,9 @@ import (
 )
 
 var (
-	expectedDoErr   = errors.New("intentional Do error")
-	expectedReadErr = errors.New("intentional read error")
-	brokenReader    = io.NopCloser(iotest.ErrReader(expectedReadErr))
+	errExpectedDoFailure   = errors.New("intentional Do error")
+	errExpectedReadFailure = errors.New("intentional read error")
+	brokenReader           = io.NopCloser(iotest.ErrReader(errExpectedReadFailure))
 
 	exampleCollectionID = "collection1"
 	exampleBundleID     = "bundle1"
@@ -45,23 +45,23 @@ var (
 	}
 )
 
-func TestUnmarshalJsonErrors(t *testing.T) {
+func TestUnmarshalJSONErrors(t *testing.T) {
 	t.Parallel()
 
-	Convey("Given a valid JsonErrors body", t, func() {
+	Convey("Given a valid JSONErrors body", t, func() {
 		body := `{"errors":[{"errorCode":"FileNotRegistered","description":"file not registered"}]}`
 		rc := io.NopCloser(strings.NewReader(body))
 
-		Convey("When unmarshalJsonErrors is called", func() {
-			jsonErrors, err := unmarshalJsonErrors(rc)
+		Convey("When unmarshalJSONErrors is called", func() {
+			jsonErrors, err := unmarshalJSONErrors(rc)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
 			})
 
-			Convey("And the expected JsonErrors is returned", func() {
-				expected := &api.JsonErrors{
-					Error: []api.JsonError{
+			Convey("And the expected JSONErrors is returned", func() {
+				expected := &api.JSONErrors{
+					Error: []api.JSONError{
 						{
 							Code:        "FileNotRegistered",
 							Description: "file not registered",
@@ -73,47 +73,47 @@ func TestUnmarshalJsonErrors(t *testing.T) {
 		})
 	})
 
-	Convey("Given an invalid JsonErrors body", t, func() {
+	Convey("Given an invalid JSONErrors body", t, func() {
 		body := `invalid json`
 		rc := io.NopCloser(strings.NewReader(body))
 
-		Convey("When unmarshalJsonErrors is called", func() {
-			jsonErrors, err := unmarshalJsonErrors(rc)
+		Convey("When unmarshalJSONErrors is called", func() {
+			jsonErrors, err := unmarshalJSONErrors(rc)
 
 			Convey("Then an error is returned", func() {
 				So(err, ShouldNotBeNil)
 			})
 
-			Convey("And no JsonErrors is returned", func() {
+			Convey("And no JSONErrors is returned", func() {
 				So(jsonErrors, ShouldBeNil)
 			})
 		})
 	})
 
 	Convey("Given a nil body", t, func() {
-		Convey("When unmarshalJsonErrors is called", func() {
-			jsonErrors, err := unmarshalJsonErrors(nil)
+		Convey("When unmarshalJSONErrors is called", func() {
+			jsonErrors, err := unmarshalJSONErrors(nil)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
 			})
 
-			Convey("And no JsonErrors is returned", func() {
+			Convey("And no JSONErrors is returned", func() {
 				So(jsonErrors, ShouldBeNil)
 			})
 		})
 	})
 
 	Convey("Given a reader that returns an error on read", t, func() {
-		Convey("When unmarshalJsonErrors is called", func() {
-			jsonErrors, err := unmarshalJsonErrors(brokenReader)
+		Convey("When unmarshalJSONErrors is called", func() {
+			jsonErrors, err := unmarshalJSONErrors(brokenReader)
 
 			Convey("Then the expected error is returned", func() {
 				So(err, ShouldNotBeNil)
-				So(err, ShouldEqual, expectedReadErr)
+				So(err, ShouldEqual, errExpectedReadFailure)
 			})
 
-			Convey("And no JsonErrors is returned", func() {
+			Convey("And no JSONErrors is returned", func() {
 				So(jsonErrors, ShouldBeNil)
 			})
 		})
@@ -189,7 +189,7 @@ func TestUnmarshalStoredRegisteredMetaData(t *testing.T) {
 
 			Convey("Then the expected error is returned", func() {
 				So(err, ShouldNotBeNil)
-				So(err, ShouldEqual, expectedReadErr)
+				So(err, ShouldEqual, errExpectedReadFailure)
 			})
 
 			Convey("And no StoredRegisteredMetaData is returned", func() {

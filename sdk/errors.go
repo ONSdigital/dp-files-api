@@ -10,7 +10,7 @@ import (
 // APIError represents an error returned by the files API
 type APIError struct {
 	StatusCode int
-	Errors     *api.JsonErrors
+	Errors     *api.JSONErrors
 }
 
 // Error implements the error interface for APIError

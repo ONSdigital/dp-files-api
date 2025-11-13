@@ -52,7 +52,7 @@ func (c *Client) patchFile(ctx context.Context, filePath string, patchReq FilePa
 
 	statusCode := resp.StatusCode
 	if statusCode != http.StatusOK {
-		jsonErrors, err := unmarshalJsonErrors(resp.Body)
+		jsonErrors, err := unmarshalJSONErrors(resp.Body)
 		if err != nil {
 			return err
 		}

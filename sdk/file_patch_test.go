@@ -92,7 +92,7 @@ func TestPatchFile_Failure(t *testing.T) {
 	t.Parallel()
 
 	Convey("Given a files-api client that fails when Do() is called", t, func() {
-		mockClienter := newMockClienter(nil, expectedDoErr)
+		mockClienter := newMockClienter(nil, errExpectedDoFailure)
 		client := newMockFilesAPIClient(mockClienter)
 
 		Convey("When PatchFile is called", func() {
@@ -101,7 +101,7 @@ func TestPatchFile_Failure(t *testing.T) {
 			err := client.patchFile(ctx, "/path/to/file.txt", patchReq)
 
 			Convey("Then the expected error is returned", func() {
-				So(err, ShouldResemble, expectedDoErr)
+				So(err, ShouldResemble, errExpectedDoFailure)
 			})
 
 			Convey("And the mock clienter's Do method is called once", func() {
@@ -126,8 +126,8 @@ func TestPatchFile_Failure(t *testing.T) {
 			Convey("Then an APIError is returned with the expected status code and errors", func() {
 				expectedError := &APIError{
 					StatusCode: http.StatusNotFound,
-					Errors: &api.JsonErrors{
-						Error: []api.JsonError{
+					Errors: &api.JSONErrors{
+						Error: []api.JSONError{
 							{
 								Code:        "FileNotRegistered",
 								Description: "file not registered",

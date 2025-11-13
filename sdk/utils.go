@@ -8,14 +8,14 @@ import (
 	"github.com/ONSdigital/dp-files-api/files"
 )
 
-// unmarshalJsonErrors unmarshals the JSON errors from the response body.
-// This function assumes the response body JSON structure matches api.JsonErrors
-func unmarshalJsonErrors(body io.ReadCloser) (*api.JsonErrors, error) {
+// unmarshalJSONErrors unmarshals the JSON errors from the response body.
+// This function assumes the response body JSON structure matches api.JSONErrors
+func unmarshalJSONErrors(body io.ReadCloser) (*api.JSONErrors, error) {
 	if body == nil {
 		return nil, nil
 	}
 
-	var jsonErrors api.JsonErrors
+	var jsonErrors api.JSONErrors
 
 	bytes, err := io.ReadAll(body)
 	if err != nil {

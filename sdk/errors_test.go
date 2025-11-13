@@ -19,8 +19,8 @@ func TestAPIError_Error(t *testing.T) {
 			name: "APIError with multiple errors",
 			apiError: &APIError{
 				StatusCode: 400,
-				Errors: &api.JsonErrors{
-					Error: []api.JsonError{
+				Errors: &api.JSONErrors{
+					Error: []api.JSONError{
 						{Code: "ValidationError", Description: "Example1 required"},
 						{Code: "ValidationError", Description: "Example2 is required"},
 					},
@@ -40,8 +40,8 @@ func TestAPIError_Error(t *testing.T) {
 			name: "APIError with empty errors",
 			apiError: &APIError{
 				StatusCode: 404,
-				Errors: &api.JsonErrors{
-					Error: []api.JsonError{},
+				Errors: &api.JSONErrors{
+					Error: []api.JSONError{},
 				},
 			},
 			expected: "API error: status code 404",
