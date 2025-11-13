@@ -64,6 +64,6 @@ func validateFileEvent(event *files.FileEvent) error {
 	return nil
 }
 
-func buildGenericError(code, description string) jsonErrors {
-	return jsonErrors{Error: []jsonError{{Code: code, Description: description}}}
+func buildGenericError(code, description string) JsonErrors {
+	return JsonErrors{Error: []JsonError{{Code: code, Description: description}}}
 }
