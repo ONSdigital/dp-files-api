@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	service = "dp-files-api"
+	serviceName = "dp-files-api"
 )
 
 // Client is the SDK client for dp-files-api
@@ -26,7 +26,7 @@ type Client struct {
 // New creates a new instance of Client for the service
 func New(filesAPIURL, authToken string) *Client {
 	return &Client{
-		hcCli:     health.NewClient(service, filesAPIURL),
+		hcCli:     health.NewClient(serviceName, filesAPIURL),
 		authToken: authToken,
 	}
 }
@@ -35,7 +35,7 @@ func New(filesAPIURL, authToken string) *Client {
 // from the provided health check client
 func NewWithHealthClient(hcCli *health.Client, authToken string) *Client {
 	return &Client{
-		hcCli:     health.NewClientWithClienter(service, hcCli.URL, hcCli.Client),
+		hcCli:     health.NewClientWithClienter(serviceName, hcCli.URL, hcCli.Client),
 		authToken: authToken,
 	}
 }
