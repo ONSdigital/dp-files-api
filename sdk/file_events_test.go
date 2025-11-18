@@ -1,4 +1,4 @@
-package sdk_test
+package sdk
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/ONSdigital/dp-files-api/files"
-	"github.com/ONSdigital/dp-files-api/sdk"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,7 +22,7 @@ func TestCreateFileEvent_Success(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := sdk.New(server.URL, "test-token")
+	client := New(server.URL, "test-token")
 
 	event := files.FileEvent{
 		RequestedBy: &files.RequestedBy{ID: "user123"},
@@ -49,7 +48,7 @@ func TestCreateFileEvent_BadRequest(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := sdk.New(server.URL, "test-token")
+	client := New(server.URL, "test-token")
 
 	event := files.FileEvent{}
 
@@ -67,7 +66,7 @@ func TestCreateFileEvent_Unauthorised(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := sdk.New(server.URL, "invalid-token")
+	client := New(server.URL, "invalid-token")
 
 	event := files.FileEvent{
 		RequestedBy: &files.RequestedBy{ID: "user123"},
@@ -90,7 +89,7 @@ func TestCreateFileEvent_Forbidden(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := sdk.New(server.URL, "test-token")
+	client := New(server.URL, "test-token")
 
 	event := files.FileEvent{
 		RequestedBy: &files.RequestedBy{ID: "user123"},
@@ -113,7 +112,7 @@ func TestCreateFileEvent_ServerError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := sdk.New(server.URL, "test-token")
+	client := New(server.URL, "test-token")
 
 	event := files.FileEvent{
 		RequestedBy: &files.RequestedBy{ID: "user123"},
@@ -130,7 +129,7 @@ func TestCreateFileEvent_ServerError(t *testing.T) {
 }
 
 func TestCreateFileEvent_NetworkError(t *testing.T) {
-	client := sdk.New("http://localhost:99999", "test-token")
+	client := New("http://localhost:99999", "test-token")
 
 	event := files.FileEvent{
 		RequestedBy: &files.RequestedBy{ID: "user123"},
@@ -156,7 +155,7 @@ func TestCreateFileEvent_VerifyRequestBody(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := sdk.New(server.URL, "test-token")
+	client := New(server.URL, "test-token")
 
 	event := files.FileEvent{
 		RequestedBy: &files.RequestedBy{ID: "user123", Email: "user@example.com"},
@@ -182,7 +181,7 @@ func TestCreateFileEvent_EmptyErrorResponse(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := sdk.New(server.URL, "test-token")
+	client := New(server.URL, "test-token")
 
 	event := files.FileEvent{
 		RequestedBy: &files.RequestedBy{ID: "user123"},
@@ -204,7 +203,7 @@ func TestCreateFileEvent_EmptyBodyError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := sdk.New(server.URL, "test-token")
+	client := New(server.URL, "test-token")
 
 	event := files.FileEvent{
 		RequestedBy: &files.RequestedBy{ID: "user123"},
@@ -227,7 +226,7 @@ func TestCreateFileEvent_PlainTextError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := sdk.New(server.URL, "test-token")
+	client := New(server.URL, "test-token")
 
 	event := files.FileEvent{
 		RequestedBy: &files.RequestedBy{ID: "user123"},

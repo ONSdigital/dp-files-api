@@ -10,13 +10,13 @@ import (
 	"github.com/go-playground/validator"
 )
 
-type jsonError struct {
+type JSONError struct {
 	Code        string `json:"errorCode"`
 	Description string `json:"description"`
 }
 
-type jsonErrors struct {
-	Error []jsonError `json:"errors"`
+type JSONErrors struct {
+	Error []JSONError `json:"errors"`
 }
 
 func handleError(w http.ResponseWriter, err error) {
@@ -57,22 +57,22 @@ func handleError(w http.ResponseWriter, err error) {
 	}
 }
 
-func buildValidationErrors(validationErrs validator.ValidationErrors) jsonErrors {
-	jsonErrs := jsonErrors{Error: []jsonError{}}
+func buildValidationErrors(validationErrs validator.ValidationErrors) JSONErrors {
+	jsonErrs := JSONErrors{Error: []JSONError{}}
 
 	for _, validationErr := range validationErrs {
 		desc := fmt.Sprintf("%s %s", validationErr.Field(), validationErr.Tag())
-		jsonErrs.Error = append(jsonErrs.Error, jsonError{Code: "ValidationError", Description: desc})
+		jsonErrs.Error = append(jsonErrs.Error, JSONError{Code: "ValidationError", Description: desc})
 	}
 	return jsonErrs
 }
 
-func writeError(w http.ResponseWriter, errs jsonErrors, httpCode int) {
+func writeError(w http.ResponseWriter, errs JSONErrors, httpCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpCode)
 	_ = json.NewEncoder(w).Encode(&errs)
 }
 
-func buildErrors(err error, code string) jsonErrors {
-	return jsonErrors{Error: []jsonError{{Description: err.Error(), Code: code}}}
+func buildErrors(err error, code string) JSONErrors {
+	return JSONErrors{Error: []JSONError{{Description: err.Error(), Code: code}}}
 }
