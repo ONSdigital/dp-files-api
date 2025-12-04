@@ -8,13 +8,13 @@ This SDK provides a client for interacting with the dp-files-api. It is intended
 
 | Name | Description |
 |------|-------------|
-| [`Checker`](client.go) | Calls the `health.Client`'s `Checker` method |
-| [`Health`](client.go) | Returns the underlying Healthcheck Client for this API client |
-| [`URL`](client.go) | Returns the URL used by this client |
-| [`DeleteFile`](file_delete.go) |  Deletes a file at the specified filePath |
-| [`CreateFileEvent`](file_events.go) | Creates a new file event in the audit log and returns the created event |
-| [`GetFile`](file_get.go) | Retrieves the metadata for a file at the specified path |
-| [`MarkFilePublished`](file_patch.go) | Sets the state of a file to `PUBLISHED` |
+| [`Checker`](#checker) | Calls the `health.Client`'s `Checker` method |
+| [`Health`](#health) | Returns the underlying Healthcheck Client for this API client |
+| [`URL`](#url) | Returns the URL used by this client |
+| [`DeleteFile`](#deletefile) |  Deletes a file at the specified filePath |
+| [`CreateFileEvent`](#createfileevent) | Creates a new file event in the audit log and returns the created event |
+| [`GetFile`](#getfile) | Retrieves the metadata for a file at the specified path |
+| [`MarkFilePublished`](#markfilepublished) | Sets the state of a file to `PUBLISHED` |
 
 > Note: `CreateFileEvent` does not support the `APIError` return type yet.
 
@@ -45,7 +45,7 @@ import (
 )
 
 func main() {
-    existingHealthClient := health.NewClient("existing-service-name", "http://localhosyt:8080")
+    existingHealthClient := health.NewClient("existing-service-name", "http://localhost:8080")
 
     client := sdk.NewWithHealthClient(existingHealthClient, "example-auth-token")
 }
@@ -85,7 +85,69 @@ func main() {
 }
 ```
 
-## Available functionality
+## Available Functionality
+
+### Checker
+
+```go
+import "github.com/ONSdigital/dp-healthcheck/healthcheck"
+
+check := &healthcheck.CheckState{}
+err := client.Checker(ctx, check)
+```
+
+### Health
+
+```go
+healthClient := client.Health()
+```
+
+### URL
+
+```go
+url := client.URL()
+```
+
+### DeleteFile
+
+```go
+err := client.DeleteFile(ctx, "/path/to/delete.csv")
+```
+
+### CreateFileEvent
+
+```go
+import "github.com/ONSdigital/dp-files-api/files"
+
+fileEvent := files.FileEvent{
+    RequestedBy: &files.RequestedBy{
+        ID:    "user",
+        Email: "user@email.com",
+    },
+    Action:   files.ActionRead,
+    Resource: "/path/to/file.csv",
+    File: &files.FileMetaData{
+        Path: "/path/to/file.csv",
+        // Add additional fields
+    },
+}
+
+createdFileEvent, err := client.CreateFileEvent(ctx, fileEvent)
+```
+
+### GetFile
+
+```go
+fileMetadata, err := client.GetFile(ctx, "/path/to/file.csv")
+```
+
+### MarkFilePublished
+
+```go
+err := client.MarkFilePublished(ctx, "/path/to/file.csv")
+```
+
+## Additional Information
 
 ### Errors
 
