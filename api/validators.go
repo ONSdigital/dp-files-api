@@ -7,7 +7,7 @@ import (
 )
 
 func awsUploadKeyValidator(fl validator.FieldLevel) bool {
-	matched, _ := regexp.MatchString("^[a-zA-Z]{1}", fl.Field().String())
+	matched, _ := regexp.MatchString("^[0-9a-zA-Z]", fl.Field().String())
 
 	return matched
 }
