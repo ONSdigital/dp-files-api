@@ -40,7 +40,7 @@ func NewWithHealthClient(hcCli *health.Client, authToken string) *Client {
 	}
 }
 
-// Checker calls files api health endpoint and returns a check object to the caller
+// Checker Calls the health.Client's Checker method
 func (c *Client) Checker(ctx context.Context, check *healthcheck.CheckState) error {
 	return c.hcCli.Checker(ctx, check)
 }
