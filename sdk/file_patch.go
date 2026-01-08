@@ -10,8 +10,6 @@ import (
 
 	"github.com/ONSdigital/dp-files-api/api"
 	"github.com/ONSdigital/dp-files-api/store"
-
-	dpNetRequest "github.com/ONSdigital/dp-net/v3/request"
 )
 
 // FilePatchRequest represents the request payload for a PATCH request to "/files/{path:.*}"
@@ -22,7 +20,7 @@ type FilePatchRequest struct {
 }
 
 // patchFile sends a PATCH request to update the file metadata at the specified path
-func (c *Client) patchFile(ctx context.Context, filePath string, patchReq FilePatchRequest) error {
+func (c *Client) patchFile(ctx context.Context, filePath string, patchReq FilePatchRequest, headers Headers) error {
 	url, err := url.Parse(c.hcCli.URL + "/files")
 	if err != nil {
 		return err
@@ -42,7 +40,7 @@ func (c *Client) patchFile(ctx context.Context, filePath string, patchReq FilePa
 		return err
 	}
 
-	dpNetRequest.AddServiceTokenHeader(req, c.authToken)
+	headers.Add(req)
 
 	resp, err := c.hcCli.Client.Do(ctx, req)
 	if err != nil {
@@ -66,11 +64,11 @@ func (c *Client) patchFile(ctx context.Context, filePath string, patchReq FilePa
 }
 
 // MarkFilePublished makes a PATCH request using patchFile to set the file state to "PUBLISHED"
-func (c *Client) MarkFilePublished(ctx context.Context, filePath string) error {
+func (c *Client) MarkFilePublished(ctx context.Context, filePath string, headers Headers) error {
 	patchReq := FilePatchRequest{
 		StateMetadata: api.StateMetadata{
 			State: stringToPointer(store.StatePublished),
 		},
 	}
-	return c.patchFile(ctx, filePath, patchReq)
+	return c.patchFile(ctx, filePath, patchReq, headers)
 }

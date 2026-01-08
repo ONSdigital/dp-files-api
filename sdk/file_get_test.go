@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -22,7 +23,7 @@ func TestGetFile_Success(t *testing.T) {
 		client := newMockFilesAPIClient(mockClienter)
 
 		Convey("When GetFile is called with a leading slash", func() {
-			metadata, err := client.GetFile(ctx, "/path/to/file.txt")
+			metadata, err := client.GetFile(context.Background(), "/path/to/file.txt", testHeaders)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
@@ -53,7 +54,7 @@ func TestGetFile_Success(t *testing.T) {
 		})
 
 		Convey("When GetFile is called without a leading slash", func() {
-			metadata, err := client.GetFile(ctx, "path/to/file.txt")
+			metadata, err := client.GetFile(context.Background(), "path/to/file.txt", testHeaders)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
@@ -93,7 +94,7 @@ func TestGetFile_Failure(t *testing.T) {
 		client := newMockFilesAPIClient(mockClienter)
 
 		Convey("When GetFile is called", func() {
-			metadata, err := client.GetFile(ctx, "/path/to/file.txt")
+			metadata, err := client.GetFile(context.Background(), "/path/to/file.txt", testHeaders)
 
 			Convey("Then the expected error is returned", func() {
 				So(err, ShouldResemble, errExpectedDoFailure)
@@ -118,7 +119,7 @@ func TestGetFile_Failure(t *testing.T) {
 		client := newMockFilesAPIClient(mockClienter)
 
 		Convey("When GetFile is called", func() {
-			metadata, err := client.GetFile(ctx, "/path/to/file.txt")
+			metadata, err := client.GetFile(context.Background(), "/path/to/file.txt", testHeaders)
 
 			Convey("Then the expected API error is returned", func() {
 				expectedError := &APIError{

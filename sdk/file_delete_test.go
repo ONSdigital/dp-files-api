@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"strings"
@@ -18,7 +19,7 @@ func TestDeleteFile_Success(t *testing.T) {
 		client := newMockFilesAPIClient(mockClienter)
 
 		Convey("When DeleteFile is called with a leading slash", func() {
-			err := client.DeleteFile(ctx, "/path/to/file.txt")
+			err := client.DeleteFile(context.Background(), "/path/to/file.txt", testHeaders)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
@@ -34,7 +35,7 @@ func TestDeleteFile_Success(t *testing.T) {
 		})
 
 		Convey("When DeleteFile is called without a leading slash", func() {
-			err := client.DeleteFile(ctx, "path/to/file.txt")
+			err := client.DeleteFile(context.Background(), "path/to/file.txt", testHeaders)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
@@ -59,7 +60,7 @@ func TestDeleteFile_Failure(t *testing.T) {
 		client := newMockFilesAPIClient(mockClienter)
 
 		Convey("When DeleteFile is called", func() {
-			err := client.DeleteFile(ctx, "/path/to/file.txt")
+			err := client.DeleteFile(context.Background(), "/path/to/file.txt", testHeaders)
 
 			Convey("Then the expected error is returned", func() {
 				So(err, ShouldResemble, errExpectedDoFailure)
@@ -80,7 +81,7 @@ func TestDeleteFile_Failure(t *testing.T) {
 		client := newMockFilesAPIClient(mockClienter)
 
 		Convey("When DeleteFile is called", func() {
-			err := client.DeleteFile(ctx, "/path/to/file.txt")
+			err := client.DeleteFile(context.Background(), "/path/to/file.txt", testHeaders)
 
 			Convey("Then the expected APIError is returned", func() {
 				expectedError := &APIError{

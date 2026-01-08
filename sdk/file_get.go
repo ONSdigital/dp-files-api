@@ -7,12 +7,10 @@ import (
 	"strings"
 
 	"github.com/ONSdigital/dp-files-api/files"
-
-	dpNetRequest "github.com/ONSdigital/dp-net/v3/request"
 )
 
 // GetFile retrieves the metadata for a file at the specified path
-func (c *Client) GetFile(ctx context.Context, filePath string) (*files.StoredRegisteredMetaData, error) {
+func (c *Client) GetFile(ctx context.Context, filePath string, headers Headers) (*files.StoredRegisteredMetaData, error) {
 	url, err := url.Parse(c.hcCli.URL + "/files")
 	if err != nil {
 		return nil, err
@@ -27,7 +25,7 @@ func (c *Client) GetFile(ctx context.Context, filePath string) (*files.StoredReg
 		return nil, err
 	}
 
-	dpNetRequest.AddServiceTokenHeader(req, c.authToken)
+	headers.Add(req)
 
 	resp, err := c.hcCli.Client.Do(ctx, req)
 	if err != nil {

@@ -5,12 +5,10 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-
-	dpNetRequest "github.com/ONSdigital/dp-net/v3/request"
 )
 
 // DeleteFile deletes a file at the specified filePath
-func (c *Client) DeleteFile(ctx context.Context, filePath string) error {
+func (c *Client) DeleteFile(ctx context.Context, filePath string, headers Headers) error {
 	url, err := url.Parse(c.hcCli.URL + "/files")
 	if err != nil {
 		return err
@@ -25,7 +23,7 @@ func (c *Client) DeleteFile(ctx context.Context, filePath string) error {
 		return err
 	}
 
-	dpNetRequest.AddServiceTokenHeader(req, c.authToken)
+	headers.Add(req)
 
 	resp, err := c.hcCli.Client.Do(ctx, req)
 	if err != nil {
