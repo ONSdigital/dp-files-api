@@ -15,8 +15,8 @@ type Clienter interface {
 	Health() *health.Client
 	URL() string
 
-	CreateFileEvent(ctx context.Context, event files.FileEvent) (*files.FileEvent, error)
-	DeleteFile(ctx context.Context, filePath string) error
-	GetFile(ctx context.Context, filePath string) (*files.StoredRegisteredMetaData, error)
-	MarkFilePublished(ctx context.Context, filePath string) error
+	CreateFileEvent(ctx context.Context, event files.FileEvent, headers Headers) (*files.FileEvent, error)
+	DeleteFile(ctx context.Context, filePath string, headers Headers) error
+	GetFile(ctx context.Context, filePath string, headers Headers) (*files.StoredRegisteredMetaData, error)
+	MarkFilePublished(ctx context.Context, filePath string, headers Headers) error
 }
