@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -29,7 +30,7 @@ func TestPatchFile_Success(t *testing.T) {
 				ETag: exampleEtag,
 			}
 
-			err := client.patchFile(ctx, "/path/to/file.txt", patchReq)
+			err := client.patchFile(context.Background(), "/path/to/file.txt", patchReq, testHeaders)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
@@ -63,7 +64,7 @@ func TestPatchFile_Success(t *testing.T) {
 				ETag: exampleEtag,
 			}
 
-			err := client.patchFile(ctx, "path/to/file.txt", patchReq)
+			err := client.patchFile(context.Background(), "path/to/file.txt", patchReq, testHeaders)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
@@ -98,7 +99,7 @@ func TestPatchFile_Failure(t *testing.T) {
 		Convey("When PatchFile is called", func() {
 			patchReq := FilePatchRequest{}
 
-			err := client.patchFile(ctx, "/path/to/file.txt", patchReq)
+			err := client.patchFile(context.Background(), "/path/to/file.txt", patchReq, testHeaders)
 
 			Convey("Then the expected error is returned", func() {
 				So(err, ShouldResemble, errExpectedDoFailure)
@@ -121,7 +122,7 @@ func TestPatchFile_Failure(t *testing.T) {
 		Convey("When PatchFile is called", func() {
 			patchReq := FilePatchRequest{}
 
-			err := client.patchFile(ctx, "/path/to/file.txt", patchReq)
+			err := client.patchFile(context.Background(), "/path/to/file.txt", patchReq, testHeaders)
 
 			Convey("Then an APIError is returned with the expected status code and errors", func() {
 				expectedError := &APIError{
@@ -155,7 +156,7 @@ func TestMarkFilePublished(t *testing.T) {
 		client := newMockFilesAPIClient(mockClienter)
 
 		Convey("When MarkFilePublished is called", func() {
-			err := client.MarkFilePublished(ctx, "/path/to/file.txt")
+			err := client.MarkFilePublished(context.Background(), "/path/to/file.txt", testHeaders)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)

@@ -25,19 +25,19 @@ var _ sdk.Clienter = &ClienterMock{}
 //			CheckerFunc: func(ctx context.Context, check *healthcheck.CheckState) error {
 //				panic("mock out the Checker method")
 //			},
-//			CreateFileEventFunc: func(ctx context.Context, event files.FileEvent) (*files.FileEvent, error) {
+//			CreateFileEventFunc: func(ctx context.Context, event files.FileEvent, headers sdk.Headers) (*files.FileEvent, error) {
 //				panic("mock out the CreateFileEvent method")
 //			},
-//			DeleteFileFunc: func(ctx context.Context, filePath string) error {
+//			DeleteFileFunc: func(ctx context.Context, filePath string, headers sdk.Headers) error {
 //				panic("mock out the DeleteFile method")
 //			},
-//			GetFileFunc: func(ctx context.Context, filePath string) (*files.StoredRegisteredMetaData, error) {
+//			GetFileFunc: func(ctx context.Context, filePath string, headers sdk.Headers) (*files.StoredRegisteredMetaData, error) {
 //				panic("mock out the GetFile method")
 //			},
 //			HealthFunc: func() *health.Client {
 //				panic("mock out the Health method")
 //			},
-//			MarkFilePublishedFunc: func(ctx context.Context, filePath string) error {
+//			MarkFilePublishedFunc: func(ctx context.Context, filePath string, headers sdk.Headers) error {
 //				panic("mock out the MarkFilePublished method")
 //			},
 //			URLFunc: func() string {
@@ -54,19 +54,19 @@ type ClienterMock struct {
 	CheckerFunc func(ctx context.Context, check *healthcheck.CheckState) error
 
 	// CreateFileEventFunc mocks the CreateFileEvent method.
-	CreateFileEventFunc func(ctx context.Context, event files.FileEvent) (*files.FileEvent, error)
+	CreateFileEventFunc func(ctx context.Context, event files.FileEvent, headers sdk.Headers) (*files.FileEvent, error)
 
 	// DeleteFileFunc mocks the DeleteFile method.
-	DeleteFileFunc func(ctx context.Context, filePath string) error
+	DeleteFileFunc func(ctx context.Context, filePath string, headers sdk.Headers) error
 
 	// GetFileFunc mocks the GetFile method.
-	GetFileFunc func(ctx context.Context, filePath string) (*files.StoredRegisteredMetaData, error)
+	GetFileFunc func(ctx context.Context, filePath string, headers sdk.Headers) (*files.StoredRegisteredMetaData, error)
 
 	// HealthFunc mocks the Health method.
 	HealthFunc func() *health.Client
 
 	// MarkFilePublishedFunc mocks the MarkFilePublished method.
-	MarkFilePublishedFunc func(ctx context.Context, filePath string) error
+	MarkFilePublishedFunc func(ctx context.Context, filePath string, headers sdk.Headers) error
 
 	// URLFunc mocks the URL method.
 	URLFunc func() string
@@ -86,6 +86,8 @@ type ClienterMock struct {
 			Ctx context.Context
 			// Event is the event argument value.
 			Event files.FileEvent
+			// Headers is the headers argument value.
+			Headers sdk.Headers
 		}
 		// DeleteFile holds details about calls to the DeleteFile method.
 		DeleteFile []struct {
@@ -93,6 +95,8 @@ type ClienterMock struct {
 			Ctx context.Context
 			// FilePath is the filePath argument value.
 			FilePath string
+			// Headers is the headers argument value.
+			Headers sdk.Headers
 		}
 		// GetFile holds details about calls to the GetFile method.
 		GetFile []struct {
@@ -100,6 +104,8 @@ type ClienterMock struct {
 			Ctx context.Context
 			// FilePath is the filePath argument value.
 			FilePath string
+			// Headers is the headers argument value.
+			Headers sdk.Headers
 		}
 		// Health holds details about calls to the Health method.
 		Health []struct {
@@ -110,6 +116,8 @@ type ClienterMock struct {
 			Ctx context.Context
 			// FilePath is the filePath argument value.
 			FilePath string
+			// Headers is the headers argument value.
+			Headers sdk.Headers
 		}
 		// URL holds details about calls to the URL method.
 		URL []struct {
@@ -161,21 +169,23 @@ func (mock *ClienterMock) CheckerCalls() []struct {
 }
 
 // CreateFileEvent calls CreateFileEventFunc.
-func (mock *ClienterMock) CreateFileEvent(ctx context.Context, event files.FileEvent) (*files.FileEvent, error) {
+func (mock *ClienterMock) CreateFileEvent(ctx context.Context, event files.FileEvent, headers sdk.Headers) (*files.FileEvent, error) {
 	if mock.CreateFileEventFunc == nil {
 		panic("ClienterMock.CreateFileEventFunc: method is nil but Clienter.CreateFileEvent was just called")
 	}
 	callInfo := struct {
-		Ctx   context.Context
-		Event files.FileEvent
+		Ctx     context.Context
+		Event   files.FileEvent
+		Headers sdk.Headers
 	}{
-		Ctx:   ctx,
-		Event: event,
+		Ctx:     ctx,
+		Event:   event,
+		Headers: headers,
 	}
 	mock.lockCreateFileEvent.Lock()
 	mock.calls.CreateFileEvent = append(mock.calls.CreateFileEvent, callInfo)
 	mock.lockCreateFileEvent.Unlock()
-	return mock.CreateFileEventFunc(ctx, event)
+	return mock.CreateFileEventFunc(ctx, event, headers)
 }
 
 // CreateFileEventCalls gets all the calls that were made to CreateFileEvent.
@@ -183,12 +193,14 @@ func (mock *ClienterMock) CreateFileEvent(ctx context.Context, event files.FileE
 //
 //	len(mockedClienter.CreateFileEventCalls())
 func (mock *ClienterMock) CreateFileEventCalls() []struct {
-	Ctx   context.Context
-	Event files.FileEvent
+	Ctx     context.Context
+	Event   files.FileEvent
+	Headers sdk.Headers
 } {
 	var calls []struct {
-		Ctx   context.Context
-		Event files.FileEvent
+		Ctx     context.Context
+		Event   files.FileEvent
+		Headers sdk.Headers
 	}
 	mock.lockCreateFileEvent.RLock()
 	calls = mock.calls.CreateFileEvent
@@ -197,21 +209,23 @@ func (mock *ClienterMock) CreateFileEventCalls() []struct {
 }
 
 // DeleteFile calls DeleteFileFunc.
-func (mock *ClienterMock) DeleteFile(ctx context.Context, filePath string) error {
+func (mock *ClienterMock) DeleteFile(ctx context.Context, filePath string, headers sdk.Headers) error {
 	if mock.DeleteFileFunc == nil {
 		panic("ClienterMock.DeleteFileFunc: method is nil but Clienter.DeleteFile was just called")
 	}
 	callInfo := struct {
 		Ctx      context.Context
 		FilePath string
+		Headers  sdk.Headers
 	}{
 		Ctx:      ctx,
 		FilePath: filePath,
+		Headers:  headers,
 	}
 	mock.lockDeleteFile.Lock()
 	mock.calls.DeleteFile = append(mock.calls.DeleteFile, callInfo)
 	mock.lockDeleteFile.Unlock()
-	return mock.DeleteFileFunc(ctx, filePath)
+	return mock.DeleteFileFunc(ctx, filePath, headers)
 }
 
 // DeleteFileCalls gets all the calls that were made to DeleteFile.
@@ -221,10 +235,12 @@ func (mock *ClienterMock) DeleteFile(ctx context.Context, filePath string) error
 func (mock *ClienterMock) DeleteFileCalls() []struct {
 	Ctx      context.Context
 	FilePath string
+	Headers  sdk.Headers
 } {
 	var calls []struct {
 		Ctx      context.Context
 		FilePath string
+		Headers  sdk.Headers
 	}
 	mock.lockDeleteFile.RLock()
 	calls = mock.calls.DeleteFile
@@ -233,21 +249,23 @@ func (mock *ClienterMock) DeleteFileCalls() []struct {
 }
 
 // GetFile calls GetFileFunc.
-func (mock *ClienterMock) GetFile(ctx context.Context, filePath string) (*files.StoredRegisteredMetaData, error) {
+func (mock *ClienterMock) GetFile(ctx context.Context, filePath string, headers sdk.Headers) (*files.StoredRegisteredMetaData, error) {
 	if mock.GetFileFunc == nil {
 		panic("ClienterMock.GetFileFunc: method is nil but Clienter.GetFile was just called")
 	}
 	callInfo := struct {
 		Ctx      context.Context
 		FilePath string
+		Headers  sdk.Headers
 	}{
 		Ctx:      ctx,
 		FilePath: filePath,
+		Headers:  headers,
 	}
 	mock.lockGetFile.Lock()
 	mock.calls.GetFile = append(mock.calls.GetFile, callInfo)
 	mock.lockGetFile.Unlock()
-	return mock.GetFileFunc(ctx, filePath)
+	return mock.GetFileFunc(ctx, filePath, headers)
 }
 
 // GetFileCalls gets all the calls that were made to GetFile.
@@ -257,10 +275,12 @@ func (mock *ClienterMock) GetFile(ctx context.Context, filePath string) (*files.
 func (mock *ClienterMock) GetFileCalls() []struct {
 	Ctx      context.Context
 	FilePath string
+	Headers  sdk.Headers
 } {
 	var calls []struct {
 		Ctx      context.Context
 		FilePath string
+		Headers  sdk.Headers
 	}
 	mock.lockGetFile.RLock()
 	calls = mock.calls.GetFile
@@ -296,21 +316,23 @@ func (mock *ClienterMock) HealthCalls() []struct {
 }
 
 // MarkFilePublished calls MarkFilePublishedFunc.
-func (mock *ClienterMock) MarkFilePublished(ctx context.Context, filePath string) error {
+func (mock *ClienterMock) MarkFilePublished(ctx context.Context, filePath string, headers sdk.Headers) error {
 	if mock.MarkFilePublishedFunc == nil {
 		panic("ClienterMock.MarkFilePublishedFunc: method is nil but Clienter.MarkFilePublished was just called")
 	}
 	callInfo := struct {
 		Ctx      context.Context
 		FilePath string
+		Headers  sdk.Headers
 	}{
 		Ctx:      ctx,
 		FilePath: filePath,
+		Headers:  headers,
 	}
 	mock.lockMarkFilePublished.Lock()
 	mock.calls.MarkFilePublished = append(mock.calls.MarkFilePublished, callInfo)
 	mock.lockMarkFilePublished.Unlock()
-	return mock.MarkFilePublishedFunc(ctx, filePath)
+	return mock.MarkFilePublishedFunc(ctx, filePath, headers)
 }
 
 // MarkFilePublishedCalls gets all the calls that were made to MarkFilePublished.
@@ -320,10 +342,12 @@ func (mock *ClienterMock) MarkFilePublished(ctx context.Context, filePath string
 func (mock *ClienterMock) MarkFilePublishedCalls() []struct {
 	Ctx      context.Context
 	FilePath string
+	Headers  sdk.Headers
 } {
 	var calls []struct {
 		Ctx      context.Context
 		FilePath string
+		Headers  sdk.Headers
 	}
 	mock.lockMarkFilePublished.RLock()
 	calls = mock.calls.MarkFilePublished

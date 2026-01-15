@@ -7,20 +7,16 @@ This SDK provides a client for interacting with the dp-files-api. It is intended
 ## Available client methods
 
 | Name | Description |
-|------|-------------|
+| ------ | ------------- |
 | [`Checker`](#checker) | Calls the `health.Client`'s `Checker` method |
 | [`Health`](#health) | Returns the underlying Healthcheck Client for this API client |
 | [`URL`](#url) | Returns the URL used by this client |
-| [`DeleteFile`](#deletefile) |  Deletes a file at the specified filePath |
+| [`DeleteFile`](#deletefile) | Deletes a file at the specified filePath |
 | [`CreateFileEvent`](#createfileevent) | Creates a new file event in the audit log and returns the created event |
 | [`GetFile`](#getfile) | Retrieves the metadata for a file at the specified path |
 | [`MarkFilePublished`](#markfilepublished) | Sets the state of a file to `PUBLISHED` |
 
-> Note: `CreateFileEvent` does not support the `APIError` return type yet.
-
 ## Instantiation
-
-> Note: An auth token is required to instantiate the client. All SDK methods send requests with this token for authorization.
 
 Example using `New`:
 
@@ -30,7 +26,7 @@ package main
 import "github.com/ONSdigital/dp-files-api/sdk"
 
 func main() {
-    client := sdk.New("http://localhost:26900", "example-auth-token")
+    client := sdk.New("http://localhost:26900")
 }
 ```
 
@@ -47,7 +43,7 @@ import (
 func main() {
     existingHealthClient := health.NewClient("existing-service-name", "http://localhost:8080")
 
-    client := sdk.NewWithHealthClient(existingHealthClient, "example-auth-token")
+    client := sdk.NewWithHealthClient(existingHealthClient)
 }
 ```
 
@@ -65,9 +61,13 @@ import (
 )
 
 func main() {
-    client := sdk.New("http://localhost:26900", "example-auth-token")
+    client := sdk.New("http://localhost:26900")
 
-    fileMetadata, err := client.GetFile(context.Background(), "/path/to/file.csv")
+    headers := sdk.Headers{
+        Authorization: "auth-token",
+    }
+
+    fileMetadata, err := client.GetFile(context.Background(), "/path/to/file.csv", headers)
     if err != nil {
         // Distinguish between API errors and other errors
         apiErr, ok := err.(*sdk.APIError)
@@ -111,7 +111,7 @@ url := client.URL()
 ### DeleteFile
 
 ```go
-err := client.DeleteFile(ctx, "/path/to/delete.csv")
+err := client.DeleteFile(ctx, "/path/to/delete.csv", sdk.Headers{})
 ```
 
 ### CreateFileEvent
@@ -132,19 +132,19 @@ fileEvent := files.FileEvent{
     },
 }
 
-createdFileEvent, err := client.CreateFileEvent(ctx, fileEvent)
+createdFileEvent, err := client.CreateFileEvent(ctx, fileEvent, sdk.Headers{})
 ```
 
 ### GetFile
 
 ```go
-fileMetadata, err := client.GetFile(ctx, "/path/to/file.csv")
+fileMetadata, err := client.GetFile(ctx, "/path/to/file.csv", sdk.Headers{})
 ```
 
 ### MarkFilePublished
 
 ```go
-err := client.MarkFilePublished(ctx, "/path/to/file.csv")
+err := client.MarkFilePublished(ctx, "/path/to/file.csv", sdk.Headers{})
 ```
 
 ## Additional Information
@@ -152,6 +152,11 @@ err := client.MarkFilePublished(ctx, "/path/to/file.csv")
 ### Errors
 
 The [`APIError`](errors.go) struct allows the user to distinguish if an error is a generic error or an API error, therefore allowing access to more detailed fields. This is shown in the [Example usage of client](#example-usage-of-client) section.
+
+### Headers
+
+The [`Headers`](headers.go) struct allows the user to provide an Authorization header if required.
+This must be set without the `"Bearer "` prefix as the SDK will automatically add this.
 
 ### Mocks
 

@@ -17,7 +17,11 @@ const (
 	testAuthToken = "test-auth-token"
 )
 
-var ctx = context.Background()
+var (
+	testHeaders = Headers{
+		Authorization: testAuthToken,
+	}
+)
 
 func createHTTPClientMock(statusCode int) *dphttp.ClienterMock {
 	return &dphttp.ClienterMock{
@@ -49,12 +53,12 @@ func newMockClienter(r *http.Response, err error) *dphttp.ClienterMock {
 }
 
 func newMockFilesAPIClient(mockClienter *dphttp.ClienterMock) *Client {
-	return NewWithHealthClient(health.NewClientWithClienter(serviceName, filesAPIURL, mockClienter), testAuthToken)
+	return NewWithHealthClient(health.NewClientWithClienter(serviceName, filesAPIURL, mockClienter))
 }
 
 func TestClient(t *testing.T) {
 	Convey("Given a new files API client", t, func() {
-		client := New(filesAPIURL, testAuthToken)
+		client := New(filesAPIURL)
 
 		Convey("URL() method returns correct url", func() {
 			So(client.URL(), ShouldEqual, filesAPIURL)
@@ -72,7 +76,7 @@ func TestNewWithHealthClient(t *testing.T) {
 	Convey("Given a health check client that returns 200 OK", t, func() {
 		mockHTTPClient := createHTTPClientMock(http.StatusOK)
 		healthClient := health.NewClientWithClienter(serviceName, filesAPIURL, mockHTTPClient)
-		client := NewWithHealthClient(healthClient, testAuthToken)
+		client := NewWithHealthClient(healthClient)
 		initialStateCheck := health.CreateCheckState(serviceName)
 
 		Convey("URL() method returns correct url", func() {
@@ -86,7 +90,7 @@ func TestNewWithHealthClient(t *testing.T) {
 		})
 
 		Convey("Checker() method returns expected check", func() {
-			err := client.Checker(ctx, &initialStateCheck)
+			err := client.Checker(context.Background(), &initialStateCheck)
 			So(err, ShouldBeNil)
 			So(initialStateCheck.Name(), ShouldEqual, serviceName)
 			So(initialStateCheck.Status(), ShouldEqual, healthcheck.StatusOK)
