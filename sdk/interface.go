@@ -19,4 +19,6 @@ type Clienter interface {
 	DeleteFile(ctx context.Context, filePath string, headers Headers) error
 	GetFile(ctx context.Context, filePath string, headers Headers) (*files.StoredRegisteredMetaData, error)
 	MarkFilePublished(ctx context.Context, filePath string, headers Headers) error
+	RegisterFile(ctx context.Context, metadata files.StoredRegisteredMetaData, headers Headers) error
+	MarkFileUploaded(ctx context.Context, filePath string, etag string, headers Headers) error
 }

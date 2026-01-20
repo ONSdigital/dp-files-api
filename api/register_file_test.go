@@ -180,3 +180,105 @@ func TestCollectionIDInBodyDoesNotRaiseError(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, rec.Code)
 }
+
+func TestContentItemOmittedFromBodyDoesNotRaiseError(t *testing.T) {
+	body := `{"path": "some/file.txt", "is_publishable":false,"title":"The latest Meme","size_in_bytes":14794,"type":"image/jpeg","licence":"OGL v3","licence_url":"http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/files", strings.NewReader(body))
+
+	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+		assert.Nil(t, metaData.ContentItem)
+		return nil
+	}, 5*time.Second)
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusCreated, rec.Code)
+}
+
+func TestContentItemInBodyDoesNotRaiseError(t *testing.T) {
+	body := `{
+		"path": "some/file.txt", 
+		"is_publishable":false,
+		"title":"The latest Meme",
+		"size_in_bytes":14794,
+		"type":"image/jpeg",
+		"licence":"OGL v3",
+		"licence_url":"http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+		"content_item": {
+			"dataset_id": "dataset-123",
+			"edition": "2024",
+			"version": "1"
+		}
+	}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/files", strings.NewReader(body))
+
+	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+		assert.NotNil(t, metaData.ContentItem)
+		assert.Equal(t, "dataset-123", metaData.ContentItem.DatasetID)
+		assert.Equal(t, "2024", metaData.ContentItem.Edition)
+		assert.Equal(t, "1", metaData.ContentItem.Version)
+		return nil
+	}, 5*time.Second)
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusCreated, rec.Code)
+}
+
+func TestContentItemWithPartialFieldsDoesNotRaiseError(t *testing.T) {
+	body := `{
+		"path": "some/file.txt", 
+		"is_publishable":false,
+		"title":"The latest Meme",
+		"size_in_bytes":14794,
+		"type":"image/jpeg",
+		"licence":"OGL v3",
+		"licence_url":"http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+		"content_item": {
+			"dataset_id": "dataset-123"
+		}
+	}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/files", strings.NewReader(body))
+
+	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+		assert.NotNil(t, metaData.ContentItem)
+		assert.Equal(t, "dataset-123", metaData.ContentItem.DatasetID)
+		assert.Equal(t, "", metaData.ContentItem.Edition)
+		assert.Equal(t, "", metaData.ContentItem.Version)
+		return nil
+	}, 5*time.Second)
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusCreated, rec.Code)
+}
+
+func TestContentItemEmptyObjectDoesNotRaiseError(t *testing.T) {
+	body := `{
+		"path": "some/file.txt", 
+		"is_publishable":false,
+		"title":"The latest Meme",
+		"size_in_bytes":14794,
+		"type":"image/jpeg",
+		"licence":"OGL v3",
+		"licence_url":"http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+		"content_item": {}
+	}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/files", strings.NewReader(body))
+
+	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+		assert.NotNil(t, metaData.ContentItem)
+		assert.Equal(t, "", metaData.ContentItem.DatasetID)
+		assert.Equal(t, "", metaData.ContentItem.Edition)
+		assert.Equal(t, "", metaData.ContentItem.Version)
+		return nil
+	}, 5*time.Second)
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusCreated, rec.Code)
+}

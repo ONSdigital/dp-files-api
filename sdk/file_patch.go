@@ -72,3 +72,14 @@ func (c *Client) MarkFilePublished(ctx context.Context, filePath string, headers
 	}
 	return c.patchFile(ctx, filePath, patchReq, headers)
 }
+
+// MarkFileUploaded makes a PATCH request to set the file state to "UPLOADED" with an etag
+func (c *Client) MarkFileUploaded(ctx context.Context, filePath string, etag string, headers Headers) error {
+	patchReq := FilePatchRequest{
+		StateMetadata: api.StateMetadata{
+			State: stringToPointer(store.StateUploaded),
+		},
+		ETag: etag,
+	}
+	return c.patchFile(ctx, filePath, patchReq, headers)
+}

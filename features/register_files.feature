@@ -110,3 +110,54 @@ Feature: Register new file upload
         }
         """
     Then the HTTP status code should be "400"
+
+  Scenario: Register file with dataset content_item metadata
+    Given I am an authorised user
+    When the file upload is registered with payload:
+        """
+        {
+          "path": "datasets/cpih/2024/data.csv",
+          "is_publishable": true,
+          "title": "CPIH Dataset 2024",
+          "size_in_bytes": 54321,
+          "type": "text/csv",
+          "licence": "OGL v3",
+          "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+          "content_item": {
+            "dataset_id": "cpih-dataset-001",
+            "edition": "2024",
+            "version": "1"
+          }
+        }
+        """
+    Then the HTTP status code should be "201"
+    And the following document entry should be created:
+      | Path          | datasets/cpih/2024/data.csv                                               |
+      | IsPublishable | true                                                                      |
+      | Title         | CPIH Dataset 2024                                                         |
+      | SizeInBytes   | 54321                                                                     |
+      | Type          | text/csv                                                                  |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | DatasetID     | cpih-dataset-001                                                          |
+      | Edition       | 2024                                                                      |
+      | Version       | 1                                                                         |
+      | CreatedAt     | 2021-10-19T09:30:30Z                                                      |
+      | LastModified  | 2021-10-19T09:30:30Z                                                      |
+      | State         | CREATED                                                                   |
+
+  Scenario: Register file without content_item metadata
+    Given I am an authorised user
+    When the file upload is registered with payload:
+        """
+        {
+          "path": "images/logo.png",
+          "is_publishable": false,
+          "title": "Company Logo",
+          "size_in_bytes": 12345,
+          "type": "image/png",
+          "licence": "OGL v3",
+          "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+        }
+        """
+    Then the HTTP status code should be "201"

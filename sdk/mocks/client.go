@@ -40,6 +40,12 @@ var _ sdk.Clienter = &ClienterMock{}
 //			MarkFilePublishedFunc: func(ctx context.Context, filePath string, headers sdk.Headers) error {
 //				panic("mock out the MarkFilePublished method")
 //			},
+//			MarkFileUploadedFunc: func(ctx context.Context, filePath string, etag string, headers sdk.Headers) error {
+//				panic("mock out the MarkFileUploaded method")
+//			},
+//			RegisterFileFunc: func(ctx context.Context, metadata files.StoredRegisteredMetaData, headers sdk.Headers) error {
+//				panic("mock out the RegisterFile method")
+//			},
 //			URLFunc: func() string {
 //				panic("mock out the URL method")
 //			},
@@ -67,6 +73,12 @@ type ClienterMock struct {
 
 	// MarkFilePublishedFunc mocks the MarkFilePublished method.
 	MarkFilePublishedFunc func(ctx context.Context, filePath string, headers sdk.Headers) error
+
+	// MarkFileUploadedFunc mocks the MarkFileUploaded method.
+	MarkFileUploadedFunc func(ctx context.Context, filePath string, etag string, headers sdk.Headers) error
+
+	// RegisterFileFunc mocks the RegisterFile method.
+	RegisterFileFunc func(ctx context.Context, metadata files.StoredRegisteredMetaData, headers sdk.Headers) error
 
 	// URLFunc mocks the URL method.
 	URLFunc func() string
@@ -119,6 +131,26 @@ type ClienterMock struct {
 			// Headers is the headers argument value.
 			Headers sdk.Headers
 		}
+		// MarkFileUploaded holds details about calls to the MarkFileUploaded method.
+		MarkFileUploaded []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// FilePath is the filePath argument value.
+			FilePath string
+			// Etag is the etag argument value.
+			Etag string
+			// Headers is the headers argument value.
+			Headers sdk.Headers
+		}
+		// RegisterFile holds details about calls to the RegisterFile method.
+		RegisterFile []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Metadata is the metadata argument value.
+			Metadata files.StoredRegisteredMetaData
+			// Headers is the headers argument value.
+			Headers sdk.Headers
+		}
 		// URL holds details about calls to the URL method.
 		URL []struct {
 		}
@@ -129,6 +161,8 @@ type ClienterMock struct {
 	lockGetFile           sync.RWMutex
 	lockHealth            sync.RWMutex
 	lockMarkFilePublished sync.RWMutex
+	lockMarkFileUploaded  sync.RWMutex
+	lockRegisterFile      sync.RWMutex
 	lockURL               sync.RWMutex
 }
 
@@ -352,6 +386,90 @@ func (mock *ClienterMock) MarkFilePublishedCalls() []struct {
 	mock.lockMarkFilePublished.RLock()
 	calls = mock.calls.MarkFilePublished
 	mock.lockMarkFilePublished.RUnlock()
+	return calls
+}
+
+// MarkFileUploaded calls MarkFileUploadedFunc.
+func (mock *ClienterMock) MarkFileUploaded(ctx context.Context, filePath string, etag string, headers sdk.Headers) error {
+	if mock.MarkFileUploadedFunc == nil {
+		panic("ClienterMock.MarkFileUploadedFunc: method is nil but Clienter.MarkFileUploaded was just called")
+	}
+	callInfo := struct {
+		Ctx      context.Context
+		FilePath string
+		Etag     string
+		Headers  sdk.Headers
+	}{
+		Ctx:      ctx,
+		FilePath: filePath,
+		Etag:     etag,
+		Headers:  headers,
+	}
+	mock.lockMarkFileUploaded.Lock()
+	mock.calls.MarkFileUploaded = append(mock.calls.MarkFileUploaded, callInfo)
+	mock.lockMarkFileUploaded.Unlock()
+	return mock.MarkFileUploadedFunc(ctx, filePath, etag, headers)
+}
+
+// MarkFileUploadedCalls gets all the calls that were made to MarkFileUploaded.
+// Check the length with:
+//
+//	len(mockedClienter.MarkFileUploadedCalls())
+func (mock *ClienterMock) MarkFileUploadedCalls() []struct {
+	Ctx      context.Context
+	FilePath string
+	Etag     string
+	Headers  sdk.Headers
+} {
+	var calls []struct {
+		Ctx      context.Context
+		FilePath string
+		Etag     string
+		Headers  sdk.Headers
+	}
+	mock.lockMarkFileUploaded.RLock()
+	calls = mock.calls.MarkFileUploaded
+	mock.lockMarkFileUploaded.RUnlock()
+	return calls
+}
+
+// RegisterFile calls RegisterFileFunc.
+func (mock *ClienterMock) RegisterFile(ctx context.Context, metadata files.StoredRegisteredMetaData, headers sdk.Headers) error {
+	if mock.RegisterFileFunc == nil {
+		panic("ClienterMock.RegisterFileFunc: method is nil but Clienter.RegisterFile was just called")
+	}
+	callInfo := struct {
+		Ctx      context.Context
+		Metadata files.StoredRegisteredMetaData
+		Headers  sdk.Headers
+	}{
+		Ctx:      ctx,
+		Metadata: metadata,
+		Headers:  headers,
+	}
+	mock.lockRegisterFile.Lock()
+	mock.calls.RegisterFile = append(mock.calls.RegisterFile, callInfo)
+	mock.lockRegisterFile.Unlock()
+	return mock.RegisterFileFunc(ctx, metadata, headers)
+}
+
+// RegisterFileCalls gets all the calls that were made to RegisterFile.
+// Check the length with:
+//
+//	len(mockedClienter.RegisterFileCalls())
+func (mock *ClienterMock) RegisterFileCalls() []struct {
+	Ctx      context.Context
+	Metadata files.StoredRegisteredMetaData
+	Headers  sdk.Headers
+} {
+	var calls []struct {
+		Ctx      context.Context
+		Metadata files.StoredRegisteredMetaData
+		Headers  sdk.Headers
+	}
+	mock.lockRegisterFile.RLock()
+	calls = mock.calls.RegisterFile
+	mock.lockRegisterFile.RUnlock()
 	return calls
 }
 

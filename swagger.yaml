@@ -435,6 +435,22 @@ definitions:
         type: string
         description: "Licence URL"
         example: "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+      content_item:
+        type: object
+        description: "Dataset information that the file relates to"
+        properties:
+          dataset_id:
+            type: string
+            description: "The dataset ID"
+            example: "cpih01"
+          edition:
+            type: string
+            description: "The edition"
+            example: "time-series"
+          version:
+            type: string
+            description: "The version"
+            example: "1"
   ChangeFileState:
     type: object
     description: "File upload complete metadata to be POSTed"
@@ -606,6 +622,22 @@ definitions:
         type: string
         description: "File status"
         example: "UPLOADED"
+      content_item:
+        type: object
+        description: "Dataset information that the file relates to"
+        properties:
+          dataset_id:
+            type: string
+            description: "The dataset ID"
+            example: "cpih01"
+          edition:
+            type: string
+            description: "The edition"
+            example: "time-series"
+          version:
+            type: string
+            description: "The version"
+            example: "1"
   Error:
     type: object
     properties:

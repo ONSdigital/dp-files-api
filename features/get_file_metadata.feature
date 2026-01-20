@@ -110,3 +110,39 @@ Feature: Fetching metadata for a file
       "etag": ""
     }
     """
+  
+  Scenario: Retrieve file metadata with content_item
+    Given I am an authorised user
+    And the file upload "datasets/cpih/2024/data.csv" has been registered with:
+      | IsPublishable | true                                                                      |
+      | Title         | CPIH Dataset 2024                                                         |
+      | SizeInBytes   | 54321                                                                     |
+      | Type          | text/csv                                                                  |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | DatasetID     | cpih-dataset-001                                                          |
+      | Edition       | 2024                                                                      |
+      | Version       | 1                                                                         |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | CREATED                                                                   |
+    When the file metadata is requested for the file "datasets/cpih/2024/data.csv"
+    Then I should receive the following JSON response with status "200":
+    """
+    {
+      "path": "datasets/cpih/2024/data.csv",
+      "is_publishable": true,
+      "title": "CPIH Dataset 2024",
+      "size_in_bytes": 54321,
+      "type": "text/csv",
+      "licence": "OGL v3",
+      "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+      "content_item": {
+        "dataset_id": "cpih-dataset-001",
+        "edition": "2024",
+        "version": "1"
+      },
+      "state": "CREATED",
+      "etag": ""
+    }
+    """

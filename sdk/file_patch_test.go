@@ -185,3 +185,44 @@ func TestMarkFilePublished(t *testing.T) {
 		})
 	})
 }
+
+// Only testing that MarkFileUploaded calls patchFile with the correct parameters
+// all other logic is within patchFile which is tested separately
+func TestMarkFileUploaded(t *testing.T) {
+	t.Parallel()
+
+	Convey("Given a files-api client", t, func() {
+		mockClienter := newMockClienter(&http.Response{StatusCode: http.StatusOK}, nil)
+		client := newMockFilesAPIClient(mockClienter)
+
+		Convey("When MarkFileUploaded is called", func() {
+			err := client.MarkFileUploaded(context.Background(), "/path/to/file.txt", exampleEtag, testHeaders)
+
+			Convey("Then no error is returned", func() {
+				So(err, ShouldBeNil)
+			})
+
+			Convey("And the mock clienter's Do method is called once with the correct request details", func() {
+				So(mockClienter.DoCalls(), ShouldHaveLength, 1)
+				actualCall := mockClienter.DoCalls()[0]
+				So(actualCall.Req.Method, ShouldEqual, http.MethodPatch)
+				So(actualCall.Req.URL.String(), ShouldEqual, filesAPIURL+"/files/path/to/file.txt")
+				So(actualCall.Req.Header.Get("Authorization"), ShouldEqual, "Bearer "+testAuthToken)
+
+				bodyBytes, err := io.ReadAll(actualCall.Req.Body)
+				So(err, ShouldBeNil)
+
+				var actualPatchReq FilePatchRequest
+				err = json.Unmarshal(bodyBytes, &actualPatchReq)
+				So(err, ShouldBeNil)
+				expectedPatchReq := FilePatchRequest{
+					StateMetadata: api.StateMetadata{
+						State: stringToPointer("UPLOADED"),
+					},
+					ETag: exampleEtag,
+				}
+				So(actualPatchReq, ShouldResemble, expectedPatchReq)
+			})
+		})
+	})
+}

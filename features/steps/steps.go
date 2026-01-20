@@ -88,6 +88,9 @@ type ExpectedMetaData struct {
 	CreatedAt     string
 	LastModified  string
 	State         string
+	DatasetID     string
+	Edition       string
+	Version       string
 }
 
 type ExpectedMetaDataUploadComplete struct {
@@ -138,6 +141,15 @@ func (c *FilesAPIComponent) theFollowingDocumentShouldBeCreated(table *godog.Tab
 		assert.Nil(c.APIFeature, metaData.BundleID)
 	} else {
 		assert.Equal(c.APIFeature, expectedMetaData.BundleID, *metaData.BundleID)
+	}
+
+	if expectedMetaData.DatasetID == "" && expectedMetaData.Edition == "" && expectedMetaData.Version == "" {
+		assert.Nil(c.APIFeature, metaData.ContentItem)
+	} else {
+		assert.NotNil(c.APIFeature, metaData.ContentItem)
+		assert.Equal(c.APIFeature, expectedMetaData.DatasetID, metaData.ContentItem.DatasetID)
+		assert.Equal(c.APIFeature, expectedMetaData.Edition, metaData.ContentItem.Edition)
+		assert.Equal(c.APIFeature, expectedMetaData.Version, metaData.ContentItem.Version)
 	}
 
 	assert.Equal(c.APIFeature, expectedMetaData.Title, metaData.Title)
@@ -277,6 +289,14 @@ func (c *FilesAPIComponent) theFileUploadHasBeenRegisteredWith(path string, tabl
 
 	if data.BundleID != "" {
 		m.BundleID = &data.BundleID
+	}
+
+	if data.DatasetID != "" || data.Edition != "" || data.Version != "" {
+		m.ContentItem = &files.StoredContentItem{
+			DatasetID: data.DatasetID,
+			Edition:   data.Edition,
+			Version:   data.Version,
+		}
 	}
 
 	_, err = c.mongoClient.Database("files").Collection("metadata").InsertOne(context.Background(), &m)

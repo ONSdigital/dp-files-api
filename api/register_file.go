@@ -15,15 +15,22 @@ import (
 type RegisterFileUpload func(ctx context.Context, metaData files.StoredRegisteredMetaData) error
 
 type RegisterMetadata struct {
-	Path          string  `json:"path" validate:"required,aws-upload-key"`
-	IsPublishable *bool   `json:"is_publishable,omitempty" validate:"required"`
-	CollectionID  *string `json:"collection_id,omitempty"`
-	BundleID      *string `json:"bundle_id,omitempty"`
-	Title         string  `json:"title"`
-	SizeInBytes   uint64  `json:"size_in_bytes" validate:"gt=0"`
-	Type          string  `json:"type"`
-	Licence       string  `json:"licence" validate:"required"`
-	LicenceURL    string  `json:"licence_url" validate:"required"`
+	Path          string       `json:"path" validate:"required,aws-upload-key"`
+	IsPublishable *bool        `json:"is_publishable,omitempty" validate:"required"`
+	CollectionID  *string      `json:"collection_id,omitempty"`
+	BundleID      *string      `json:"bundle_id,omitempty"`
+	Title         string       `json:"title"`
+	SizeInBytes   uint64       `json:"size_in_bytes" validate:"gt=0"`
+	Type          string       `json:"type"`
+	Licence       string       `json:"licence" validate:"required"`
+	LicenceURL    string       `json:"licence_url" validate:"required"`
+	ContentItem   *ContentItem `json:"content_item,omitempty"`
+}
+
+type ContentItem struct {
+	DatasetID string `json:"dataset_id,omitempty"`
+	Edition   string `json:"edition,omitempty"`
+	Version   string `json:"version,omitempty"`
 }
 
 func HandlerRegisterUploadStarted(register RegisterFileUpload, deadlineDuration time.Duration) http.HandlerFunc {
@@ -71,6 +78,15 @@ func getRegisterMetadataFromRequest(req *http.Request) (RegisterMetadata, error)
 }
 
 func generateStoredRegisterMetaData(m RegisterMetadata) files.StoredRegisteredMetaData {
+	var contentItem *files.StoredContentItem
+	if m.ContentItem != nil {
+		contentItem = &files.StoredContentItem{
+			DatasetID: m.ContentItem.DatasetID,
+			Edition:   m.ContentItem.Edition,
+			Version:   m.ContentItem.Version,
+		}
+	}
+
 	return files.StoredRegisteredMetaData{
 		Path:          m.Path,
 		IsPublishable: *m.IsPublishable,
@@ -81,5 +97,6 @@ func generateStoredRegisterMetaData(m RegisterMetadata) files.StoredRegisteredMe
 		Type:          m.Type,
 		Licence:       m.Licence,
 		LicenceURL:    m.LicenceURL,
+		ContentItem:   contentItem,
 	}
 }
