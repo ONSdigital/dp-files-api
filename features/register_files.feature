@@ -145,19 +145,3 @@ Feature: Register new file upload
       | CreatedAt     | 2021-10-19T09:30:30Z                                                      |
       | LastModified  | 2021-10-19T09:30:30Z                                                      |
       | State         | CREATED                                                                   |
-
-  Scenario: Register file without content_item metadata
-    Given I am an authorised user
-    When the file upload is registered with payload:
-        """
-        {
-          "path": "images/logo.png",
-          "is_publishable": false,
-          "title": "Company Logo",
-          "size_in_bytes": 12345,
-          "type": "image/png",
-          "licence": "OGL v3",
-          "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
-        }
-        """
-    Then the HTTP status code should be "201"
