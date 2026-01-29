@@ -61,13 +61,17 @@ func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 
 func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {
 	c.isAuthorised = true
-
+	if c.APIFeature != nil {
+		return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer test-token")
+	}
 	return nil
 }
 
 func (c *FilesAPIComponent) iAmNotAnAuthorisedUser() error {
 	c.isAuthorised = false
-
+	if c.APIFeature != nil {
+		return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer test-token")
+	}
 	return nil
 }
 
