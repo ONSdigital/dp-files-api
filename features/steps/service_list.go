@@ -16,6 +16,7 @@ import (
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/health"
 	kafka "github.com/ONSdigital/dp-kafka/v3"
+	permsdk "github.com/ONSdigital/dp-permissions-api/sdk"
 
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/mongo"
@@ -40,6 +41,9 @@ func (e *fakeServiceContainer) GetAuthMiddleware() auth.Middleware {
 		HealthCheckFunc:         func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		CloseFunc:               func(ctx context.Context) error { return nil },
 		IdentityHealthCheckFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+		ParseFunc: func(tokenString string) (*permsdk.EntityData, error) {
+			return &permsdk.EntityData{UserID: "test-user"}, nil
+		},
 		RequireFunc: func(permission string, handlerFunc http.HandlerFunc) http.HandlerFunc {
 			if e.isAuthorised {
 				return handlerFunc
@@ -47,6 +51,14 @@ func (e *fakeServiceContainer) GetAuthMiddleware() auth.Middleware {
 				return func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusForbidden)
 				}
+			}
+		},
+		RequireWithAttributesFunc: func(permission string, handlerFunc http.HandlerFunc, _ auth.GetAttributesFromRequest) http.HandlerFunc {
+			if e.isAuthorised {
+				return handlerFunc
+			}
+			return func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusForbidden)
 			}
 		},
 	}
