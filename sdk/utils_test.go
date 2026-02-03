@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -53,7 +54,7 @@ func TestUnmarshalJSONErrors(t *testing.T) {
 		rc := io.NopCloser(strings.NewReader(body))
 
 		Convey("When unmarshalJSONErrors is called", func() {
-			jsonErrors, err := unmarshalJSONErrors(rc)
+			jsonErrors, err := unmarshalJSONErrors(context.Background(), rc)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
@@ -78,10 +79,10 @@ func TestUnmarshalJSONErrors(t *testing.T) {
 		rc := io.NopCloser(strings.NewReader(body))
 
 		Convey("When unmarshalJSONErrors is called", func() {
-			jsonErrors, err := unmarshalJSONErrors(rc)
+			jsonErrors, err := unmarshalJSONErrors(context.Background(), rc)
 
-			Convey("Then an error is returned", func() {
-				So(err, ShouldNotBeNil)
+			Convey("Then no error is returned", func() {
+				So(err, ShouldBeNil)
 			})
 
 			Convey("And no JSONErrors is returned", func() {
@@ -92,7 +93,7 @@ func TestUnmarshalJSONErrors(t *testing.T) {
 
 	Convey("Given a nil body", t, func() {
 		Convey("When unmarshalJSONErrors is called", func() {
-			jsonErrors, err := unmarshalJSONErrors(nil)
+			jsonErrors, err := unmarshalJSONErrors(context.Background(), nil)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
@@ -106,7 +107,7 @@ func TestUnmarshalJSONErrors(t *testing.T) {
 
 	Convey("Given a reader that returns an error on read", t, func() {
 		Convey("When unmarshalJSONErrors is called", func() {
-			jsonErrors, err := unmarshalJSONErrors(brokenReader)
+			jsonErrors, err := unmarshalJSONErrors(context.Background(), brokenReader)
 
 			Convey("Then the expected error is returned", func() {
 				So(err, ShouldNotBeNil)
@@ -118,6 +119,7 @@ func TestUnmarshalJSONErrors(t *testing.T) {
 			})
 		})
 	})
+
 }
 
 func TestUnmarshalStoredRegisteredMetaData(t *testing.T) {

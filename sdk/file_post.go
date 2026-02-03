@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/ONSdigital/dp-files-api/files"
-	"github.com/ONSdigital/log.go/v2/log"
 )
 
 // RegisterFile makes a POST request to register new file metadata
@@ -33,11 +32,9 @@ func (c *Client) RegisterFile(ctx context.Context, metadata files.StoredRegister
 
 	statusCode := resp.StatusCode
 	if statusCode != http.StatusCreated {
-		jsonErrors, err := unmarshalJSONErrors(resp.Body)
+		jsonErrors, err := unmarshalJSONErrors(ctx, resp.Body)
 		if err != nil {
-			log.Error(ctx, "failed to parse error response from files-api", err, log.Data{
-				"status_code": statusCode,
-			})
+			return err
 		}
 		return &APIError{
 			StatusCode: statusCode,

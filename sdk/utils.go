@@ -1,16 +1,18 @@
 package sdk
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 
 	"github.com/ONSdigital/dp-files-api/api"
 	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 // unmarshalJSONErrors unmarshals the JSON errors from the response body.
-// This function assumes the response body JSON structure matches api.JSONErrors
-func unmarshalJSONErrors(body io.ReadCloser) (*api.JSONErrors, error) {
+// If the body does not match the expected structure for JSON errors, it logs the error and returns nil.
+func unmarshalJSONErrors(ctx context.Context, body io.ReadCloser) (*api.JSONErrors, error) {
 	if body == nil {
 		return nil, nil
 	}
@@ -23,7 +25,8 @@ func unmarshalJSONErrors(body io.ReadCloser) (*api.JSONErrors, error) {
 	}
 
 	if err := json.Unmarshal(bytes, &jsonErrors); err != nil {
-		return nil, err
+		log.Error(ctx, "body did not match expected structure for JSON errors", err, log.Data{"body": string(bytes)})
+		return nil, nil
 	}
 
 	return &jsonErrors, nil
