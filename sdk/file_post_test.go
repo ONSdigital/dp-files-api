@@ -188,3 +188,37 @@ func TestRegisterFile_Failure(t *testing.T) {
 		})
 	})
 }
+
+func TestRegisterFile_ErrorResponse(t *testing.T) {
+	t.Parallel()
+
+	Convey("Given a files-api client that returns a non-JSON error response", t, func() {
+		mockClienter := newMockClienter(&http.Response{
+			StatusCode: http.StatusUnauthorized,
+			Body:       io.NopCloser(strings.NewReader("")),
+		}, nil)
+		client := newMockFilesAPIClient(mockClienter)
+
+		Convey("When RegisterFile is called", func() {
+			isPublishable := true
+			metadata := files.StoredRegisteredMetaData{
+				Path:          "path/to/file.txt",
+				IsPublishable: isPublishable,
+				Title:         "Test File",
+				SizeInBytes:   12345,
+				Type:          "text/plain",
+				Licence:       "OGL v3",
+				LicenceURL:    "http://example.com/licence",
+			}
+
+			err := client.RegisterFile(context.Background(), metadata, testHeaders)
+
+			Convey("Then an APIError is returned with the status code but no parsed errors", func() {
+				apiErr, ok := err.(*APIError)
+				So(ok, ShouldBeTrue)
+				So(apiErr.StatusCode, ShouldEqual, http.StatusUnauthorized)
+				So(apiErr.Errors, ShouldBeNil)
+			})
+		})
+	})
+}

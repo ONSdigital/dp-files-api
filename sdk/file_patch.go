@@ -10,6 +10,7 @@ import (
 
 	"github.com/ONSdigital/dp-files-api/api"
 	"github.com/ONSdigital/dp-files-api/store"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 // FilePatchRequest represents the request payload for a PATCH request to "/files/{path:.*}"
@@ -52,7 +53,9 @@ func (c *Client) patchFile(ctx context.Context, filePath string, patchReq FilePa
 	if statusCode != http.StatusOK {
 		jsonErrors, err := unmarshalJSONErrors(resp.Body)
 		if err != nil {
-			return err
+			log.Error(ctx, "failed to parse error response from files-api", err, log.Data{
+				"status_code": statusCode,
+			})
 		}
 		return &APIError{
 			StatusCode: statusCode,
