@@ -119,7 +119,6 @@ func TestUnmarshalJSONErrors(t *testing.T) {
 			})
 		})
 	})
-
 }
 
 func TestUnmarshalStoredRegisteredMetaData(t *testing.T) {

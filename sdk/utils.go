@@ -25,6 +25,8 @@ func unmarshalJSONErrors(ctx context.Context, body io.ReadCloser) (*api.JSONErro
 	}
 
 	if err := json.Unmarshal(bytes, &jsonErrors); err != nil {
+		// Body did not match expected structure for JSON errors.
+		// This case is only expected to occur when authorisation middleware returns an error.
 		log.Error(ctx, "body did not match expected structure for JSON errors", err, log.Data{"body": string(bytes)})
 		return nil, nil
 	}
