@@ -50,6 +50,7 @@ type CollectionUpdateManyFunc func(ctx context.Context, selector interface{}, up
 type CollectionInsertFunc func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error)
 type BundleFindOneFunc func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error
 type KafkaSendFunc func(schema *avro.Schema, event interface{}) error
+type CollectionFindOneAndUpdateFunc func(ctx context.Context, filter interface{}, update interface{}, result interface{}, opts ...mongodriver.FindOption) error
 
 func CollectionFindReturnsValueAndError(value int, expectedError error) CollectionFindFunc {
 	return func(ctx context.Context, filter interface{}, results interface{}, opts ...mongodriver.FindOption) (int, error) {
@@ -93,6 +94,19 @@ func CollectionFindOneReturnsError(expectedError error) CollectionFindOneFunc {
 
 func BundleFindOneReturnsError(expectedError error) BundleFindOneFunc {
 	return func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+		return expectedError
+	}
+}
+
+func CollectionFindOneAndUpdateReturnsNil(metadataBytes []byte) CollectionFindOneAndUpdateFunc {
+	return func(ctx context.Context, filter interface{}, update interface{}, result interface{}, opts ...mongodriver.FindOption) error {
+		bson.Unmarshal(metadataBytes, result)
+		return nil
+	}
+}
+
+func CollectionFindOneAndUpdateReturnsError(expectedError error) CollectionFindOneAndUpdateFunc {
+	return func(ctx context.Context, filter interface{}, update interface{}, result interface{}, opts ...mongodriver.FindOption) error {
 		return expectedError
 	}
 }

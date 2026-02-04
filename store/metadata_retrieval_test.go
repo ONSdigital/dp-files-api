@@ -689,3 +689,65 @@ func (suite *StoreSuite) TestPatchBundleMetadataSuccess() {
 	subject.PatchFilePublishBundleMetadata(&metadata, bundle)
 	suite.Exactly(metadataExpected, metadata)
 }
+
+func (suite *StoreSuite) TestPutContentItemUpdate() {
+	metadata := files.StoredRegisteredMetaData{
+		Path: "path1",
+		ContentItem: &files.StoredContentItem{
+			DatasetID: "dataset1",
+			Edition:   "edition1",
+			Version:   "1",
+		},
+	}
+
+	metadataContentUpdated := metadata
+	metadataContentUpdated.ContentItem.Version = "2"
+
+	metadataBytes, _ := bson.Marshal(metadata)
+
+	metadataColl := mock.MongoCollectionMock{
+		FindOneAndUpdateFunc: CollectionFindOneAndUpdateReturnsNil(metadataBytes),
+	}
+
+	subject := store.NewStore(&metadataColl, nil, nil, nil, nil, suite.defaultClock, nil, nil)
+
+	_, err := subject.UpdateContentItem(suite.defaultContext, "path1", *metadataContentUpdated.ContentItem)
+
+	suite.NoError(err)
+}
+
+func (suite *StoreSuite) TestUpdateContentItemFileNotRegistered() {
+	contentItem := &files.StoredContentItem{
+		DatasetID: "dataset1",
+		Edition:   "edition1",
+		Version:   "1",
+	}
+
+	collection := mock.MongoCollectionMock{
+		FindOneAndUpdateFunc: CollectionFindOneAndUpdateReturnsError(mongodriver.ErrNoDocumentFound),
+	}
+
+	subject := store.NewStore(&collection, nil, nil, nil, nil, suite.defaultClock, nil, nil)
+
+	_, err := subject.UpdateContentItem(suite.defaultContext, suite.path, *contentItem)
+
+	suite.ErrorIs(err, store.ErrFileNotRegistered)
+}
+
+func (suite *StoreSuite) TestUpdateContentItemMetadataNotFound() {
+	contentItem := &files.StoredContentItem{
+		DatasetID: "dataset1",
+		Edition:   "edition1",
+		Version:   "1",
+	}
+
+	collection := mock.MongoCollectionMock{
+		FindOneAndUpdateFunc: CollectionFindOneAndUpdateReturnsError(errors.New("mongo write error")),
+	}
+
+	subject := store.NewStore(&collection, nil, nil, nil, nil, suite.defaultClock, nil, nil)
+
+	_, err := subject.UpdateContentItem(suite.defaultContext, suite.path, *contentItem)
+
+	suite.ErrorContains(err, "mongo write error")
+}

@@ -25,6 +25,12 @@ var (
 	exampleTime         = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
 	exampleEtag         = "example-etag"
 
+	contentItem = files.StoredContentItem{
+		DatasetID: "test_dataset_id",
+		Edition:   "test_edition",
+		Version:   "2",
+	}
+
 	exampleStoredRegisteredMetaData = &files.StoredRegisteredMetaData{
 		Path:              "path/to/file.txt",
 		IsPublishable:     true,
@@ -42,6 +48,7 @@ var (
 		MovedAt:           nil,
 		State:             store.StateUploaded,
 		Etag:              exampleEtag,
+		ContentItem:       &contentItem,
 	}
 )
 

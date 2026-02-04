@@ -29,6 +29,7 @@ type MongoCollection interface {
 	DeleteById(ctx context.Context, id interface{}) (*mongodb.CollectionDeleteResult, error)
 	Aggregate(ctx context.Context, pipeline interface{}, results interface{}) error
 	NewLockClient() *lock.Client
+	FindOneAndUpdate(ctx context.Context, filter interface{}, update interface{}, result interface{}, opts ...mongodb.FindOption) error
 }
 
 //go:generate moq -out mock/cursor.go -pkg mock . MongoCursor

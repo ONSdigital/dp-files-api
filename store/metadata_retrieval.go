@@ -170,3 +170,27 @@ func (store *Store) PatchFilePublishBundleMetadata(metadata *files.StoredRegiste
 	metadata.State = StatePublished
 	metadata.LastModified = bundle.LastModified
 }
+
+func (store *Store) UpdateContentItem(ctx context.Context, path string, contentItem files.StoredContentItem) (files.StoredRegisteredMetaData, error) {
+	logdata := log.Data{"path": path}
+
+	update := bson.M{
+		"$set": bson.M{
+			"content_item": contentItem,
+		},
+	}
+
+	updated := files.StoredRegisteredMetaData{}
+
+	// mongodriver.ReturnDocument(1) sets it to return the document after the update has happened
+	if err := store.metadataCollection.FindOneAndUpdate(ctx, bson.M{fieldPath: path}, update, &updated, mongodriver.ReturnDocument(1)); err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			log.Error(ctx, "content item update failed as file metadata not found", err, logdata)
+			return updated, ErrFileNotRegistered
+		}
+		log.Error(ctx, "failed updating content item in file metadata", err, logdata)
+		return updated, err
+	}
+
+	return updated, nil
+}

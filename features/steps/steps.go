@@ -57,6 +57,7 @@ func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the response should contain at least "([^"]*)" file event$`, c.theResponseShouldContainAtLeastFileEvent)
 	ctx.Step(`^the response should have pagination with limit "([^"]*)" and offset "([^"]*)"$`, c.theResponseShouldHavePaginationWithLimitAndOffset)
 	ctx.Step(`^all returned events should have file path "([^"]*)"$`, c.allReturnedEventsShouldHaveFilePath)
+	ctx.Step(`^I update the content item of the file "([^"]*)" with:`, c.iUpdateTheContentItemOfTheFileWith)
 }
 
 func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {
@@ -531,4 +532,8 @@ func (c *FilesAPIComponent) iGetFilesInTheBundle(bundleID string) error {
 
 func (c *FilesAPIComponent) iGetFilesWithBothCollectionAndBundleID(collectionID, bundleID string) error {
 	return c.APIFeature.IGet(fmt.Sprintf("/files?collection_id=%s&bundle_id=%s", collectionID, bundleID))
+}
+
+func (c *FilesAPIComponent) iUpdateTheContentItemOfTheFileWith(path string, payload *godog.DocString) error {
+	return c.APIFeature.IPut(fmt.Sprintf("/files/%s", path), payload)
 }

@@ -229,6 +229,29 @@ paths:
             500:
               $ref: '#/responses/InternalError'
 
+    put:
+      tags:
+        - Update file metadata content_item
+      summary: Updates the content_item information for a file's metadata
+      security:
+        - Bearer: []
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/file_path'
+        - $ref: '#/parameters/put_content_item'
+      responses:
+        200:
+          $ref: '#/definitions/MetaData'
+        400:
+          $ref: '#/definitions/Error'
+        403:
+          description: Authorization Failed - Check logs
+        404:
+          description: File not found
+        500:
+          $ref: '#/responses/InternalError'
+
   /collection/{collectionID}:
     patch:
       summary: Publish all files in a collaction
@@ -465,6 +488,22 @@ definitions:
         type: string
         description: "The etag for the file"
         example: "194577a7e20bdcc7afbb718f502c134c"
+  ContentItemUpdate:
+    type: object
+    description: "Content item information to update for a file's metadata"
+    properties:
+      dataset_id:
+        type: string
+        description: "The dataset ID"
+        example: "cpih01"
+      edition:
+        type: string
+        description: "The edition"
+        example: "time-series"
+      version:
+        type: string
+        description: "The version"
+        example: "1"
 
   Event:
     description: Details of a specific file access event forming part of the audit log for users downloading a file.
@@ -676,3 +715,11 @@ parameters:
     required: true
     schema:
       $ref: '#/definitions/ChangeFileState'
+
+  put_content_item:
+    name: content_item
+    description: "Update the content_item information for a file's metadata"
+    in: body
+    required: true
+    schema:
+      $ref: '#/definitions/ContentItemUpdate'

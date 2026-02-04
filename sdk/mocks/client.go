@@ -6,6 +6,7 @@ package mocks
 import (
 	"context"
 	"github.com/ONSdigital/dp-api-clients-go/v2/health"
+	"github.com/ONSdigital/dp-files-api/api"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/sdk"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
@@ -24,6 +25,9 @@ var _ sdk.Clienter = &ClienterMock{}
 //		mockedClienter := &ClienterMock{
 //			CheckerFunc: func(ctx context.Context, check *healthcheck.CheckState) error {
 //				panic("mock out the Checker method")
+//			},
+//			ContentItemUpdateFunc: func(ctx context.Context, filePath string, item api.ContentItem, headers sdk.Headers) (files.StoredRegisteredMetaData, error) {
+//				panic("mock out the ContentItemUpdate method")
 //			},
 //			CreateFileEventFunc: func(ctx context.Context, event files.FileEvent, headers sdk.Headers) (*files.FileEvent, error) {
 //				panic("mock out the CreateFileEvent method")
@@ -59,6 +63,9 @@ type ClienterMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(ctx context.Context, check *healthcheck.CheckState) error
 
+	// ContentItemUpdateFunc mocks the ContentItemUpdate method.
+	ContentItemUpdateFunc func(ctx context.Context, filePath string, item api.ContentItem, headers sdk.Headers) (files.StoredRegisteredMetaData, error)
+
 	// CreateFileEventFunc mocks the CreateFileEvent method.
 	CreateFileEventFunc func(ctx context.Context, event files.FileEvent, headers sdk.Headers) (*files.FileEvent, error)
 
@@ -91,6 +98,17 @@ type ClienterMock struct {
 			Ctx context.Context
 			// Check is the check argument value.
 			Check *healthcheck.CheckState
+		}
+		// ContentItemUpdate holds details about calls to the ContentItemUpdate method.
+		ContentItemUpdate []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// FilePath is the filePath argument value.
+			FilePath string
+			// Item is the item argument value.
+			Item api.ContentItem
+			// Headers is the headers argument value.
+			Headers sdk.Headers
 		}
 		// CreateFileEvent holds details about calls to the CreateFileEvent method.
 		CreateFileEvent []struct {
@@ -156,6 +174,7 @@ type ClienterMock struct {
 		}
 	}
 	lockChecker           sync.RWMutex
+	lockContentItemUpdate sync.RWMutex
 	lockCreateFileEvent   sync.RWMutex
 	lockDeleteFile        sync.RWMutex
 	lockGetFile           sync.RWMutex
@@ -199,6 +218,50 @@ func (mock *ClienterMock) CheckerCalls() []struct {
 	mock.lockChecker.RLock()
 	calls = mock.calls.Checker
 	mock.lockChecker.RUnlock()
+	return calls
+}
+
+// ContentItemUpdate calls ContentItemUpdateFunc.
+func (mock *ClienterMock) ContentItemUpdate(ctx context.Context, filePath string, item api.ContentItem, headers sdk.Headers) (files.StoredRegisteredMetaData, error) {
+	if mock.ContentItemUpdateFunc == nil {
+		panic("ClienterMock.ContentItemUpdateFunc: method is nil but Clienter.ContentItemUpdate was just called")
+	}
+	callInfo := struct {
+		Ctx      context.Context
+		FilePath string
+		Item     api.ContentItem
+		Headers  sdk.Headers
+	}{
+		Ctx:      ctx,
+		FilePath: filePath,
+		Item:     item,
+		Headers:  headers,
+	}
+	mock.lockContentItemUpdate.Lock()
+	mock.calls.ContentItemUpdate = append(mock.calls.ContentItemUpdate, callInfo)
+	mock.lockContentItemUpdate.Unlock()
+	return mock.ContentItemUpdateFunc(ctx, filePath, item, headers)
+}
+
+// ContentItemUpdateCalls gets all the calls that were made to ContentItemUpdate.
+// Check the length with:
+//
+//	len(mockedClienter.ContentItemUpdateCalls())
+func (mock *ClienterMock) ContentItemUpdateCalls() []struct {
+	Ctx      context.Context
+	FilePath string
+	Item     api.ContentItem
+	Headers  sdk.Headers
+} {
+	var calls []struct {
+		Ctx      context.Context
+		FilePath string
+		Item     api.ContentItem
+		Headers  sdk.Headers
+	}
+	mock.lockContentItemUpdate.RLock()
+	calls = mock.calls.ContentItemUpdate
+	mock.lockContentItemUpdate.RUnlock()
 	return calls
 }
 

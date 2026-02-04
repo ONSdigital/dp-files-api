@@ -78,6 +78,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		removeFile := api.HandleRemoveFile(store.RemoveFile)
 		createFileEvent := api.HandlerCreateFileEvent(store.CreateFileEvent)
 		getFileEvents := api.HandlerGetFileEvents(store.GetFileEvents)
+		updateContentItem := api.HandlerUpdateContentItem(store.UpdateContentItem)
 
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:create", register)).Methods(http.MethodPost)
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:read", getMultipleFiles)).Methods(http.MethodGet)
@@ -87,6 +88,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path("/file-events").HandlerFunc(authMiddleware.Require("static-files:read", getFileEvents)).Methods(http.MethodGet)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:read", getSingleFile)).Methods(http.MethodGet)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:update", removeFile)).Methods(http.MethodDelete)
+		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:update", updateContentItem)).Methods(http.MethodPut)
 
 		patchRequestHandlers := api.PatchRequestHandlers{
 			UploadComplete:   authMiddleware.Require("static-files:update", api.HandleMarkUploadComplete(store.MarkUploadComplete)),
