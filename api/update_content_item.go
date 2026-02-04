@@ -12,13 +12,16 @@ import (
 type UpdateContentItem func(ctx context.Context, path string, contentItem files.StoredContentItem) (files.StoredRegisteredMetaData, error)
 
 type ContentItemChange struct {
-	ContentItem ContentItem `json:"content_item"`
+	ContentItem *ContentItem `json:"content_item"`
 }
 
 func HandlerUpdateContentItem(updateContentItem UpdateContentItem) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		cic := ContentItemChange{}
-		if err := json.NewDecoder(req.Body).Decode(&cic); err != nil {
+		var cic = ContentItemChange{}
+		dec := json.NewDecoder(req.Body)
+		dec.DisallowUnknownFields()
+
+		if err := dec.Decode(&cic); err != nil {
 			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
 			return
 		}
@@ -32,6 +35,7 @@ func HandlerUpdateContentItem(updateContentItem UpdateContentItem) http.HandlerF
 		metadata, err := updateContentItem(req.Context(), mux.Vars(req)["path"], storedContentItemChange)
 		if err != nil {
 			handleError(w, err)
+			return
 		}
 
 		w.Header().Add("Content-Type", "application/json")

@@ -127,23 +127,4 @@ Feature: Updating the content item in a files metadata
           }
         }
       """
-    Then I should receive the following JSON response with status "200":
-       """
-        {
-          "path": "images/meme.jpg",
-          "is_publishable": true,
-          "collection_id": "1234-asdfg-54321-qwerty",
-          "title": "The latest Meme",
-          "size_in_bytes": 14794,
-          "type": "image/jpeg",
-          "licence": "OGL v3",
-          "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
-          "state": "CREATED",
-          "etag": "",
-          "content_item": {
-            "dataset_id": "meme-dataset-3",
-            "edition": "jan3",
-            "version": "3"
-          }
-        }
-      """
+    Then the HTTP status code should be "400"

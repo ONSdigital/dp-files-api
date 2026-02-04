@@ -245,6 +245,8 @@ paths:
           $ref: '#/definitions/MetaData'
         400:
           $ref: '#/definitions/Error'
+        401:
+          $ref: '#/responses/UnauthorisedError'
         403:
           description: Authorization Failed - Check logs
         404:
