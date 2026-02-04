@@ -39,7 +39,6 @@ func HandlerUpdateContentItem(updateContentItem UpdateContentItem) http.HandlerF
 			handleError(w, err)
 			return
 		}
-		
 		w.WriteHeader(http.StatusOK)
 	}
 }
