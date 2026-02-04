@@ -33,7 +33,7 @@ func (c *Client) DeleteFile(ctx context.Context, filePath string, headers Header
 
 	statusCode := resp.StatusCode
 	if statusCode != http.StatusNoContent {
-		jsonErrors, err := unmarshalJSONErrors(resp.Body)
+		jsonErrors, err := unmarshalJSONErrors(ctx, resp.Body)
 		if err != nil {
 			return err
 		}

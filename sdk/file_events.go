@@ -33,7 +33,7 @@ func (c *Client) CreateFileEvent(ctx context.Context, event files.FileEvent, hea
 
 	statusCode := resp.StatusCode
 	if statusCode != http.StatusCreated {
-		jsonErrors, err := unmarshalJSONErrors(resp.Body)
+		jsonErrors, err := unmarshalJSONErrors(ctx, resp.Body)
 		if err != nil {
 			return nil, err
 		}

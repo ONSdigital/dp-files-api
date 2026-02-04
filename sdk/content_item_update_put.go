@@ -43,7 +43,7 @@ func (c *Client) UpdateContentItem(ctx context.Context, filePath string, content
 
 	statusCode := resp.StatusCode
 	if statusCode != http.StatusOK {
-		jsonErrors, err := unmarshalJSONErrors(resp.Body)
+		jsonErrors, err := unmarshalJSONErrors(ctx, resp.Body)
 		if err != nil {
 			return nil, err
 		}

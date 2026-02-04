@@ -226,3 +226,32 @@ func TestMarkFileUploaded(t *testing.T) {
 		})
 	})
 }
+
+func TestPatchFile_ErrorResponse(t *testing.T) {
+	t.Parallel()
+
+	Convey("Given a files-api client that returns a non-JSON error response", t, func() {
+		mockClienter := newMockClienter(&http.Response{
+			StatusCode: http.StatusUnauthorized,
+			Body:       io.NopCloser(strings.NewReader("")),
+		}, nil)
+		client := newMockFilesAPIClient(mockClienter)
+
+		Convey("When patchFile is called", func() {
+			patchReq := FilePatchRequest{
+				StateMetadata: api.StateMetadata{
+					State: stringToPointer("UPLOADED"),
+				},
+			}
+
+			err := client.patchFile(context.Background(), "/path/to/file.txt", patchReq, testHeaders)
+
+			Convey("Then an APIError is returned with the status code but no parsed errors", func() {
+				apiErr, ok := err.(*APIError)
+				So(ok, ShouldBeTrue)
+				So(apiErr.StatusCode, ShouldEqual, http.StatusUnauthorized)
+				So(apiErr.Errors, ShouldBeNil)
+			})
+		})
+	})
+}
