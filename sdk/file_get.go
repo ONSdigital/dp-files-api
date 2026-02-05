@@ -35,7 +35,7 @@ func (c *Client) GetFile(ctx context.Context, filePath string, headers Headers) 
 
 	statusCode := resp.StatusCode
 	if statusCode != http.StatusOK {
-		jsonErrors, err := unmarshalJSONErrors(resp.Body)
+		jsonErrors, err := unmarshalJSONErrors(ctx, resp.Body)
 		if err != nil {
 			return nil, err
 		}

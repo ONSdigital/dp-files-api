@@ -32,7 +32,7 @@ func (c *Client) RegisterFile(ctx context.Context, metadata files.StoredRegister
 
 	statusCode := resp.StatusCode
 	if statusCode != http.StatusCreated {
-		jsonErrors, err := unmarshalJSONErrors(resp.Body)
+		jsonErrors, err := unmarshalJSONErrors(ctx, resp.Body)
 		if err != nil {
 			return err
 		}
