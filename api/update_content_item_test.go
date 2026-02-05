@@ -2,7 +2,9 @@ package api_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -51,4 +53,31 @@ func TestContentItemUpdateReceivingUnexpectedError(t *testing.T) {
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestContentItemUpdateSuccess(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/files/file.txt", strings.NewReader(`{"content_item": {"dataset_id": "test_dataset_id", "edition": "jan2026", "version": "1"}}`))
+
+	h := api.HandlerUpdateContentItem(func(ctx context.Context, path string, contentItem files.StoredContentItem) (files.StoredRegisteredMetaData, error) {
+		return files.StoredRegisteredMetaData{
+			ContentItem: &files.StoredContentItem{
+				DatasetID: contentItem.DatasetID,
+				Edition:   contentItem.Edition,
+				Version:   contentItem.Version,
+			}}, nil
+	})
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	expectedResponse, _ := json.Marshal(files.StoredRegisteredMetaData{
+		ContentItem: &files.StoredContentItem{
+			DatasetID: "test_dataset_id",
+			Edition:   "jan2026",
+			Version:   "1",
+		},
+	})
+	response, _ := io.ReadAll(rec.Body)
+	assert.JSONEq(t, string(expectedResponse), string(response))
 }
