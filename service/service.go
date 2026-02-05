@@ -67,10 +67,9 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		cfg,
 	)
 
-	getSingleFile := api.HandleGetFileMetadata(store.GetFileMetadata)
-
 	const filesURI = "/files/{path:.*}"
 	if cfg.IsPublishing {
+		getSingleFile := api.HandleGetFileMetadata(store.GetFileMetadata, authMiddleware, api.PermissionStaticFilesRead)
 		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload, cfg.MongoConfig.QueryTimeout)
 		getMultipleFiles := api.HandlerGetFilesMetadata(store.GetFilesMetadata)
 		collectionPublished := api.HandleMarkCollectionPublished(store.MarkCollectionPublished)
@@ -81,12 +80,12 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		updateContentItem := api.HandlerUpdateContentItem(store.UpdateContentItem)
 
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:create", register)).Methods(http.MethodPost)
-		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:read", getMultipleFiles)).Methods(http.MethodGet)
+		r.Path("/files").HandlerFunc(authMiddleware.Require(api.PermissionStaticFilesRead, getMultipleFiles)).Methods(http.MethodGet)
 		r.Path("/collection/{collectionID}").HandlerFunc(authMiddleware.Require("static-files:update", collectionPublished)).Methods(http.MethodPatch)
 		r.Path("/bundle/{bundleID}").HandlerFunc(authMiddleware.Require("static-files:update", bundlePublished)).Methods(http.MethodPatch)
-		r.Path("/file-events").HandlerFunc(authMiddleware.Require("static-files:read", createFileEvent)).Methods(http.MethodPost)
-		r.Path("/file-events").HandlerFunc(authMiddleware.Require("static-files:read", getFileEvents)).Methods(http.MethodGet)
-		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:read", getSingleFile)).Methods(http.MethodGet)
+		r.Path("/file-events").HandlerFunc(authMiddleware.Require(api.PermissionStaticFilesRead, createFileEvent)).Methods(http.MethodPost)
+		r.Path("/file-events").HandlerFunc(authMiddleware.Require(api.PermissionStaticFilesRead, getFileEvents)).Methods(http.MethodGet)
+		r.Path(filesURI).HandlerFunc(getSingleFile).Methods(http.MethodGet)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:update", removeFile)).Methods(http.MethodDelete)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:update", updateContentItem)).Methods(http.MethodPut)
 
@@ -100,6 +99,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 
 		r.Path(filesURI).HandlerFunc(api.PatchRequestToHandler(patchRequestHandlers)).Methods(http.MethodPatch)
 	} else {
+		getSingleFile := api.HandleGetFileMetadata(store.GetFileMetadata, nil, "")
 		forbiddenHandler := func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusForbidden)
 		}
