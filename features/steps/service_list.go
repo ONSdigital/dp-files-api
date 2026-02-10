@@ -75,7 +75,8 @@ func (m *testAuthMiddleware) IdentityHealthCheck(ctx context.Context, state *hea
 func (e *fakeServiceContainer) GetAuthMiddleware() auth.Middleware {
 	jwtParser := &authMock.JWTParserMock{
 		ParseFunc: func(tokenString string) (*permsdk.EntityData, error) {
-			if tokenString == "valid.jwt.token" {
+			// #nosec G101 -- test token string
+			if tokenString == "test-valid-jwt-token" {
 				return &permsdk.EntityData{UserID: "user"}, nil
 			}
 			return nil, fmt.Errorf("invalid jwt token")
