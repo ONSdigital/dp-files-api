@@ -146,3 +146,63 @@ Feature: Fetching metadata for a file
       "etag": ""
     }
     """
+
+  Scenario: File metadata request without a JWT returns 401
+    Given I am not authenticated
+    And the file upload "images/meme.jpg" has been registered with:
+      | IsPublishable | true                                                                      |
+      | Title         | The latest Meme                                                           |
+      | SizeInBytes   | 14794                                                                     |
+      | Type          | image/jpeg                                                                |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | CREATED                                                                   |
+    When the file metadata is requested for the file "images/meme.jpg"
+    Then the HTTP status code should be "401"
+
+  Scenario: File metadata request with an invalid JWT returns 401
+    Given I set the "Authorization" header to "Bearer invalid-token"
+    And the file upload "images/meme.jpg" has been registered with:
+      | IsPublishable | true                                                                      |
+      | Title         | The latest Meme                                                           |
+      | SizeInBytes   | 14794                                                                     |
+      | Type          | image/jpeg                                                                |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | CREATED                                                                   |
+    When the file metadata is requested for the file "images/meme.jpg"
+    Then the HTTP status code should be "401"
+
+  Scenario: File metadata request with a service token returns 401
+    Given I use a service auth token "service-token"
+    And the file upload "images/meme.jpg" has been registered with:
+      | IsPublishable | true                                                                      |
+      | Title         | The latest Meme                                                           |
+      | SizeInBytes   | 14794                                                                     |
+      | Type          | image/jpeg                                                                |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | CREATED                                                                   |
+    When the file metadata is requested for the file "images/meme.jpg"
+    Then the HTTP status code should be "401"
+
+  Scenario: File metadata request with insufficient permissions returns 403
+    Given I am not an authorised user
+    And the file upload "images/meme.jpg" has been registered with:
+      | IsPublishable | true                                                                      |
+      | Title         | The latest Meme                                                           |
+      | SizeInBytes   | 14794                                                                     |
+      | Type          | image/jpeg                                                                |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | CREATED                                                                   |
+    When the file metadata is requested for the file "images/meme.jpg"
+    Then the HTTP status code should be "403"

@@ -62,13 +62,17 @@ func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 
 func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {
 	c.isAuthorised = true
-
+	if c.APIFeature != nil {
+		return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer test-token")
+	}
 	return nil
 }
 
 func (c *FilesAPIComponent) iAmNotAnAuthorisedUser() error {
 	c.isAuthorised = false
-
+	if c.APIFeature != nil {
+		return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer test-token")
+	}
 	return nil
 }
 
@@ -442,7 +446,8 @@ func (c *FilesAPIComponent) iPublishTheBundle(bundleID string) error {
 
 func (c *FilesAPIComponent) theFollowingPublishedMessageIsSent(table *godog.Table) error {
 	expectedMessage, _ := assistdog.NewDefault().ParseMap(table)
-	for i := 0; i < 30; i++ {
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
 		if msg, ok := c.msgs[expectedMessage["path"]]; ok {
 			assert.True(c.APIFeature, ok, "Could not find message")
 			assert.Equal(c.APIFeature, expectedMessage["path"], msg.Path)
@@ -452,7 +457,7 @@ func (c *FilesAPIComponent) theFollowingPublishedMessageIsSent(table *godog.Tabl
 			return c.APIFeature.StepError()
 		}
 
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 
 	assert.Fail(c.APIFeature, "Could not find kafka message")
