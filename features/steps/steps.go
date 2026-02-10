@@ -26,6 +26,12 @@ import (
 func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I am an authorised user$`, c.iAmAnAuthorisedUser)
 	ctx.Step(`^I am not an authorised user$`, c.iAmNotAnAuthorisedUser)
+	ctx.Step(`^I use a valid JWT token$`, c.iUseAValidJWTToken)
+	ctx.Step(`^I use an invalid JWT token$`, c.iUseAnInvalidJWTToken)
+	ctx.Step(`^I use a valid service token$`, c.iUseAValidServiceToken)
+	ctx.Step(`^I use an invalid service token$`, c.iUseAnInvalidServiceToken)
+	ctx.Step(`^I have no auth token$`, c.iHaveNoAuthToken)
+	ctx.Step(`^the dataset edition permission allows "([^"]*)"$`, c.theDatasetEditionPermissionAllows)
 	ctx.Step(`^the file upload is registered with payload:`, c.iRegisterFile)
 	ctx.Step(`^the following document entry should be created:`, c.theFollowingDocumentShouldBeCreated)
 	ctx.Step(`^the file upload "([^"]*)" has been registered$`, c.theFileUploadHasBeenRegistered)
@@ -62,13 +68,36 @@ func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 
 func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {
 	c.isAuthorised = true
-
-	return nil
+	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer valid.jwt.token")
 }
 
 func (c *FilesAPIComponent) iAmNotAnAuthorisedUser() error {
 	c.isAuthorised = false
+	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer valid.jwt.token")
+}
 
+func (c *FilesAPIComponent) iUseAValidJWTToken() error {
+	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer valid.jwt.token")
+}
+
+func (c *FilesAPIComponent) iUseAnInvalidJWTToken() error {
+	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer invalid.jwt.token")
+}
+
+func (c *FilesAPIComponent) iUseAValidServiceToken() error {
+	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer valid-service")
+}
+
+func (c *FilesAPIComponent) iUseAnInvalidServiceToken() error {
+	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer invalid-service")
+}
+
+func (c *FilesAPIComponent) iHaveNoAuthToken() error {
+	return c.APIFeature.IAmNotAuthorised()
+}
+
+func (c *FilesAPIComponent) theDatasetEditionPermissionAllows(datasetEdition string) error {
+	c.allowedDatasetEdition = datasetEdition
 	return nil
 }
 

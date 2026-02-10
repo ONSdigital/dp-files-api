@@ -10,6 +10,8 @@ import (
 
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	authMock "github.com/ONSdigital/dp-authorisation/v2/authorisation/mock"
+	dprequest "github.com/ONSdigital/dp-net/v3/request"
+	permsdk "github.com/ONSdigital/dp-permissions-api/sdk"
 
 	"github.com/ONSdigital/dp-files-api/aws"
 	"github.com/ONSdigital/dp-files-api/config"
@@ -30,26 +32,86 @@ import (
 )
 
 type fakeServiceContainer struct {
-	server       *dphttp.Server
-	r            *mux.Router
-	isAuthorised bool
+	server                *dphttp.Server
+	r                     *mux.Router
+	isAuthorised          bool
+	allowedDatasetEdition string
+}
+
+type testAuthMiddleware struct {
+	delegate *auth.PermissionCheckMiddleware
+}
+
+func (m *testAuthMiddleware) Require(permission string, handlerFunc http.HandlerFunc) http.HandlerFunc {
+	return m.delegate.Require(permission, handlerFunc)
+}
+
+func (m *testAuthMiddleware) RequireWithAttributes(permission string, handlerFunc http.HandlerFunc, getAttributes auth.GetAttributesFromRequest) http.HandlerFunc {
+	return m.delegate.RequireWithAttributes(permission, handlerFunc, getAttributes)
+}
+
+func (m *testAuthMiddleware) Close(ctx context.Context) error {
+	return nil
+}
+
+func (m *testAuthMiddleware) Parse(token string) (*permsdk.EntityData, error) {
+	return m.delegate.Parse(token)
+}
+
+func (m *testAuthMiddleware) HealthCheck(ctx context.Context, state *healthcheck.CheckState) error {
+	if state != nil {
+		_ = state.Update(healthcheck.StatusOK, "ok", http.StatusOK)
+	}
+	return nil
+}
+
+func (m *testAuthMiddleware) IdentityHealthCheck(ctx context.Context, state *healthcheck.CheckState) error {
+	if state != nil {
+		_ = state.Update(healthcheck.StatusOK, "ok", http.StatusOK)
+	}
+	return nil
 }
 
 func (e *fakeServiceContainer) GetAuthMiddleware() auth.Middleware {
-	return &authMock.MiddlewareMock{
-		HealthCheckFunc:         func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-		CloseFunc:               func(ctx context.Context) error { return nil },
-		IdentityHealthCheckFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-		RequireFunc: func(permission string, handlerFunc http.HandlerFunc) http.HandlerFunc {
-			if e.isAuthorised {
-				return handlerFunc
-			} else {
-				return func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusForbidden)
-				}
+	jwtParser := &authMock.JWTParserMock{
+		ParseFunc: func(tokenString string) (*permsdk.EntityData, error) {
+			if tokenString == "valid.jwt.token" {
+				return &permsdk.EntityData{UserID: "user"}, nil
 			}
+			return nil, fmt.Errorf("invalid jwt token")
 		},
 	}
+
+	permissionsChecker := &authMock.PermissionsCheckerMock{
+		HasPermissionFunc: func(ctx context.Context, entityData permsdk.EntityData, permission string, attributes map[string]string) (bool, error) {
+			if !e.isAuthorised {
+				return false, nil
+			}
+			if e.allowedDatasetEdition != "" {
+				if attributes == nil {
+					return false, nil
+				}
+				if attributes["dataset_edition"] != e.allowedDatasetEdition {
+					return false, nil
+				}
+			}
+			return true, nil
+		},
+		HealthCheckFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+		CloseFunc:       func(ctx context.Context) error { return nil },
+	}
+
+	zebedeeClient := &authMock.ZebedeeClientMock{
+		CheckTokenIdentityFunc: func(ctx context.Context, token string) (*dprequest.IdentityResponse, error) {
+			if token == "valid-service" {
+				return &dprequest.IdentityResponse{Identifier: "service-user"}, nil
+			}
+			return nil, fmt.Errorf("invalid service token")
+		},
+	}
+
+	delegate := auth.NewMiddlewareFromDependencies(jwtParser, permissionsChecker, zebedeeClient, nil)
+	return &testAuthMiddleware{delegate: delegate}
 }
 
 func (e *fakeServiceContainer) GetHTTPServer() files.HTTPServer {

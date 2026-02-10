@@ -22,16 +22,17 @@ import (
 )
 
 type FilesAPIComponent struct {
-	DpHTTPServer *dphttp.Server
-	svc          *service.Service
-	svcList      service.ServiceContainer
-	APIFeature   *componenttest.APIFeature
-	errChan      chan error
-	mongoClient  *mongo.Client
-	cg           *kafka.ConsumerGroup
-	msgs         map[string]files.FilePublished
-	isPublishing bool
-	isAuthorised bool
+	DpHTTPServer          *dphttp.Server
+	svc                   *service.Service
+	svcList               service.ServiceContainer
+	APIFeature            *componenttest.APIFeature
+	errChan               chan error
+	mongoClient           *mongo.Client
+	cg                    *kafka.ConsumerGroup
+	msgs                  map[string]files.FilePublished
+	isPublishing          bool
+	isAuthorised          bool
+	allowedDatasetEdition string
 }
 
 func NewFilesAPIComponent() *FilesAPIComponent {
@@ -52,7 +53,7 @@ func NewFilesAPIComponent() *FilesAPIComponent {
 
 func (c *FilesAPIComponent) Initialiser() (http.Handler, error) {
 	r := &mux.Router{}
-	c.svcList = &fakeServiceContainer{c.DpHTTPServer, r, c.isAuthorised}
+	c.svcList = &fakeServiceContainer{c.DpHTTPServer, r, c.isAuthorised, c.allowedDatasetEdition}
 	cfg, _ := config.Get()
 	cfg.IsPublishing = c.isPublishing
 	c.svc, _ = service.Run(context.Background(), c.svcList, c.errChan, cfg, r)
@@ -132,6 +133,7 @@ func (c *FilesAPIComponent) Reset() {
 	}
 
 	c.isPublishing = true
+	c.allowedDatasetEdition = ""
 }
 
 func (c *FilesAPIComponent) Close() error {

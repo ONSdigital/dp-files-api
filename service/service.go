@@ -68,6 +68,9 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	)
 
 	getSingleFile := api.HandleGetFileMetadata(store.GetFileMetadata)
+	if cfg.IsPublishing {
+		getSingleFile = api.HandleGetFileMetadataWithAuth(store.GetFileMetadata, authMiddleware)
+	}
 
 	const filesURI = "/files/{path:.*}"
 	if cfg.IsPublishing {
@@ -86,7 +89,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path("/bundle/{bundleID}").HandlerFunc(authMiddleware.Require("static-files:update", bundlePublished)).Methods(http.MethodPatch)
 		r.Path("/file-events").HandlerFunc(authMiddleware.Require("static-files:read", createFileEvent)).Methods(http.MethodPost)
 		r.Path("/file-events").HandlerFunc(authMiddleware.Require("static-files:read", getFileEvents)).Methods(http.MethodGet)
-		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:read", getSingleFile)).Methods(http.MethodGet)
+		r.Path(filesURI).HandlerFunc(getSingleFile).Methods(http.MethodGet)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:update", removeFile)).Methods(http.MethodDelete)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:update", updateContentItem)).Methods(http.MethodPut)
 

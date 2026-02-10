@@ -146,3 +146,139 @@ Feature: Fetching metadata for a file
       "etag": ""
     }
     """
+
+  Scenario: Missing JWT returns 401
+    Given I have no auth token
+    And the file upload "datasets/auth/2024/data.csv" has been registered with:
+      | IsPublishable | true                                                                      |
+      | Title         | Auth Dataset                                                              |
+      | SizeInBytes   | 54321                                                                     |
+      | Type          | text/csv                                                                  |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | DatasetID     | dataset-1                                                                 |
+      | Edition       | edition-1                                                                 |
+      | Version       | 1                                                                         |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | CREATED                                                                   |
+    When the file metadata is requested for the file "datasets/auth/2024/data.csv"
+    Then the HTTP status code should be "401"
+
+  Scenario: Invalid JWT returns 401
+    Given I use an invalid JWT token
+    And the file upload "datasets/auth/2024/data.csv" has been registered with:
+      | IsPublishable | true                                                                      |
+      | Title         | Auth Dataset                                                              |
+      | SizeInBytes   | 54321                                                                     |
+      | Type          | text/csv                                                                  |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | DatasetID     | dataset-1                                                                 |
+      | Edition       | edition-1                                                                 |
+      | Version       | 1                                                                         |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | CREATED                                                                   |
+    When the file metadata is requested for the file "datasets/auth/2024/data.csv"
+    Then the HTTP status code should be "401"
+
+  Scenario: Valid JWT without permission returns 403
+    Given I use a valid JWT token
+    And I am not an authorised user
+    And the dataset edition permission allows "dataset-1/edition-1"
+    And the file upload "datasets/auth/2024/data.csv" has been registered with:
+      | IsPublishable | true                                                                      |
+      | Title         | Auth Dataset                                                              |
+      | SizeInBytes   | 54321                                                                     |
+      | Type          | text/csv                                                                  |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | DatasetID     | dataset-1                                                                 |
+      | Edition       | edition-1                                                                 |
+      | Version       | 1                                                                         |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | CREATED                                                                   |
+    When the file metadata is requested for the file "datasets/auth/2024/data.csv"
+    Then the HTTP status code should be "403"
+
+  Scenario: Valid JWT with dataset edition permission returns 200
+    Given I use a valid JWT token
+    And I am an authorised user
+    And the dataset edition permission allows "dataset-1/edition-1"
+    And the file upload "datasets/auth/2024/data.csv" has been registered with:
+      | IsPublishable | true                                                                      |
+      | Title         | Auth Dataset                                                              |
+      | SizeInBytes   | 54321                                                                     |
+      | Type          | text/csv                                                                  |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | DatasetID     | dataset-1                                                                 |
+      | Edition       | edition-1                                                                 |
+      | Version       | 1                                                                         |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | CREATED                                                                   |
+    When the file metadata is requested for the file "datasets/auth/2024/data.csv"
+    Then the HTTP status code should be "200"
+
+  Scenario: Valid JWT with mismatched dataset edition returns 403
+    Given I use a valid JWT token
+    And I am an authorised user
+    And the dataset edition permission allows "dataset-allowed/edition-1"
+    And the file upload "datasets/auth/2024/data.csv" has been registered with:
+      | IsPublishable | true                                                                      |
+      | Title         | Auth Dataset                                                              |
+      | SizeInBytes   | 54321                                                                     |
+      | Type          | text/csv                                                                  |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | DatasetID     | dataset-1                                                                 |
+      | Edition       | edition-1                                                                 |
+      | Version       | 1                                                                         |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | CREATED                                                                   |
+    When the file metadata is requested for the file "datasets/auth/2024/data.csv"
+    Then the HTTP status code should be "403"
+
+  Scenario: Valid service token with dataset edition permission returns 200
+    Given I use a valid service token
+    And I am an authorised user
+    And the dataset edition permission allows "dataset-1/edition-1"
+    And the file upload "datasets/auth/2024/data.csv" has been registered with:
+      | IsPublishable | true                                                                      |
+      | Title         | Auth Dataset                                                              |
+      | SizeInBytes   | 54321                                                                     |
+      | Type          | text/csv                                                                  |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | DatasetID     | dataset-1                                                                 |
+      | Edition       | edition-1                                                                 |
+      | Version       | 1                                                                         |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | CREATED                                                                   |
+    When the file metadata is requested for the file "datasets/auth/2024/data.csv"
+    Then the HTTP status code should be "200"
+
+  Scenario: Valid service token without permission returns 403
+    Given I use a valid service token
+    And I am not an authorised user
+    And the dataset edition permission allows "dataset-1/edition-1"
+    And the file upload "datasets/auth/2024/data.csv" has been registered with:
+      | IsPublishable | true                                                                      |
+      | Title         | Auth Dataset                                                              |
+      | SizeInBytes   | 54321                                                                     |
+      | Type          | text/csv                                                                  |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | DatasetID     | dataset-1                                                                 |
+      | Edition       | edition-1                                                                 |
+      | Version       | 1                                                                         |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | CREATED                                                                   |
+    When the file metadata is requested for the file "datasets/auth/2024/data.csv"
+    Then the HTTP status code should be "403"
