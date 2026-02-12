@@ -39,6 +39,8 @@ type fakeServiceContainer struct {
 	component *FilesAPIComponent
 }
 
+const validServiceToken = "valid-service"
+
 func (e *fakeServiceContainer) GetAuthMiddleware() auth.Middleware {
 	return &authMock.MiddlewareMock{
 		RequireFunc: func(permission string, handlerFunc http.HandlerFunc) http.HandlerFunc {
@@ -105,7 +107,7 @@ func (e *fakeServiceContainer) GetPermissionsChecker() auth.PermissionsChecker {
 func (e *fakeServiceContainer) GetZebedeeClient() auth.ZebedeeClient {
 	return &authMock.ZebedeeClientMock{
 		CheckTokenIdentityFunc: func(ctx context.Context, token string) (*dprequest.IdentityResponse, error) {
-			if token != "valid-service" {
+			if token != validServiceToken {
 				return nil, errors.New("invalid service token")
 			}
 			return &dprequest.IdentityResponse{Identifier: "service-user"}, nil
@@ -127,7 +129,7 @@ func parseBearerToken(r *http.Request) (string, bool) {
 
 func isValidToken(token string) bool {
 	// #nosec G101 -- test-only tokens used by component auth scenarios
-	return token == "test-valid-jwt-token" || token == "valid-service"
+	return token == "test-valid-jwt-token" || token == validServiceToken
 }
 
 func (e *fakeServiceContainer) GetHTTPServer() files.HTTPServer {
