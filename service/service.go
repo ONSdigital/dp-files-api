@@ -69,7 +69,9 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 
 	getSingleFile := api.HandleGetFileMetadata(store.GetFileMetadata)
 	if cfg.IsPublishing {
-		getSingleFile = api.HandleGetFileMetadataWithAuth(store.GetFileMetadata, authMiddleware)
+		permissionsChecker := serviceList.GetPermissionsChecker()
+		zebedeeClient := serviceList.GetZebedeeClient()
+		getSingleFile = api.HandleGetFileMetadataWithPermissions(store.GetFileMetadata, authMiddleware, permissionsChecker, zebedeeClient)
 	}
 
 	const filesURI = "/files/{path:.*}"

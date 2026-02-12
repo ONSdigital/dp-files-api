@@ -3,20 +3,22 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
+	"strings"
 
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
+	"github.com/ONSdigital/dp-authorisation/v2/jwt"
 	"github.com/ONSdigital/dp-files-api/files"
+	permsdk "github.com/ONSdigital/dp-permissions-api/sdk"
 	"github.com/gorilla/mux"
 )
 
 type GetFileMetadata func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error)
 
-func HandleGetFileMetadata(getMetadata GetFileMetadata) http.HandlerFunc {
-	return HandleGetFileMetadataWithAuth(getMetadata, nil)
-}
+var errInvalidServiceToken = errors.New("invalid service token")
 
-func HandleGetFileMetadataWithAuth(getMetadata GetFileMetadata, authMiddleware auth.Middleware) http.HandlerFunc {
+func HandleGetFileMetadata(getMetadata GetFileMetadata) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		w.Header().Add("Content-Type", "application/json")
@@ -26,26 +28,94 @@ func HandleGetFileMetadataWithAuth(getMetadata GetFileMetadata, authMiddleware a
 			return
 		}
 
-		writeResponse := func(w http.ResponseWriter) {
-			if err := json.NewEncoder(w).Encode(metadata); err != nil {
-				handleError(w, err)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(metadata); err != nil {
+			handleError(w, err)
+			return
+		}
+	}
+}
+
+func HandleGetFileMetadataWithPermissions(
+	getMetadata GetFileMetadata,
+	authMiddleware auth.Middleware,
+	permissionsChecker auth.PermissionsChecker,
+	zebedeeClient auth.ZebedeeClient,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		w.Header().Add("Content-Type", "application/json")
+		metadata, err := getMetadata(req.Context(), vars["path"])
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+		if authMiddleware == nil || permissionsChecker == nil || zebedeeClient == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
-		if authMiddleware == nil {
-			writeResponse(w)
+		authToken := strings.TrimPrefix(req.Header.Get("Authorization"), "Bearer ")
+		if authToken == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		entityData, err := getEntityData(req.Context(), authToken, authMiddleware, zebedeeClient)
+		if err != nil {
+			if err == jwt.ErrPublickeysEmpty {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			if err == errInvalidServiceToken {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if entityData == nil {
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
 		attributes := datasetEditionAttributes(metadata)
-		authMiddleware.RequireWithAttributes(
-			"static-files:read",
-			func(w http.ResponseWriter, _ *http.Request) { writeResponse(w) },
-			func(_ *http.Request) (map[string]string, error) { return attributes, nil },
-		)(w, req)
+		hasPermission, err := permissionsChecker.HasPermission(req.Context(), *entityData, "static-files:read", attributes)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if !hasPermission {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(metadata); err != nil {
+			handleError(w, err)
+			return
+		}
 	}
+}
+
+func getEntityData(
+	ctx context.Context,
+	authToken string,
+	authMiddleware auth.Middleware,
+	zebedeeClient auth.ZebedeeClient,
+) (*permsdk.EntityData, error) {
+	if strings.Contains(authToken, "service") {
+		identityResponse, err := zebedeeClient.CheckTokenIdentity(ctx, authToken)
+		if err != nil {
+			return nil, errInvalidServiceToken
+		}
+		if identityResponse == nil || identityResponse.Identifier == "" {
+			return nil, errInvalidServiceToken
+		}
+		return &permsdk.EntityData{UserID: identityResponse.Identifier}, nil
+	}
+
+	return authMiddleware.Parse(authToken)
 }
 
 func datasetEditionAttributes(metadata files.StoredRegisteredMetaData) map[string]string {

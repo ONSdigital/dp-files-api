@@ -27,6 +27,8 @@ type ServiceContainer interface {
 	GetClock() clock.Clock
 	GetKafkaProducer() kafka.IProducer
 	GetAuthMiddleware() auth.Middleware
+	GetPermissionsChecker() auth.PermissionsChecker
+	GetZebedeeClient() auth.ZebedeeClient
 	GetS3Clienter() aws.S3Clienter
 	Shutdown(ctx context.Context) error
 }

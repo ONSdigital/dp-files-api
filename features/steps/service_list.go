@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
+	authMock "github.com/ONSdigital/dp-authorisation/v2/authorisation/mock"
 	permsdk "github.com/ONSdigital/dp-permissions-api/sdk"
 
 	"github.com/ONSdigital/dp-files-api/aws"
@@ -22,6 +23,7 @@ import (
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-files-api/mongo"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
+	dprequest "github.com/ONSdigital/dp-net/v3/request"
 
 	dphttp "github.com/ONSdigital/dp-net/v3/http"
 	dps3 "github.com/ONSdigital/dp-s3/v3"
@@ -37,89 +39,78 @@ type fakeServiceContainer struct {
 	component *FilesAPIComponent
 }
 
-type testAuthMiddleware struct {
-	component *FilesAPIComponent
-}
-
-func (m *testAuthMiddleware) Require(permission string, handlerFunc http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		token, ok := parseBearerToken(r)
-		if !ok {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		if !isValidToken(token) {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		if !m.component.isAuthorised {
-			w.WriteHeader(http.StatusForbidden)
-			return
-		}
-		handlerFunc(w, r)
-	}
-}
-
-func (m *testAuthMiddleware) RequireWithAttributes(permission string, handlerFunc http.HandlerFunc, getAttributes auth.GetAttributesFromRequest) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		token, ok := parseBearerToken(r)
-		if !ok {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		if !isValidToken(token) {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		if !m.component.isAuthorised {
-			w.WriteHeader(http.StatusForbidden)
-			return
-		}
-
-		attributes, err := getAttributes(r)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		if m.component.allowedDatasetEdition != "" {
-			if attributes == nil || attributes["dataset_edition"] != m.component.allowedDatasetEdition {
-				w.WriteHeader(http.StatusForbidden)
-				return
-			}
-		}
-
-		handlerFunc(w, r)
-	}
-}
-
-func (m *testAuthMiddleware) Close(ctx context.Context) error {
-	return nil
-}
-
-func (m *testAuthMiddleware) Parse(token string) (*permsdk.EntityData, error) {
-	if !isValidToken(token) {
-		return nil, errors.New("invalid token")
-	}
-	return &permsdk.EntityData{UserID: "user"}, nil
-}
-
-func (m *testAuthMiddleware) HealthCheck(ctx context.Context, state *healthcheck.CheckState) error {
-	if state != nil {
-		_ = state.Update(healthcheck.StatusOK, "ok", http.StatusOK)
-	}
-	return nil
-}
-
-func (m *testAuthMiddleware) IdentityHealthCheck(ctx context.Context, state *healthcheck.CheckState) error {
-	if state != nil {
-		_ = state.Update(healthcheck.StatusOK, "ok", http.StatusOK)
-	}
-	return nil
-}
-
 func (e *fakeServiceContainer) GetAuthMiddleware() auth.Middleware {
-	return &testAuthMiddleware{component: e.component}
+	return &authMock.MiddlewareMock{
+		RequireFunc: func(permission string, handlerFunc http.HandlerFunc) http.HandlerFunc {
+			return func(w http.ResponseWriter, r *http.Request) {
+				token, ok := parseBearerToken(r)
+				if !ok {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				if !isValidToken(token) {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				if !e.component.isAuthorised {
+					w.WriteHeader(http.StatusForbidden)
+					return
+				}
+				handlerFunc(w, r)
+			}
+		},
+		ParseFunc: func(token string) (*permsdk.EntityData, error) {
+			if !isValidToken(token) {
+				return nil, errors.New("invalid token")
+			}
+			return &permsdk.EntityData{UserID: "user"}, nil
+		},
+		HealthCheckFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+			if state != nil {
+				_ = state.Update(healthcheck.StatusOK, "ok", http.StatusOK)
+			}
+			return nil
+		},
+		IdentityHealthCheckFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+			if state != nil {
+				_ = state.Update(healthcheck.StatusOK, "ok", http.StatusOK)
+			}
+			return nil
+		},
+		CloseFunc: func(ctx context.Context) error {
+			return nil
+		},
+	}
+}
+
+func (e *fakeServiceContainer) GetPermissionsChecker() auth.PermissionsChecker {
+	return &authMock.PermissionsCheckerMock{
+		HasPermissionFunc: func(ctx context.Context, entityData permsdk.EntityData, permission string, attributes map[string]string) (bool, error) {
+			if !e.component.isAuthorised {
+				return false, nil
+			}
+			if e.component.allowedDatasetEdition != "" {
+				if attributes == nil || attributes["dataset_edition"] != e.component.allowedDatasetEdition {
+					return false, nil
+				}
+			}
+			return true, nil
+		},
+		CloseFunc: func(ctx context.Context) error {
+			return nil
+		},
+	}
+}
+
+func (e *fakeServiceContainer) GetZebedeeClient() auth.ZebedeeClient {
+	return &authMock.ZebedeeClientMock{
+		CheckTokenIdentityFunc: func(ctx context.Context, token string) (*dprequest.IdentityResponse, error) {
+			if token != "valid-service" {
+				return nil, errors.New("invalid service token")
+			}
+			return &dprequest.IdentityResponse{Identifier: "service-user"}, nil
+		},
+	}
 }
 
 func parseBearerToken(r *http.Request) (string, bool) {

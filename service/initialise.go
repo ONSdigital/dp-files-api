@@ -5,6 +5,8 @@ import (
 	"errors"
 
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
+	"github.com/ONSdigital/dp-authorisation/v2/permissions"
+	"github.com/ONSdigital/dp-authorisation/v2/zebedeeclient"
 	"github.com/ONSdigital/dp-files-api/aws"
 	"github.com/ONSdigital/dp-files-api/clock"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
@@ -34,6 +36,8 @@ type ExternalServiceList struct {
 	httpServer     files.HTTPServer
 	healthChecker  health.Checker
 	authMiddleware auth.Middleware
+	permissionsChecker auth.PermissionsChecker
+	zebedeeClient      auth.ZebedeeClient
 	kafkaProducer  kafka.IProducer
 	s3Client       aws.S3Clienter
 	router         *mux.Router
@@ -62,6 +66,9 @@ func (e *ExternalServiceList) setup(ctx context.Context) error {
 
 	if err := e.createAuthMiddleware(); err != nil {
 		return err
+	}
+	if e.cfg.IsPublishing {
+		e.createAuthDependencies()
 	}
 
 	if err := e.createMongo(); err != nil {
@@ -109,6 +116,16 @@ func (e *ExternalServiceList) createS3(ctx context.Context) (err error) {
 func (e *ExternalServiceList) createAuthMiddleware() (err error) {
 	e.authMiddleware, err = auth.NewFeatureFlaggedMiddleware(context.Background(), &e.cfg.AuthConfig, nil)
 	return
+}
+
+func (e *ExternalServiceList) createAuthDependencies() {
+	e.permissionsChecker = permissions.NewChecker(
+		context.Background(),
+		e.cfg.AuthConfig.PermissionsAPIURL,
+		e.cfg.AuthConfig.PermissionsCacheUpdateInterval,
+		e.cfg.AuthConfig.PermissionsMaxCacheTime,
+	)
+	e.zebedeeClient = zebedeeclient.NewZebedeeClient(e.cfg.AuthConfig.ZebedeeURL)
 }
 
 func (e *ExternalServiceList) createKafkaProducer() error {
@@ -190,6 +207,14 @@ func (e *ExternalServiceList) GetAuthMiddleware() auth.Middleware {
 	return e.authMiddleware
 }
 
+func (e *ExternalServiceList) GetPermissionsChecker() auth.PermissionsChecker {
+	return e.permissionsChecker
+}
+
+func (e *ExternalServiceList) GetZebedeeClient() auth.ZebedeeClient {
+	return e.zebedeeClient
+}
+
 func (e *ExternalServiceList) GetS3Clienter() aws.S3Clienter {
 	return e.s3Client
 }
@@ -208,9 +233,17 @@ func (e *ExternalServiceList) Shutdown(ctx context.Context) error {
 		log.Error(ctx, "failed to shutdown HTTP server", err)
 	}
 
-	if err := e.authMiddleware.Close(ctx); err != nil {
-		shutdownErr = true
-		log.Error(ctx, "failed to shutdown Authorization Middleware", err)
+	if e.authMiddleware != nil {
+		if err := e.authMiddleware.Close(ctx); err != nil {
+			shutdownErr = true
+			log.Error(ctx, "failed to shutdown Authorization Middleware", err)
+		}
+	}
+	if e.permissionsChecker != nil {
+		if err := e.permissionsChecker.Close(ctx); err != nil {
+			shutdownErr = true
+			log.Error(ctx, "failed to shutdown permissions checker", err)
+		}
 	}
 
 	if shutdownErr {

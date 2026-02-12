@@ -7,9 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	authMock "github.com/ONSdigital/dp-authorisation/v2/authorisation/mock"
-	"github.com/ONSdigital/dp-authorisation/v2/authorisationtest"
 	"github.com/ONSdigital/dp-files-api/api"
 	"github.com/ONSdigital/dp-files-api/files"
 	dprequest "github.com/ONSdigital/dp-net/v3/request"
@@ -44,24 +42,16 @@ func TestGetFileMetadataAuth_UsesDatasetEditionAttributesAfterMetadataLoaded(t *
 		},
 	}
 
-	jwtParser := &authMock.JWTParserMock{
-		ParseFunc: func(tokenString string) (*permissionsAPISDK.EntityData, error) {
+	middleware := &authMock.MiddlewareMock{
+		ParseFunc: func(token string) (*permissionsAPISDK.EntityData, error) {
 			return &permissionsAPISDK.EntityData{UserID: "user-1"}, nil
 		},
 	}
 
-	zebedeeClient := &authMock.ZebedeeClientMock{
-		CheckTokenIdentityFunc: func(ctx context.Context, token string) (*dprequest.IdentityResponse, error) {
-			t.Fatalf("zebedee client should not be called for jwt tokens")
-			return nil, nil
-		},
-	}
-
-	authMiddleware := auth.NewMiddlewareFromDependencies(jwtParser, permissionsChecker, zebedeeClient, nil)
-	handler := api.HandleGetFileMetadataWithAuth(getMetadata, authMiddleware)
+	handler := api.HandleGetFileMetadataWithPermissions(getMetadata, middleware, permissionsChecker, &authMock.ZebedeeClientMock{})
 
 	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", http.NoBody)
-	req.Header.Set("Authorization", authorisationtest.AdminJWTToken)
+	req.Header.Set("Authorization", "Bearer test-valid-jwt-token")
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -74,8 +64,9 @@ func TestGetFileMetadataAuth_MissingJWTReturns401(t *testing.T) {
 		return files.StoredRegisteredMetaData{}, nil
 	}
 
-	authMiddleware := auth.NewMiddlewareFromDependencies(
-		&authMock.JWTParserMock{ParseFunc: func(tokenString string) (*permissionsAPISDK.EntityData, error) {
+	handler := api.HandleGetFileMetadataWithPermissions(
+		getMetadata,
+		&authMock.MiddlewareMock{ParseFunc: func(token string) (*permissionsAPISDK.EntityData, error) {
 			t.Fatalf("jwt parser should not be called when no auth header is present")
 			return nil, nil
 		}},
@@ -87,10 +78,8 @@ func TestGetFileMetadataAuth_MissingJWTReturns401(t *testing.T) {
 			t.Fatalf("zebedee client should not be called when no auth header is present")
 			return nil, nil
 		}},
-		nil,
 	)
 
-	handler := api.HandleGetFileMetadataWithAuth(getMetadata, authMiddleware)
 	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", http.NoBody)
 	rec := httptest.NewRecorder()
 
@@ -104,8 +93,9 @@ func TestGetFileMetadataAuth_InvalidJWTReturns401(t *testing.T) {
 		return files.StoredRegisteredMetaData{}, nil
 	}
 
-	authMiddleware := auth.NewMiddlewareFromDependencies(
-		&authMock.JWTParserMock{ParseFunc: func(tokenString string) (*permissionsAPISDK.EntityData, error) {
+	handler := api.HandleGetFileMetadataWithPermissions(
+		getMetadata,
+		&authMock.MiddlewareMock{ParseFunc: func(token string) (*permissionsAPISDK.EntityData, error) {
 			return nil, errors.New("invalid jwt")
 		}},
 		&authMock.PermissionsCheckerMock{HasPermissionFunc: func(ctx context.Context, entityData permissionsAPISDK.EntityData, permission string, attributes map[string]string) (bool, error) {
@@ -116,12 +106,10 @@ func TestGetFileMetadataAuth_InvalidJWTReturns401(t *testing.T) {
 			t.Fatalf("zebedee client should not be called for invalid jwt")
 			return nil, nil
 		}},
-		nil,
 	)
 
-	handler := api.HandleGetFileMetadataWithAuth(getMetadata, authMiddleware)
 	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", http.NoBody)
-	req.Header.Set("Authorization", "Bearer invalid.jwt.token")
+	req.Header.Set("Authorization", "Bearer test-invalid-jwt-token")
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -136,8 +124,9 @@ func TestGetFileMetadataAuth_ValidJWTNotAuthorisedReturns403(t *testing.T) {
 		}, nil
 	}
 
-	authMiddleware := auth.NewMiddlewareFromDependencies(
-		&authMock.JWTParserMock{ParseFunc: func(tokenString string) (*permissionsAPISDK.EntityData, error) {
+	handler := api.HandleGetFileMetadataWithPermissions(
+		getMetadata,
+		&authMock.MiddlewareMock{ParseFunc: func(token string) (*permissionsAPISDK.EntityData, error) {
 			return &permissionsAPISDK.EntityData{UserID: "user-1"}, nil
 		}},
 		&authMock.PermissionsCheckerMock{HasPermissionFunc: func(ctx context.Context, entityData permissionsAPISDK.EntityData, permission string, attributes map[string]string) (bool, error) {
@@ -147,12 +136,10 @@ func TestGetFileMetadataAuth_ValidJWTNotAuthorisedReturns403(t *testing.T) {
 			t.Fatalf("zebedee client should not be called for jwt tokens")
 			return nil, nil
 		}},
-		nil,
 	)
 
-	handler := api.HandleGetFileMetadataWithAuth(getMetadata, authMiddleware)
 	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", http.NoBody)
-	req.Header.Set("Authorization", authorisationtest.AdminJWTToken)
+	req.Header.Set("Authorization", "Bearer test-valid-jwt-token")
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -167,8 +154,9 @@ func TestGetFileMetadataAuth_ValidJWTAuthorisedReturns200(t *testing.T) {
 		}, nil
 	}
 
-	authMiddleware := auth.NewMiddlewareFromDependencies(
-		&authMock.JWTParserMock{ParseFunc: func(tokenString string) (*permissionsAPISDK.EntityData, error) {
+	handler := api.HandleGetFileMetadataWithPermissions(
+		getMetadata,
+		&authMock.MiddlewareMock{ParseFunc: func(token string) (*permissionsAPISDK.EntityData, error) {
 			return &permissionsAPISDK.EntityData{UserID: "user-1"}, nil
 		}},
 		&authMock.PermissionsCheckerMock{HasPermissionFunc: func(ctx context.Context, entityData permissionsAPISDK.EntityData, permission string, attributes map[string]string) (bool, error) {
@@ -178,12 +166,10 @@ func TestGetFileMetadataAuth_ValidJWTAuthorisedReturns200(t *testing.T) {
 			t.Fatalf("zebedee client should not be called for jwt tokens")
 			return nil, nil
 		}},
-		nil,
 	)
 
-	handler := api.HandleGetFileMetadataWithAuth(getMetadata, authMiddleware)
 	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", http.NoBody)
-	req.Header.Set("Authorization", authorisationtest.AdminJWTToken)
+	req.Header.Set("Authorization", "Bearer test-valid-jwt-token")
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -198,8 +184,9 @@ func TestGetFileMetadataAuth_ServiceTokenAuthorisedReturns200(t *testing.T) {
 		}, nil
 	}
 
-	authMiddleware := auth.NewMiddlewareFromDependencies(
-		&authMock.JWTParserMock{ParseFunc: func(tokenString string) (*permissionsAPISDK.EntityData, error) {
+	handler := api.HandleGetFileMetadataWithPermissions(
+		getMetadata,
+		&authMock.MiddlewareMock{ParseFunc: func(token string) (*permissionsAPISDK.EntityData, error) {
 			t.Fatalf("jwt parser should not be called for service tokens")
 			return nil, nil
 		}},
@@ -209,12 +196,10 @@ func TestGetFileMetadataAuth_ServiceTokenAuthorisedReturns200(t *testing.T) {
 		&authMock.ZebedeeClientMock{CheckTokenIdentityFunc: func(ctx context.Context, token string) (*dprequest.IdentityResponse, error) {
 			return &dprequest.IdentityResponse{Identifier: "service-user"}, nil
 		}},
-		nil,
 	)
 
-	handler := api.HandleGetFileMetadataWithAuth(getMetadata, authMiddleware)
 	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", http.NoBody)
-	req.Header.Set("Authorization", authorisationtest.ZebedeeServiceToken)
+	req.Header.Set("Authorization", "Bearer valid-service")
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -229,8 +214,9 @@ func TestGetFileMetadataAuth_ServiceTokenNotAuthorisedReturns403(t *testing.T) {
 		}, nil
 	}
 
-	authMiddleware := auth.NewMiddlewareFromDependencies(
-		&authMock.JWTParserMock{ParseFunc: func(tokenString string) (*permissionsAPISDK.EntityData, error) {
+	handler := api.HandleGetFileMetadataWithPermissions(
+		getMetadata,
+		&authMock.MiddlewareMock{ParseFunc: func(token string) (*permissionsAPISDK.EntityData, error) {
 			t.Fatalf("jwt parser should not be called for service tokens")
 			return nil, nil
 		}},
@@ -240,12 +226,10 @@ func TestGetFileMetadataAuth_ServiceTokenNotAuthorisedReturns403(t *testing.T) {
 		&authMock.ZebedeeClientMock{CheckTokenIdentityFunc: func(ctx context.Context, token string) (*dprequest.IdentityResponse, error) {
 			return &dprequest.IdentityResponse{Identifier: "service-user"}, nil
 		}},
-		nil,
 	)
 
-	handler := api.HandleGetFileMetadataWithAuth(getMetadata, authMiddleware)
 	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", http.NoBody)
-	req.Header.Set("Authorization", authorisationtest.ZebedeeServiceToken)
+	req.Header.Set("Authorization", "Bearer valid-service")
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
