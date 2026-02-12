@@ -53,7 +53,7 @@ func NewFilesAPIComponent() *FilesAPIComponent {
 
 func (c *FilesAPIComponent) Initialiser() (http.Handler, error) {
 	r := &mux.Router{}
-	c.svcList = &fakeServiceContainer{c.DpHTTPServer, r, c.isAuthorised, c.allowedDatasetEdition}
+	c.svcList = &fakeServiceContainer{c.DpHTTPServer, r, c}
 	cfg, _ := config.Get()
 	cfg.IsPublishing = c.isPublishing
 	c.svc, _ = service.Run(context.Background(), c.svcList, c.errChan, cfg, r)

@@ -68,20 +68,20 @@ func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 
 func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {
 	c.isAuthorised = true
-	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer valid.jwt.token")
+	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer test-valid-jwt-token")
 }
 
 func (c *FilesAPIComponent) iAmNotAnAuthorisedUser() error {
 	c.isAuthorised = false
-	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer valid.jwt.token")
+	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer test-valid-jwt-token")
 }
 
 func (c *FilesAPIComponent) iUseAValidJWTToken() error {
-	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer valid.jwt.token")
+	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer test-valid-jwt-token")
 }
 
 func (c *FilesAPIComponent) iUseAnInvalidJWTToken() error {
-	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer invalid.jwt.token")
+	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer test-invalid-jwt-token")
 }
 
 func (c *FilesAPIComponent) iUseAValidServiceToken() error {
