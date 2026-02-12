@@ -135,6 +135,7 @@ func parseBearerToken(r *http.Request) (string, bool) {
 }
 
 func isValidToken(token string) bool {
+	// #nosec G101 -- test-only tokens used by component auth scenarios
 	return token == "test-valid-jwt-token" || token == "valid-service"
 }
 
