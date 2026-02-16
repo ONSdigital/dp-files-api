@@ -28,19 +28,19 @@ import (
 
 // ExternalServiceList holds the initialiser and initialisation state of external services.
 type ExternalServiceList struct {
-	cfg            *config.Config
-	buildTime      string
-	gitCommit      string
-	version        string
-	mongo          mongo.Client
-	httpServer     files.HTTPServer
-	healthChecker  health.Checker
-	authMiddleware auth.Middleware
+	cfg                *config.Config
+	buildTime          string
+	gitCommit          string
+	version            string
+	mongo              mongo.Client
+	httpServer         files.HTTPServer
+	healthChecker      health.Checker
+	authMiddleware     auth.Middleware
 	permissionsChecker auth.PermissionsChecker
 	zebedeeClient      auth.ZebedeeClient
-	kafkaProducer  kafka.IProducer
-	s3Client       aws.S3Clienter
-	router         *mux.Router
+	kafkaProducer      kafka.IProducer
+	s3Client           aws.S3Clienter
+	router             *mux.Router
 }
 
 // NewServiceList creates a new service list of dependent services with the provided initialiser
