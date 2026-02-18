@@ -28,11 +28,12 @@ func HandleGetFileMetadata(getMetadata GetFileMetadata) http.HandlerFunc {
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(w).Encode(metadata); err != nil {
 			handleError(w, err)
 			return
 		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -51,50 +52,45 @@ func HandleGetFileMetadataWithPermissions(
 			return
 		}
 		if authMiddleware == nil || permissionsChecker == nil || zebedeeClient == nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			handleError(w, ErrAuthConfigUnavailable)
 			return
 		}
 
-		authToken := strings.TrimPrefix(req.Header.Get("Authorization"), "Bearer ")
+		authToken := strings.TrimPrefix(req.Header.Get("Authorization"), permsdk.BearerPrefix)
 		if authToken == "" {
-			w.WriteHeader(http.StatusUnauthorized)
+			handleError(w, ErrMissingAuthToken)
 			return
 		}
 
 		entityData, err := getEntityData(req.Context(), authToken, authMiddleware, zebedeeClient)
 		if err != nil {
-			if err == jwt.ErrPublickeysEmpty {
-				w.WriteHeader(http.StatusInternalServerError)
+			if errors.Is(err, jwt.ErrPublickeysEmpty) {
+				handleError(w, err)
 				return
 			}
-			if err == errInvalidServiceToken {
-				w.WriteHeader(http.StatusForbidden)
-				return
-			}
-			w.WriteHeader(http.StatusUnauthorized)
+			handleError(w, ErrInvalidAuthToken)
 			return
 		}
 		if entityData == nil {
-			w.WriteHeader(http.StatusUnauthorized)
+			handleError(w, ErrInvalidAuthToken)
 			return
 		}
 
-		attributes := datasetEditionAttributes(metadata)
+		attributes := getPermissionAttributesFromRequest(metadata)
 		hasPermission, err := permissionsChecker.HasPermission(req.Context(), *entityData, "static-files:read", attributes)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			handleError(w, err)
 			return
 		}
 		if !hasPermission {
-			w.WriteHeader(http.StatusForbidden)
+			handleError(w, ErrForbidden)
 			return
 		}
-
-		w.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(w).Encode(metadata); err != nil {
 			handleError(w, err)
 			return
 		}
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -104,21 +100,24 @@ func getEntityData(
 	authMiddleware auth.Middleware,
 	zebedeeClient auth.ZebedeeClient,
 ) (*permsdk.EntityData, error) {
-	if strings.Contains(authToken, "service") {
-		identityResponse, err := zebedeeClient.CheckTokenIdentity(ctx, authToken)
-		if err != nil {
-			return nil, errInvalidServiceToken
-		}
-		if identityResponse == nil || identityResponse.Identifier == "" {
-			return nil, errInvalidServiceToken
-		}
-		return &permsdk.EntityData{UserID: identityResponse.Identifier}, nil
+	entityData, err := authMiddleware.Parse(authToken)
+	if err == nil {
+		return entityData, nil
 	}
 
-	return authMiddleware.Parse(authToken)
+	if errors.Is(err, jwt.ErrPublickeysEmpty) {
+		return nil, err
+	}
+
+	identityResponse, idErr := zebedeeClient.CheckTokenIdentity(ctx, authToken)
+	if idErr != nil || identityResponse == nil || identityResponse.Identifier == "" {
+		return nil, errInvalidServiceToken
+	}
+
+	return &permsdk.EntityData{UserID: identityResponse.Identifier}, nil
 }
 
-func datasetEditionAttributes(metadata files.StoredRegisteredMetaData) map[string]string {
+func getPermissionAttributesFromRequest(metadata files.StoredRegisteredMetaData) map[string]string {
 	attributes := map[string]string{}
 	if metadata.ContentItem == nil {
 		return attributes

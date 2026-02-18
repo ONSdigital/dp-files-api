@@ -95,17 +95,22 @@ func TestGetFileMetadataAuth_InvalidJWTReturns401(t *testing.T) {
 
 	handler := api.HandleGetFileMetadataWithPermissions(
 		getMetadata,
-		&authMock.MiddlewareMock{ParseFunc: func(token string) (*permissionsAPISDK.EntityData, error) {
-			return nil, errors.New("invalid jwt")
-		}},
-		&authMock.PermissionsCheckerMock{HasPermissionFunc: func(ctx context.Context, entityData permissionsAPISDK.EntityData, permission string, attributes map[string]string) (bool, error) {
-			t.Fatalf("permissions checker should not be called when jwt parsing fails")
-			return false, nil
-		}},
-		&authMock.ZebedeeClientMock{CheckTokenIdentityFunc: func(ctx context.Context, token string) (*dprequest.IdentityResponse, error) {
-			t.Fatalf("zebedee client should not be called for invalid jwt")
-			return nil, nil
-		}},
+		&authMock.MiddlewareMock{
+			ParseFunc: func(token string) (*permissionsAPISDK.EntityData, error) {
+				return nil, errors.New("invalid jwt")
+			},
+		},
+		&authMock.PermissionsCheckerMock{
+			HasPermissionFunc: func(ctx context.Context, entityData permissionsAPISDK.EntityData, permission string, attributes map[string]string) (bool, error) {
+				t.Fatalf("permissions checker should not be called when token is invalid")
+				return false, nil
+			},
+		},
+		&authMock.ZebedeeClientMock{
+			CheckTokenIdentityFunc: func(ctx context.Context, token string) (*dprequest.IdentityResponse, error) {
+				return nil, errors.New("invalid service token")
+			},
+		},
 	)
 
 	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", http.NoBody)
@@ -186,16 +191,21 @@ func TestGetFileMetadataAuth_ServiceTokenAuthorisedReturns200(t *testing.T) {
 
 	handler := api.HandleGetFileMetadataWithPermissions(
 		getMetadata,
-		&authMock.MiddlewareMock{ParseFunc: func(token string) (*permissionsAPISDK.EntityData, error) {
-			t.Fatalf("jwt parser should not be called for service tokens")
-			return nil, nil
-		}},
-		&authMock.PermissionsCheckerMock{HasPermissionFunc: func(ctx context.Context, entityData permissionsAPISDK.EntityData, permission string, attributes map[string]string) (bool, error) {
-			return true, nil
-		}},
-		&authMock.ZebedeeClientMock{CheckTokenIdentityFunc: func(ctx context.Context, token string) (*dprequest.IdentityResponse, error) {
-			return &dprequest.IdentityResponse{Identifier: "service-user"}, nil
-		}},
+		&authMock.MiddlewareMock{
+			ParseFunc: func(token string) (*permissionsAPISDK.EntityData, error) {
+				return nil, errors.New("not a jwt") // force fallback to service identity
+			},
+		},
+		&authMock.PermissionsCheckerMock{
+			HasPermissionFunc: func(ctx context.Context, entityData permissionsAPISDK.EntityData, permission string, attributes map[string]string) (bool, error) {
+				return true, nil
+			},
+		},
+		&authMock.ZebedeeClientMock{
+			CheckTokenIdentityFunc: func(ctx context.Context, token string) (*dprequest.IdentityResponse, error) {
+				return &dprequest.IdentityResponse{Identifier: "service-user"}, nil
+			},
+		},
 	)
 
 	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", http.NoBody)
@@ -216,16 +226,21 @@ func TestGetFileMetadataAuth_ServiceTokenNotAuthorisedReturns403(t *testing.T) {
 
 	handler := api.HandleGetFileMetadataWithPermissions(
 		getMetadata,
-		&authMock.MiddlewareMock{ParseFunc: func(token string) (*permissionsAPISDK.EntityData, error) {
-			t.Fatalf("jwt parser should not be called for service tokens")
-			return nil, nil
-		}},
-		&authMock.PermissionsCheckerMock{HasPermissionFunc: func(ctx context.Context, entityData permissionsAPISDK.EntityData, permission string, attributes map[string]string) (bool, error) {
-			return false, nil
-		}},
-		&authMock.ZebedeeClientMock{CheckTokenIdentityFunc: func(ctx context.Context, token string) (*dprequest.IdentityResponse, error) {
-			return &dprequest.IdentityResponse{Identifier: "service-user"}, nil
-		}},
+		&authMock.MiddlewareMock{
+			ParseFunc: func(token string) (*permissionsAPISDK.EntityData, error) {
+				return nil, errors.New("not a jwt")
+			},
+		},
+		&authMock.PermissionsCheckerMock{
+			HasPermissionFunc: func(ctx context.Context, entityData permissionsAPISDK.EntityData, permission string, attributes map[string]string) (bool, error) {
+				return false, nil
+			},
+		},
+		&authMock.ZebedeeClientMock{
+			CheckTokenIdentityFunc: func(ctx context.Context, token string) (*dprequest.IdentityResponse, error) {
+				return &dprequest.IdentityResponse{Identifier: "service-user"}, nil
+			},
+		},
 	)
 
 	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", http.NoBody)

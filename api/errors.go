@@ -2,12 +2,22 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/ONSdigital/dp-files-api/store"
 
 	"github.com/go-playground/validator"
+)
+
+var (
+	ErrMissingAuthToken      = errors.New("missing auth token")
+	ErrInvalidAuthToken      = errors.New("invalid auth token")
+	ErrPermissionsDenied     = errors.New("permissions denied")
+	ErrAuthConfigUnavailable = errors.New("authorisation config missing")
+	ErrUnauthorised          = errors.New("unauthorised")
+	ErrForbidden             = errors.New("forbidden")
 )
 
 type JSONError struct {
@@ -26,6 +36,10 @@ func handleError(w http.ResponseWriter, err error) {
 	}
 
 	switch err {
+	case ErrMissingAuthToken, ErrInvalidAuthToken, ErrUnauthorised, errInvalidServiceToken:
+		writeError(w, buildErrors(err, "Unauthorised"), http.StatusUnauthorized)
+	case ErrForbidden, ErrPermissionsDenied:
+		writeError(w, buildErrors(err, "Forbidden"), http.StatusForbidden)
 	case store.ErrDuplicateFile:
 		writeError(w, buildErrors(err, "DuplicateFileError"), http.StatusConflict)
 	case store.ErrCollectionIDAlreadySet:
