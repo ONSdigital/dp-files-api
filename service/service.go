@@ -67,15 +67,10 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		cfg,
 	)
 
-	getSingleFile := api.HandleGetFileMetadata(store.GetFileMetadata)
+	const filesURI = "/files/{path:.*}"
 	if cfg.IsPublishing {
 		permissionsChecker := serviceList.GetPermissionsChecker()
 		zebedeeClient := serviceList.GetZebedeeClient()
-		getSingleFile = api.HandleGetFileMetadataWithPermissions(store.GetFileMetadata, authMiddleware, permissionsChecker, zebedeeClient)
-	}
-
-	const filesURI = "/files/{path:.*}"
-	if cfg.IsPublishing {
 		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload, cfg.MongoConfig.QueryTimeout)
 		getMultipleFiles := api.HandlerGetFilesMetadata(store.GetFilesMetadata)
 		collectionPublished := api.HandleMarkCollectionPublished(store.MarkCollectionPublished)
@@ -91,7 +86,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path("/bundle/{bundleID}").HandlerFunc(authMiddleware.Require("static-files:update", bundlePublished)).Methods(http.MethodPatch)
 		r.Path("/file-events").HandlerFunc(authMiddleware.Require("static-files:read", createFileEvent)).Methods(http.MethodPost)
 		r.Path("/file-events").HandlerFunc(authMiddleware.Require("static-files:read", getFileEvents)).Methods(http.MethodGet)
-		r.Path(filesURI).HandlerFunc(getSingleFile).Methods(http.MethodGet)
+		r.Path(filesURI).HandlerFunc(api.HandleGetFileMetadataWithPermissions(store.GetFileMetadata, authMiddleware, permissionsChecker, zebedeeClient)).Methods(http.MethodGet)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:update", removeFile)).Methods(http.MethodDelete)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:update", updateContentItem)).Methods(http.MethodPut)
 
@@ -115,7 +110,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path("/bundle/{bundle-id}").HandlerFunc(forbiddenHandler).Methods(http.MethodPatch)
 
 		// simple scenario - web mode where users are not authenticated - allowed based on publishing status
-		r.Path(filesURI).HandlerFunc(getSingleFile).Methods(http.MethodGet)
+		r.Path(filesURI).HandlerFunc(api.HandleGetFileMetadata(store.GetFileMetadata)).Methods(http.MethodGet)
 	}
 	r.Path("/health").HandlerFunc(hc.Handler)
 

@@ -10,6 +10,7 @@ import (
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	"github.com/ONSdigital/dp-authorisation/v2/jwt"
 	"github.com/ONSdigital/dp-files-api/files"
+	dprequest "github.com/ONSdigital/dp-net/v3/request"
 	permsdk "github.com/ONSdigital/dp-permissions-api/sdk"
 	"github.com/gorilla/mux"
 )
@@ -56,7 +57,7 @@ func HandleGetFileMetadataWithPermissions(
 			return
 		}
 
-		authToken := strings.TrimPrefix(req.Header.Get("Authorization"), permsdk.BearerPrefix)
+		authToken := strings.TrimPrefix(req.Header.Get(dprequest.AuthHeaderKey), permsdk.BearerPrefix)
 		if authToken == "" {
 			handleError(w, ErrMissingAuthToken)
 			return
