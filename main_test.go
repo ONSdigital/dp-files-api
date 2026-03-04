@@ -27,7 +27,6 @@ type ComponentTest struct {
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
-
 	authorizationFeature := componenttest.NewAuthorizationFeature()
 	if !*loggingFlag {
 		buf := bytes.NewBufferString("")
@@ -60,18 +59,14 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	authorizationFeature.RegisterSteps(ctx)
 }
 
-func (f *ComponentTest) InitializeTestSuite(ctx *godog.TestSuiteContext) {
-
-}
-
 func TestComponent(t *testing.T) {
 	if *componentFlag {
 		f := &ComponentTest{}
 
 		status := godog.TestSuite{
-			Name:                 "feature_tests",
-			ScenarioInitializer:  f.InitializeScenario,
-			TestSuiteInitializer: f.InitializeTestSuite,
+			Name:                "feature_tests",
+			ScenarioInitializer: f.InitializeScenario,
+			//TestSuiteInitializer: f.InitializeTestSuite,
 			Options: &godog.Options{
 				Output: colors.Colored(os.Stdout),
 				Format: "pretty",

@@ -14,6 +14,10 @@ import (
 	"github.com/ONSdigital/log.go/v2/log"
 )
 
+const (
+	logServiceMessage = "user/service does not have required permission"
+)
+
 type CreateFileEvent func(ctx context.Context, event *files.FileEvent) error
 
 func HandlerCreateFileEvent(createFileEvent CreateFileEvent, authMiddleware auth.Middleware, idClient *clientsidentity.Client, permissionsChecker auth.PermissionsChecker) http.HandlerFunc {
@@ -64,7 +68,6 @@ func HandlerCreateFileEvent(createFileEvent CreateFileEvent, authMiddleware auth
 		logData["entity_data"] = authEntityData
 
 		if checkUserPermission(req, logData, "static-files:read", permissionAttrs, permissionsChecker, authEntityData.EntityData) {
-
 			if err := createFileEvent(req.Context(), &event); err != nil {
 				handleError(w, err)
 				return
@@ -80,7 +83,7 @@ func HandlerCreateFileEvent(createFileEvent CreateFileEvent, authMiddleware auth
 
 			log.Info(req.Context(), "CreateFileEvent endpoint: create file event request successful", logData)
 		} else {
-			logData["message"] = "user/service does not have required permission"
+			logData["message"] = logServiceMessage
 
 			if authEntityData.IsServiceAuth {
 				log.Info(req.Context(), "authorisation failed: request has no permission", log.Classification(log.ProtectiveMonitoring), log.Auth(log.SERVICE, authEntityData.EntityData.UserID), logData)

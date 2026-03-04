@@ -45,7 +45,6 @@ type Service struct {
 	MongoClient    mongo.Client
 	KafkaProducer  kafka.IProducer
 	AuthMiddleware auth.Middleware
-	identityClient *clientsidentity.Client
 	S3Client       aws.S3Clienter
 }
 

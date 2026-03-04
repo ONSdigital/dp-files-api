@@ -142,7 +142,6 @@ func getPermissionsBundle() *permissionsAPISDK.Bundle {
 			},
 		},
 	}
-
 }
 
 func setupFakePermissionsAPI() *authorisationtest.FakePermissionsAPI {

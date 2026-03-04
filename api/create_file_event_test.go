@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ONSdigital/dp-api-clients-go/v2/identity"
 	clientsidentity "github.com/ONSdigital/dp-api-clients-go/v2/identity"
 	"github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	authMock "github.com/ONSdigital/dp-authorisation/v2/authorisation/mock"
@@ -20,7 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setUpAuthServices() (authorisation.Middleware, *identity.Client, authorisation.PermissionsChecker) {
+func setUpAuthServices() (authorisation.Middleware, *clientsidentity.Client, authorisation.PermissionsChecker) {
 	cfg, _ := config.Get()
 
 	testIdentityClient := clientsidentity.New(cfg.ZebedeeURL)
@@ -43,7 +42,6 @@ func setUpAuthServices() (authorisation.Middleware, *identity.Client, authorisat
 		},
 	}
 	return authorisationMock, testIdentityClient, permissionsChecker
-
 }
 
 func TestCreateFileEventWithBadJSON(t *testing.T) {

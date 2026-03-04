@@ -77,44 +77,19 @@ func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {
 
 func (c *FilesAPIComponent) iAmNotAnAuthorisedUser() error {
 	c.isAuthorised = false
-	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer test-valid-jwt-token")
-}
-
-func (c *FilesAPIComponent) iUseAValidJWTToken() error {
-	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer test-valid-jwt-token")
+	return nil
 }
 
 func (c *FilesAPIComponent) iUseAnInvalidJWTToken() error {
-	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer test-invalid-jwt-token")
+	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer test.invalid-jwt-token")
 }
 
 func (c *FilesAPIComponent) iUseAValidServiceToken() error {
 	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer valid-service")
-}
-
-func (c *FilesAPIComponent) iUseAnInvalidServiceToken() error {
-	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer invalid-service")
-}
-
-func (c *FilesAPIComponent) iHaveNoAuthToken() error {
-	return c.APIFeature.IAmNotAuthorised()
-}
-
-func (c *FilesAPIComponent) theDatasetEditionPermissionAllows(datasetEdition string) error {
-	c.allowedDatasetEdition = datasetEdition
-	return nil
 }
 
 func (c *FilesAPIComponent) iRegisterFile(payload *godog.DocString) error {
 	return c.APIFeature.IPostToWithBody("/files", payload)
-}
-
-func (c *FilesAPIComponent) iUseAValidServiceToken() error {
-	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer valid-service")
-}
-
-func (c *FilesAPIComponent) iUseAnInvalidJWTToken() error {
-	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer test.-invalid-jwt-token")
 }
 
 func (c *FilesAPIComponent) viewerAllowedJWTToken() error {

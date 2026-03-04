@@ -79,7 +79,6 @@ func HandleGetFileMetadataWithAuth(getMetadata GetFileMetadata, authMiddleware a
 			writeError(w, buildGenericError("Forbidden", "the request was not authorised - check token and user's permissions"), http.StatusForbidden)
 			return
 		}
-
 	}
 }
 

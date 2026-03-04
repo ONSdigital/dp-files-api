@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	clientsidentity "github.com/ONSdigital/dp-api-clients-go/v2/identity"
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	"github.com/ONSdigital/dp-files-api/aws"
 	"github.com/ONSdigital/dp-files-api/clock"
@@ -35,7 +34,6 @@ type ExternalServiceList struct {
 	httpServer     files.HTTPServer
 	healthChecker  health.Checker
 	authMiddleware auth.Middleware
-	identityClient *clientsidentity.Client
 	kafkaProducer  kafka.IProducer
 	s3Client       aws.S3Clienter
 	router         *mux.Router
@@ -192,14 +190,6 @@ func (e *ExternalServiceList) GetAuthMiddleware() auth.Middleware {
 	return e.authMiddleware
 }
 
-func (e *ExternalServiceList) GetPermissionsChecker() auth.PermissionsChecker {
-	return e.permissionsChecker
-}
-
-func (e *ExternalServiceList) GetZebedeeClient() auth.ZebedeeClient {
-	return e.zebedeeClient
-}
-
 func (e *ExternalServiceList) GetS3Clienter() aws.S3Clienter {
 	return e.s3Client
 }
@@ -222,12 +212,6 @@ func (e *ExternalServiceList) Shutdown(ctx context.Context) error {
 		if err := e.authMiddleware.Close(ctx); err != nil {
 			shutdownErr = true
 			log.Error(ctx, "failed to shutdown Authorization Middleware", err)
-		}
-	}
-	if e.permissionsChecker != nil {
-		if err := e.permissionsChecker.Close(ctx); err != nil {
-			shutdownErr = true
-			log.Error(ctx, "failed to shutdown permissions checker", err)
 		}
 	}
 

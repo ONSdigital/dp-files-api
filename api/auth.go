@@ -8,7 +8,6 @@ import (
 	clientsidentity "github.com/ONSdigital/dp-api-clients-go/v2/identity"
 	"github.com/ONSdigital/log.go/v2/log"
 
-	"github.com/ONSdigital/dp-permissions-api/sdk"
 	permissionsAPISDK "github.com/ONSdigital/dp-permissions-api/sdk"
 
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
@@ -42,7 +41,7 @@ func getAuthEntityData(ctx context.Context, authMiddleware auth.Middleware, idCl
 			log.Error(ctx, "authorisation failed: service token issue", err, log.Classification(log.ProtectiveMonitoring), log.Auth(log.SERVICE, ""), logData)
 			return nil, err
 		} else {
-			entityData = &sdk.EntityData{UserID: resp.Identifier}
+			entityData = &permissionsAPISDK.EntityData{UserID: resp.Identifier}
 			isServiceAuth = true
 		}
 	}
@@ -72,5 +71,4 @@ func checkUserPermission(r *http.Request, logData log.Data, permission string, a
 	logData["authenticated"] = authorised
 
 	return authorised
-
 }

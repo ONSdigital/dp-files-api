@@ -40,7 +40,6 @@ func (e *fakeServiceContainer) GetAuthMiddleware() authorisation.Middleware {
 	middleware, _ := authorisation.NewMiddlewareFromConfig(ctx, &cfg.AuthConfig, cfg.JWTVerificationPublicKeys)
 
 	return middleware
-
 }
 
 func (e *fakeServiceContainer) GetHTTPServer() files.HTTPServer {
