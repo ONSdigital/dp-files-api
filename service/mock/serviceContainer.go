@@ -340,3 +340,13 @@ func (mock *ServiceContainerMock) ShutdownCalls() []struct {
 	mock.lockShutdown.RUnlock()
 	return calls
 }
+
+// GetPermissionsChecker returns nil unless regenerated with moq including this method.
+func (mock *ServiceContainerMock) GetPermissionsChecker() auth.PermissionsChecker {
+	return nil
+}
+
+// GetZebedeeClient returns nil unless regenerated with moq including this method.
+func (mock *ServiceContainerMock) GetZebedeeClient() auth.ZebedeeClient {
+	return nil
+}

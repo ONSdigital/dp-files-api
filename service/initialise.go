@@ -192,6 +192,14 @@ func (e *ExternalServiceList) GetAuthMiddleware() auth.Middleware {
 	return e.authMiddleware
 }
 
+func (e *ExternalServiceList) GetPermissionsChecker() auth.PermissionsChecker {
+	return e.permissionsChecker
+}
+
+func (e *ExternalServiceList) GetZebedeeClient() auth.ZebedeeClient {
+	return e.zebedeeClient
+}
+
 func (e *ExternalServiceList) GetS3Clienter() aws.S3Clienter {
 	return e.s3Client
 }
@@ -210,9 +218,17 @@ func (e *ExternalServiceList) Shutdown(ctx context.Context) error {
 		log.Error(ctx, "failed to shutdown HTTP server", err)
 	}
 
-	if err := e.authMiddleware.Close(ctx); err != nil {
-		shutdownErr = true
-		log.Error(ctx, "failed to shutdown Authorization Middleware", err)
+	if e.authMiddleware != nil {
+		if err := e.authMiddleware.Close(ctx); err != nil {
+			shutdownErr = true
+			log.Error(ctx, "failed to shutdown Authorization Middleware", err)
+		}
+	}
+	if e.permissionsChecker != nil {
+		if err := e.permissionsChecker.Close(ctx); err != nil {
+			shutdownErr = true
+			log.Error(ctx, "failed to shutdown permissions checker", err)
+		}
 	}
 
 	if shutdownErr {
