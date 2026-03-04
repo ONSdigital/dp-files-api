@@ -1,21 +1,23 @@
 Feature: List Files by Collection ID
 
   Scenario: The one where there are no files in the collection
-    Given I am an authorised user
+    Given I am identified as "service"
+    And I use a service auth token "test-auth-token"
     When I get files in the collection "1234-asdfg-54321-qwerty"
     Then I should receive the following JSON response with status "200":
     """
-{
-  "count": 0,
-  "limit": 0,
-  "offset": 0,
-  "total_count": 0,
-  "items": []
-  }
-  """
+    {
+    "count": 0,
+    "limit": 0,
+    "offset": 0,
+    "total_count": 0,
+    "items": []
+    }
+    """
 
   Scenario: The one where there are some file in the collection
-    Given I am an authorised user
+    Given I am identified as "service"
+    And I use a service auth token "test-auth-token"
     Given the file upload "images/meme.jpg" has been completed with:
       | IsPublishable     | true                                                                      |
       | CollectionID      | 1234-asdfg-54321-qwerty                                                   |
@@ -45,41 +47,41 @@ Feature: List Files by Collection ID
     When I get files in the collection "1234-asdfg-54321-qwerty"
     Then I should receive the following JSON response with status "200":
     """
-{
-  "count": 2,
-  "limit": 2,
-  "offset": 0,
-  "total_count": 2,
-  "items": [
     {
-      "path": "images/meme.jpg",
-      "is_publishable": true,
-      "collection_id": "1234-asdfg-54321-qwerty",
-      "title": "The latest Meme",
-      "size_in_bytes": 14794,
-      "type": "image/jpeg",
-      "licence": "OGL v3",
-      "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
-      "state": "UPLOADED",
-      "etag": "123456789"
-    },
-    {
-      "path": "images/other-meme.jpg",
-      "is_publishable": true,
-      "collection_id": "1234-asdfg-54321-qwerty",
-      "title": "The latest Meme",
-      "size_in_bytes": 14794,
-      "type": "image/jpeg",
-      "licence": "OGL v3",
-      "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
-      "state": "UPLOADED",
-      "etag": "123456789"
+      "count": 2,
+      "limit": 2,
+      "offset": 0,
+      "total_count": 2,
+      "items": [
+        {
+          "path": "images/meme.jpg",
+          "is_publishable": true,
+          "collection_id": "1234-asdfg-54321-qwerty",
+          "title": "The latest Meme",
+          "size_in_bytes": 14794,
+          "type": "image/jpeg",
+          "licence": "OGL v3",
+          "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+          "state": "UPLOADED",
+          "etag": "123456789"
+        },
+        {
+          "path": "images/other-meme.jpg",
+          "is_publishable": true,
+          "collection_id": "1234-asdfg-54321-qwerty",
+          "title": "The latest Meme",
+          "size_in_bytes": 14794,
+          "type": "image/jpeg",
+          "licence": "OGL v3",
+          "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+          "state": "UPLOADED",
+          "etag": "123456789"
+        }
+      ]
     }
-  ]
-}
     """
 
   Scenario: The one where the user is not authorised to view a list of files
-    Given I am not an authorised user
+    Given I am not identified
     When I get files in the collection "1234-asdfg-54321-qwerty"
-    Then the HTTP status code should be "403"
+    Then the HTTP status code should be "401"

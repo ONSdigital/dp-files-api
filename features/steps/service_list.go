@@ -3,14 +3,11 @@ package steps
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
 
-	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
-	authMock "github.com/ONSdigital/dp-authorisation/v2/authorisation/mock"
-
+	"github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	"github.com/ONSdigital/dp-files-api/aws"
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/files"
@@ -30,26 +27,20 @@ import (
 )
 
 type fakeServiceContainer struct {
-	server       *dphttp.Server
-	r            *mux.Router
-	isAuthorised bool
+	server             *dphttp.Server
+	r                  *mux.Router
+	isAuthorised       bool
+	isViewerAllowed    bool
+	isViewerNotAllowed bool
 }
 
-func (e *fakeServiceContainer) GetAuthMiddleware() auth.Middleware {
-	return &authMock.MiddlewareMock{
-		HealthCheckFunc:         func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-		CloseFunc:               func(ctx context.Context) error { return nil },
-		IdentityHealthCheckFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-		RequireFunc: func(permission string, handlerFunc http.HandlerFunc) http.HandlerFunc {
-			if e.isAuthorised {
-				return handlerFunc
-			} else {
-				return func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusForbidden)
-				}
-			}
-		},
-	}
+func (e *fakeServiceContainer) GetAuthMiddleware() authorisation.Middleware {
+	ctx := context.Background()
+	cfg, _ := config.Get()
+	middleware, _ := authorisation.NewMiddlewareFromConfig(ctx, &cfg.AuthConfig, cfg.JWTVerificationPublicKeys)
+
+	return middleware
+
 }
 
 func (e *fakeServiceContainer) GetHTTPServer() files.HTTPServer {

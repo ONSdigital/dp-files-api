@@ -4,11 +4,11 @@ import "time"
 
 // FileEvent represents a file access event for the audit log
 type FileEvent struct {
-	CreatedAt   *time.Time    `json:"created_at,omitempty" bson:"created_at,omitempty"`
-	RequestedBy *RequestedBy  `json:"requested_by" bson:"requested_by"`
-	Action      string        `json:"action" bson:"action"`
-	Resource    string        `json:"resource" bson:"resource"`
-	File        *FileMetaData `json:"file" bson:"file"`
+	CreatedAt   *time.Time                `json:"created_at,omitempty" bson:"created_at,omitempty"`
+	RequestedBy *RequestedBy              `json:"requested_by" bson:"requested_by"`
+	Action      string                    `json:"action" bson:"action"`
+	Resource    string                    `json:"resource" bson:"resource"`
+	File        *StoredRegisteredMetaData `json:"file" bson:"file"`
 }
 
 // RequestedBy represents the user who made the request

@@ -1,7 +1,8 @@
 Feature: Publishing file to Kafka from a collection ID
 
-  Scenario: Publishing a collection with a multiple file associated with it
-    Given I am an authorised user
+  Scenario: Publishing a collection which has multiple files associated with it
+    Given I am identified as "service"
+    And I use a service auth token "test-auth-token"
     And the file upload "images/meme.jpg" has been completed with:
       | IsPublishable     | true                                                                      |
       | CollectionID      | 1234-asdfg-54321-qwerty                                                   |
@@ -73,7 +74,8 @@ Feature: Publishing file to Kafka from a collection ID
       | sizeInBytes | 14794                 |
 
   Scenario: Failing to publish a collection with a single file that has not completely uploaded
-    Given I am an authorised user
+    Given I am identified as "service"
+    And I use a service auth token "test-auth-token"
     And the file upload "images/meme.jpg" has been registered with:
       | IsPublishable | true                                                                      |
       | CollectionID  | 1234-asdfg-54321-qwerty                                                   |
@@ -89,7 +91,8 @@ Feature: Publishing file to Kafka from a collection ID
     Then the HTTP status code should be "409"
 
   Scenario: Failing to publish a collection with a multiple files one of which has not completely uploaded
-    Given I am an authorised user
+    Given I am identified as "service"
+    And I use a service auth token "test-auth-token"
     And the file upload "images/meme.jpg" has been registered with:
       | IsPublishable | true                                                                      |
       | CollectionID  | 1234-asdfg-54321-qwerty                                                   |
@@ -131,13 +134,24 @@ Feature: Publishing file to Kafka from a collection ID
       | Etag              | 123456789                                                                 |
       | State             | UPLOADED                                                                  |
 
-  Scenario: Publishing file for a collection that does not exists
-    Given I am an authorised user
+  Scenario: Publishing file for a collection - service user
+    Given I am identified as "service"
+    And I use a service auth token "test-auth-token"
     When I publish the collection "1234-asdfg-54321-qwerty"
     Then the HTTP status code should be "201"
 
+  Scenario: Publishing file for a collection - publisher user
+    Given I am a publisher user
+    When I publish the collection "1234-asdfg-54321-qwerty"
+    Then the HTTP status code should be "201"
+
+  Scenario: Publishing file for a collection - user forbidden
+    Given I am a viewer user without permission
+    When I publish the collection "1234-asdfg-54321-qwerty"
+    Then the HTTP status code should be "403"
+
   Scenario: The one where the user is not authorised to publish a collection
-    Given I am not an authorised user
+    Given I am not identified
     And the file upload "images/meme.jpg" has been completed with:
       | IsPublishable     | true                                                                      |
       | CollectionID      | 1234-asdfg-54321-qwerty                                                   |
@@ -152,4 +166,4 @@ Feature: Publishing file to Kafka from a collection ID
       | State             | UPLOADED                                                                  |
       | Etag              | 123456789                                                                 |
     When I publish the collection "1234-asdfg-54321-qwerty"
-    Then the HTTP status code should be "403"
+    Then the HTTP status code should be "401"

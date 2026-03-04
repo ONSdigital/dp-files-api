@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	clientsidentity "github.com/ONSdigital/dp-api-clients-go/v2/identity"
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	"github.com/ONSdigital/dp-files-api/aws"
 	"github.com/ONSdigital/dp-files-api/clock"
@@ -34,6 +35,7 @@ type ExternalServiceList struct {
 	httpServer     files.HTTPServer
 	healthChecker  health.Checker
 	authMiddleware auth.Middleware
+	identityClient *clientsidentity.Client
 	kafkaProducer  kafka.IProducer
 	s3Client       aws.S3Clienter
 	router         *mux.Router

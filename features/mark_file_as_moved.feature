@@ -5,7 +5,8 @@ Feature: Mark files as moved
   So that download services know it is now available for redirection to S3
 
   Scenario: state change to moved fails if etags dont match
-    Given I am an authorised user
+    Given I am identified as "service"
+    And I use a service auth token "test-auth-token"
     And the file upload "index.html" has been published with:
       | Path              | index.html                                                                |
       | IsPublishable     | true                                                                      |
@@ -25,7 +26,8 @@ Feature: Mark files as moved
     Then the HTTP status code should be "409"
 
   Scenario: The one where marking the state as moved is successful
-    Given I am an authorised user
+    Given I am identified as "service"
+    And I use a service auth token "test-auth-token"
     And the file upload "index.html" has been published with:
       | Path              | index.html                                                                |
       | IsPublishable     | true                                                                      |
@@ -61,7 +63,8 @@ Feature: Mark files as moved
       | State             | MOVED                                                                 |
 
   Scenario: The one where the file is not in PUBLISHED state
-    Given I am an authorised user
+    Given I am identified as "service"
+    And I use a service auth token "test-auth-token"
     And the file upload "images/meme.jpg" has been registered with:
       | IsPublishable | true                                                                      |
       | CollectionID  | 1234-asdfg-54321-qwerty                                                   |
@@ -77,12 +80,13 @@ Feature: Mark files as moved
     Then the HTTP status code should be "409"
 
   Scenario: The one where the file does not exist
-    Given I am an authorised user
+    Given I am identified as "service"
+    And I use a service auth token "test-auth-token"
     When the file "images/not-found.jpg" is marked as moved with etag "987654321"
     Then the HTTP status code should be "404"
 
   Scenario: The one where the user is not authorised to mark a file as moved
-    Given I am not an authorised user
+    Given I am not identified
     And the file upload "images/meme.jpg" has been published with:
       | Path              | images/meme.jpg                                                           |
       | IsPublishable     | true                                                                      |
@@ -99,6 +103,6 @@ Feature: Mark files as moved
       | Etag              | 123456789                                                                 |
       | State             | PUBLISHED                                                                 |
     When the file "images/meme.jpg" is marked as moved with etag "987654321"
-    Then the HTTP status code should be "403"
+    Then the HTTP status code should be "401"
 
 

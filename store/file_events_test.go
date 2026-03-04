@@ -27,7 +27,7 @@ func (suite *StoreSuite) TestCreateFileEventSuccess() {
 		RequestedBy: &files.RequestedBy{ID: "user123"},
 		Action:      files.ActionRead,
 		Resource:    "/downloads/file.csv",
-		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
+		File:        &files.StoredRegisteredMetaData{Path: "file.csv", Type: "csv"},
 	}
 
 	err := subject.CreateFileEvent(suite.defaultContext, event)
@@ -56,7 +56,7 @@ func (suite *StoreSuite) TestCreateFileEventInsertError() {
 		RequestedBy: &files.RequestedBy{ID: "user123"},
 		Action:      files.ActionRead,
 		Resource:    "/downloads/file.csv",
-		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
+		File:        &files.StoredRegisteredMetaData{Path: "file.csv", Type: "csv"},
 	}
 
 	err := subject.CreateFileEvent(suite.defaultContext, event)
@@ -85,7 +85,7 @@ func (suite *StoreSuite) TestCreateFileEventSetsCreatedAtTimestamp() {
 		RequestedBy: &files.RequestedBy{ID: "user123", Email: "user@example.com"},
 		Action:      files.ActionCreate,
 		Resource:    "/files/test.csv",
-		File:        &files.FileMetaData{Path: "test.csv", Type: "text/csv"},
+		File:        &files.StoredRegisteredMetaData{Path: "test.csv", Type: "text/csv"},
 	}
 
 	err := subject.CreateFileEvent(suite.defaultContext, event)
@@ -112,7 +112,7 @@ func (suite *StoreSuite) TestCreateFileEventPreservesEventData() {
 		RequestedBy: &files.RequestedBy{ID: "user456", Email: "test@example.com"},
 		Action:      files.ActionDelete,
 		Resource:    "/files/old-file.xls",
-		File:        &files.FileMetaData{Path: "old-file.xls", Type: "application/xls"},
+		File:        &files.StoredRegisteredMetaData{Path: "old-file.xls", Type: "application/xls"},
 	}
 
 	err := subject.CreateFileEvent(suite.defaultContext, event)
@@ -137,7 +137,7 @@ func (suite *StoreSuite) TestGetFileEventsSuccess() {
 					RequestedBy: &files.RequestedBy{ID: "user123"},
 					Action:      files.ActionRead,
 					Resource:    "/downloads/file.csv",
-					File:        &files.FileMetaData{Path: "file.csv"},
+					File:        &files.StoredRegisteredMetaData{Path: "file.csv"},
 				},
 			}
 			return 1, nil
@@ -326,7 +326,7 @@ func (suite *StoreSuite) TestGetFileEventsWithAllFilters() {
 					RequestedBy: &files.RequestedBy{ID: "user123"},
 					Action:      files.ActionRead,
 					Resource:    "/downloads/data.csv",
-					File:        &files.FileMetaData{Path: "data.csv"},
+					File:        &files.StoredRegisteredMetaData{Path: "data.csv"},
 				},
 			}
 			return 1, nil

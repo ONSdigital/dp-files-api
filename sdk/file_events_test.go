@@ -19,7 +19,7 @@ var (
 		RequestedBy: &files.RequestedBy{ID: "user123"},
 		Action:      files.ActionRead,
 		Resource:    "/downloads/file.csv",
-		File:        &files.FileMetaData{Path: "file.csv", Type: "csv"},
+		File:        &files.StoredRegisteredMetaData{Path: "file.csv", Type: "csv"},
 	}
 )
 

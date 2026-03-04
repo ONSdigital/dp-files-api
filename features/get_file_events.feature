@@ -1,10 +1,8 @@
 Feature: Getting file events
 
-  Background:
-    Given I am an authorised user
-
   Scenario: Successfully get all file events with full JSON response
-    Given the following file events exist in the database:
+    Given I am an admin user
+    And the following file events exist in the database:
       | RequestedByID | Action | Resource                  | FilePath  |
       | user123       | READ   | /downloads/file1.csv      | file1.csv |
       | user456       | READ   | /downloads/file2.csv      | file2.csv |
@@ -29,10 +27,12 @@ Feature: Getting file events
           "action": "READ",
           "resource": "/downloads/file1.csv",
           "file": {
+            "etag":"",
             "path": "file1.csv",
             "is_publishable": true,
             "title": "Test File",
             "size_in_bytes": 1024,
+            "state":"",
             "type": "text/csv",
             "licence": "OGL v3",
             "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
@@ -47,10 +47,12 @@ Feature: Getting file events
           "action": "READ",
           "resource": "/downloads/file2.csv",
           "file": {
+            "etag":"",
             "path": "file2.csv",
             "is_publishable": true,
             "title": "Test File",
             "size_in_bytes": 1024,
+            "state":"",
             "type": "text/csv",
             "licence": "OGL v3",
             "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
@@ -65,7 +67,9 @@ Feature: Getting file events
           "action": "CREATE",
           "resource": "/files/file3.csv",
           "file": {
+            "etag":"",
             "path": "file3.csv",
+            "state":"",
             "is_publishable": true,
             "title": "Test File",
             "size_in_bytes": 1024,
@@ -83,7 +87,9 @@ Feature: Getting file events
           "action": "READ",
           "resource": "/downloads/file1.csv",
           "file": {
+            "etag":"",
             "path": "file1.csv",
+            "state":"",
             "is_publishable": true,
             "title": "Test File",
             "size_in_bytes": 1024,
@@ -101,7 +107,9 @@ Feature: Getting file events
           "action": "DELETE",
           "resource": "/files/file2.csv",
           "file": {
+            "etag":"",
             "path": "file2.csv",
+            "state":"",
             "is_publishable": true,
             "title": "Test File",
             "size_in_bytes": 1024,
@@ -115,7 +123,8 @@ Feature: Getting file events
     """
 
   Scenario: Get file events with pagination and full JSON response
-    Given the following file events exist in the database:
+    Given I am an admin user
+    And the following file events exist in the database:
       | RequestedByID | Action | Resource                  | FilePath  |
       | user123       | READ   | /downloads/file1.csv      | file1.csv |
       | user456       | READ   | /downloads/file2.csv      | file2.csv |
@@ -140,6 +149,8 @@ Feature: Getting file events
           "action": "READ",
           "resource": "/downloads/file2.csv",
           "file": {
+            "etag":"",
+            "state":"",
             "path": "file2.csv",
             "is_publishable": true,
             "title": "Test File",
@@ -158,6 +169,8 @@ Feature: Getting file events
           "action": "CREATE",
           "resource": "/files/file3.csv",
           "file": {
+            "etag":"",
+            "state":"",
             "path": "file3.csv",
             "is_publishable": true,
             "title": "Test File",
@@ -172,7 +185,8 @@ Feature: Getting file events
     """
 
   Scenario: Get file events filtered by path with full JSON response
-    Given the following file events exist in the database:
+    Given I am an admin user
+    And the following file events exist in the database:
       | RequestedByID | Action | Resource                  | FilePath  |
       | user123       | READ   | /downloads/file1.csv      | file1.csv |
       | user456       | READ   | /downloads/file2.csv      | file2.csv |
@@ -195,6 +209,8 @@ Feature: Getting file events
           "action": "READ",
           "resource": "/downloads/file1.csv",
           "file": {
+            "etag":"",
+            "state":"",
             "path": "file1.csv",
             "is_publishable": true,
             "title": "Test File",
@@ -213,7 +229,9 @@ Feature: Getting file events
           "action": "CREATE",
           "resource": "/files/file1.csv",
           "file": {
+            "etag":"",
             "path": "file1.csv",
+            "state":"",
             "is_publishable": true,
             "title": "Test File",
             "size_in_bytes": 1024,
@@ -227,7 +245,8 @@ Feature: Getting file events
     """
 
   Scenario: Get file events with date filter
-    Given the following file events exist in the database:
+    Given I am an admin user
+    And the following file events exist in the database:
       | RequestedByID | Action | Resource                  | FilePath  |
       | user123       | READ   | /downloads/file1.csv      | file1.csv |
       | user456       | CREATE | /files/file2.csv          | file2.csv |
@@ -236,18 +255,20 @@ Feature: Getting file events
     And the response should contain at least "1" file event
 
   Scenario: Cannot get file events when not authorised
-    Given I am not an authorised user
+    Given I am not identified
     When I GET "/file-events"
-    Then the HTTP status code should be "403"
+    Then the HTTP status code should be "401"
 
   Scenario: Return 404 when filtering by non-existent path
-    Given the following file events exist in the database:
+    Given I am an admin user
+    And the following file events exist in the database:
       | RequestedByID | Action | Resource                  | FilePath  |
       | user123       | READ   | /downloads/file1.csv      | file1.csv |
     When I GET "/file-events?path=nonexistent-file.csv"
     Then the HTTP status code should be "404"
 
   Scenario: Return 400 for invalid limit parameter
+    Given I am an admin user
     When I GET "/file-events?limit=abc"
     Then I should receive the following JSON response with status "400":
     """
@@ -262,6 +283,7 @@ Feature: Getting file events
     """
 
   Scenario: Return 400 for invalid offset parameter
+    Given I am an admin user
     When I GET "/file-events?offset=-5"
     Then I should receive the following JSON response with status "400":
     """
@@ -276,6 +298,7 @@ Feature: Getting file events
     """
 
   Scenario: Return 400 for invalid date format
+    Given I am an admin user
     When I GET "/file-events?after=not-a-date"
     Then I should receive the following JSON response with status "400":
     """
@@ -290,6 +313,7 @@ Feature: Getting file events
     """
 
   Scenario: Return 400 for limit exceeding maximum
+    Given I am an admin user
     When I GET "/file-events?limit=2000"
     Then I should receive the following JSON response with status "400":
     """
@@ -304,7 +328,8 @@ Feature: Getting file events
     """
 
   Scenario: Get empty results when no events match filters
-    Given the following file events exist in the database:
+    Given I am an admin user
+    And the following file events exist in the database:
       | RequestedByID | Action | Resource                  | FilePath  |
       | user123       | READ   | /downloads/file1.csv      | file1.csv |
     When I GET "/file-events?path=file1.csv&after=2050-01-01T00:00:00Z"

@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"time"
 
+	clientsidentity "github.com/ONSdigital/dp-api-clients-go/v2/identity"
 	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
-
+	"github.com/ONSdigital/dp-authorisation/v2/permissions"
 	"github.com/ONSdigital/dp-files-api/aws"
 	"github.com/ONSdigital/dp-files-api/config"
 	"github.com/ONSdigital/dp-files-api/store"
@@ -44,6 +45,7 @@ type Service struct {
 	MongoClient    mongo.Client
 	KafkaProducer  kafka.IProducer
 	AuthMiddleware auth.Middleware
+	identityClient *clientsidentity.Client
 	S3Client       aws.S3Clienter
 }
 
@@ -54,6 +56,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	mongoClient := serviceList.GetMongoDB()
 	kafkaProducer := serviceList.GetKafkaProducer()
 	hc := serviceList.GetHealthCheck()
+	identityClient := clientsidentity.New(cfg.ZebedeeURL)
 	authMiddleware := serviceList.GetAuthMiddleware()
 	s3Client := serviceList.GetS3Clienter()
 	store := store.NewStore(
@@ -67,26 +70,32 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		cfg,
 	)
 
-	getSingleFile := api.HandleGetFileMetadata(store.GetFileMetadata)
-
 	const filesURI = "/files/{path:.*}"
 	if cfg.IsPublishing {
+		permissionChecker := permissions.NewChecker(
+			ctx,
+			cfg.AuthConfig.PermissionsAPIURL,
+			cfg.AuthConfig.PermissionsCacheUpdateInterval,
+			cfg.AuthConfig.PermissionsMaxCacheTime,
+		)
+
 		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload, cfg.MongoConfig.QueryTimeout)
 		getMultipleFiles := api.HandlerGetFilesMetadata(store.GetFilesMetadata)
 		collectionPublished := api.HandleMarkCollectionPublished(store.MarkCollectionPublished)
 		bundlePublished := api.HandleMarkBundlePublished(store.MarkBundlePublished)
 		removeFile := api.HandleRemoveFile(store.RemoveFile)
-		createFileEvent := api.HandlerCreateFileEvent(store.CreateFileEvent)
+		createFileEvent := api.HandlerCreateFileEvent(store.CreateFileEvent, authMiddleware, identityClient, permissionChecker)
 		getFileEvents := api.HandlerGetFileEvents(store.GetFileEvents)
 		updateContentItem := api.HandlerUpdateContentItem(store.UpdateContentItem)
+		getSingleFile := api.HandleGetFileMetadataWithAuth(store.GetFileMetadata, authMiddleware, identityClient, permissionChecker)
 
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:create", register)).Methods(http.MethodPost)
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:read", getMultipleFiles)).Methods(http.MethodGet)
 		r.Path("/collection/{collectionID}").HandlerFunc(authMiddleware.Require("static-files:update", collectionPublished)).Methods(http.MethodPatch)
 		r.Path("/bundle/{bundleID}").HandlerFunc(authMiddleware.Require("static-files:update", bundlePublished)).Methods(http.MethodPatch)
-		r.Path("/file-events").HandlerFunc(authMiddleware.Require("static-files:read", createFileEvent)).Methods(http.MethodPost)
+		r.Path("/file-events").HandlerFunc(createFileEvent).Methods(http.MethodPost)
 		r.Path("/file-events").HandlerFunc(authMiddleware.Require("static-files:read", getFileEvents)).Methods(http.MethodGet)
-		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:read", getSingleFile)).Methods(http.MethodGet)
+		r.Path(filesURI).HandlerFunc(getSingleFile).Methods(http.MethodGet)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:update", removeFile)).Methods(http.MethodDelete)
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:update", updateContentItem)).Methods(http.MethodPut)
 
@@ -110,7 +119,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path("/bundle/{bundle-id}").HandlerFunc(forbiddenHandler).Methods(http.MethodPatch)
 
 		// simple scenario - web mode where users are not authenticated - allowed based on publishing status
-		r.Path(filesURI).HandlerFunc(getSingleFile).Methods(http.MethodGet)
+		r.Path(filesURI).HandlerFunc(api.HandleGetFileMetadata(store.GetFileMetadata)).Methods(http.MethodGet)
 	}
 	r.Path("/health").HandlerFunc(hc.Handler)
 

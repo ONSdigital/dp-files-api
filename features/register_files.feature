@@ -1,7 +1,7 @@
 Feature: Register new file upload
 
   Scenario: Register that a collection upload has started
-    Given I am an authorised user
+    Given I am a publisher user
     When the file upload is registered with payload:
         """
         {
@@ -30,7 +30,7 @@ Feature: Register new file upload
       | State         | CREATED                                                                   |
   
   Scenario: Register that a bundle upload has started
-    Given I am an authorised user
+    Given I am a publisher user
     When the file upload is registered with payload:
         """
         {
@@ -58,8 +58,8 @@ Feature: Register new file upload
       | LastModified  | 2021-10-19T09:30:30Z                                                      |
       | State         | CREATED                                                                   |
 
-  Scenario: Attempting to register a file with a path that is already register
-    Given I am an authorised user
+  Scenario: Attempting to register a file with a path that is already registered
+    Given I am a publisher user
     And the file upload "images/old-meme.jpg" has been registered
     When the file upload is registered with payload:
         """
@@ -76,8 +76,25 @@ Feature: Register new file upload
         """
     Then the HTTP status code should be "409"
 
-  Scenario: Attempting to register a file with a path that is already register
-    Given I am not an authorised user
+  Scenario: Attempting to register a file - user unauthorised
+    Given I am not identified
+    When the file upload is registered with payload:
+        """
+        {
+          "path": "images/meme.jpg",
+          "is_publishable": true,
+          "collection_id": "1234-asdfg-54321-qwerty",
+          "title": "The latest Meme",
+          "size_in_bytes": 14794,
+          "type": "image/jpeg",
+          "licence": "OGL v3",
+          "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+        }
+        """
+    Then the HTTP status code should be "401"
+
+  Scenario: Attempting to register a file - user does not have permissions
+    Given I am a viewer user without permission
     When the file upload is registered with payload:
         """
         {
@@ -94,7 +111,7 @@ Feature: Register new file upload
     Then the HTTP status code should be "403"
   
   Scenario: Attempting to register a file with both collection_id and bundle_id in the metadata
-    Given I am an authorised user
+    Given I am a publisher user
     When the file upload is registered with payload:
         """
         {
@@ -112,7 +129,7 @@ Feature: Register new file upload
     Then the HTTP status code should be "400"
 
   Scenario: Register file with dataset content_item metadata
-    Given I am an authorised user
+    Given I am a publisher user
     When the file upload is registered with payload:
         """
         {

@@ -27,12 +27,17 @@ type ComponentTest struct {
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
+
+	authorizationFeature := componenttest.NewAuthorizationFeature()
 	if !*loggingFlag {
 		buf := bytes.NewBufferString("")
 		log.SetDestination(buf, buf)
 	}
 
-	component := steps.NewFilesAPIComponent()
+	component, err := steps.NewFilesAPIComponent(authorizationFeature.FakeAuthService.Server.URL)
+	if err != nil {
+		panic(err)
+	}
 
 	apiFeature := componenttest.NewAPIFeature(component.Initialiser)
 	component.APIFeature = apiFeature
@@ -52,6 +57,7 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 
 	apiFeature.RegisterSteps(ctx)
 	component.RegisterSteps(ctx)
+	authorizationFeature.RegisterSteps(ctx)
 }
 
 func (f *ComponentTest) InitializeTestSuite(ctx *godog.TestSuiteContext) {

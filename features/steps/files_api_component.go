@@ -2,12 +2,16 @@ package steps
 
 import (
 	"context"
+	"crypto/rsa"
 	"net/http"
 	"time"
 
+	permissionsAPISDK "github.com/ONSdigital/dp-permissions-api/sdk"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 
+	"github.com/ONSdigital/dp-authorisation/v2/authorisation"
+	"github.com/ONSdigital/dp-authorisation/v2/authorisationtest"
 	"github.com/ONSdigital/dp-files-api/files"
 
 	kafka "github.com/ONSdigital/dp-kafka/v3"
@@ -22,19 +26,25 @@ import (
 )
 
 type FilesAPIComponent struct {
-	DpHTTPServer *dphttp.Server
-	svc          *service.Service
-	svcList      service.ServiceContainer
-	APIFeature   *componenttest.APIFeature
-	errChan      chan error
-	mongoClient  *mongo.Client
-	cg           *kafka.ConsumerGroup
-	msgs         map[string]files.FilePublished
-	isPublishing bool
-	isAuthorised bool
+	DpHTTPServer            *dphttp.Server
+	svc                     *service.Service
+	svcList                 service.ServiceContainer
+	APIFeature              *componenttest.APIFeature
+	errChan                 chan error
+	mongoClient             *mongo.Client
+	cg                      *kafka.ConsumerGroup
+	msgs                    map[string]files.FilePublished
+	isPublishing            bool
+	isAuthorised            bool
+	isViewerAllowed         bool
+	isViewerNotAllowed      bool
+	Config                  *config.Config
+	AuthorisationMiddleware authorisation.Middleware
+	viewerPrivKey           *rsa.PrivateKey
+	viewerKID               string
 }
 
-func NewFilesAPIComponent() *FilesAPIComponent {
+func NewFilesAPIComponent(zebedeeURL string) (*FilesAPIComponent, error) {
 	s := dphttp.NewServer("", http.NewServeMux())
 	s.HandleOSSignals = false
 
@@ -43,16 +53,121 @@ func NewFilesAPIComponent() *FilesAPIComponent {
 		errChan:      make(chan error),
 	}
 
+	var err error
+	c.Config, err = config.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	fakePermissionsAPI := setupFakePermissionsAPI()
+
+	c.Config.AuthConfig.PermissionsAPIURL = fakePermissionsAPI.URL()
+	c.Config.ZebedeeURL = zebedeeURL
+
 	log.Namespace = "dp-files-api"
 
 	c.isPublishing = true
 
-	return c
+	return c, nil
+}
+
+func getPermissionsBundle() *permissionsAPISDK.Bundle {
+	return &permissionsAPISDK.Bundle{
+		"static-files:read": {
+			"users/service": {
+				{
+					ID: "1",
+				},
+			},
+			"groups/role-publisher": {
+				{
+					ID: "1",
+				},
+			},
+			"groups/role-admin": {
+				{
+					ID: "1",
+				},
+			},
+			"groups/role-viewer-allowed": {
+				{
+					ID: "1",
+					Condition: permissionsAPISDK.Condition{
+						Values:    []string{"cpih01/feb-2026"},
+						Attribute: "dataset_edition",
+						Operator:  "StringEquals",
+					},
+				},
+			},
+			"groups/role-viewer-not-allowed": {
+				{
+					ID: "1",
+					Condition: permissionsAPISDK.Condition{
+						Values:    []string{"1/45"},
+						Attribute: "dataset_edition",
+						Operator:  "StringEquals",
+					},
+				},
+			},
+		},
+		"static-files:update": {
+			"groups/role-publisher": {
+				{
+					ID: "1",
+				},
+			},
+			"users/service": {
+				{
+					ID: "1",
+				},
+			},
+			"groups/role-admin": {
+				{
+					ID: "1",
+				},
+			},
+		},
+		"static-files:create": {
+			"groups/role-publisher": {
+				{
+					ID: "1",
+				},
+			},
+		},
+		"static-files:delete": {
+			"groups/role-publisher": {
+				{
+					ID: "1",
+				},
+			},
+		},
+	}
+
+}
+
+func setupFakePermissionsAPI() *authorisationtest.FakePermissionsAPI {
+	fakePermissionsAPI := authorisationtest.NewFakePermissionsAPI()
+	bundle := getPermissionsBundle()
+	fakePermissionsAPI.Reset()
+	if err := fakePermissionsAPI.UpdatePermissionsBundleResponse(bundle); err != nil {
+		log.Error(context.Background(), "failed to update permissions bundle response", err)
+	}
+	return fakePermissionsAPI
+}
+
+func (c *FilesAPIComponent) DoGetAuthorisationMiddleware(ctx context.Context, cfg *authorisation.Config) (authorisation.Middleware, error) {
+	middleware, err := authorisation.NewMiddlewareFromConfig(ctx, cfg, cfg.JWTVerificationPublicKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	c.AuthorisationMiddleware = middleware
+	return c.AuthorisationMiddleware, nil
 }
 
 func (c *FilesAPIComponent) Initialiser() (http.Handler, error) {
 	r := &mux.Router{}
-	c.svcList = &fakeServiceContainer{c.DpHTTPServer, r, c.isAuthorised}
+	c.svcList = &fakeServiceContainer{c.DpHTTPServer, r, c.isAuthorised, c.isViewerAllowed, c.isViewerNotAllowed}
 	cfg, _ := config.Get()
 	cfg.IsPublishing = c.isPublishing
 	c.svc, _ = service.Run(context.Background(), c.svcList, c.errChan, cfg, r)
