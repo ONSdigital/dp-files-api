@@ -22,5 +22,5 @@ type Clienter interface {
 	MarkFilePublished(ctx context.Context, filePath string, headers Headers) error
 	RegisterFile(ctx context.Context, metadata files.StoredRegisteredMetaData, headers Headers) error
 	MarkFileUploaded(ctx context.Context, filePath string, etag string, headers Headers) error
-	ContentItemUpdate(ctx context.Context, filePath string, item api.ContentItem, headers Headers) (files.StoredRegisteredMetaData, error)
+	UpdateContentItem(ctx context.Context, filePath string, item api.ContentItem, headers Headers) (files.StoredRegisteredMetaData, error)
 }
