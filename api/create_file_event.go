@@ -60,8 +60,10 @@ func HandlerCreateFileEvent(createFileEvent CreateFileEvent, authMiddleware auth
 
 		var permissionAttrs map[string]string
 		if event.File.ContentItem != nil {
-			permissionAttrs = map[string]string{
-				"dataset_edition": event.File.ContentItem.DatasetID + "/" + event.File.ContentItem.Edition,
+			if event.File.ContentItem.DatasetID != "" && event.File.ContentItem.Edition != "" {
+				permissionAttrs = map[string]string{
+					"dataset_edition": event.File.ContentItem.DatasetID + "/" + event.File.ContentItem.Edition,
+				}
 			}
 		}
 
