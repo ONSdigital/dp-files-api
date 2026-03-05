@@ -52,8 +52,11 @@ func HandleGetFileMetadataWithAuth(getMetadata GetFileMetadata, authMiddleware a
 		}
 		var permissionAttrs map[string]string
 		if metadata.ContentItem != nil {
-			permissionAttrs = map[string]string{
-				"dataset_edition": metadata.ContentItem.DatasetID + "/" + metadata.ContentItem.Edition,
+
+			if metadata.ContentItem.DatasetID != "" && metadata.ContentItem.Edition != "" {
+				permissionAttrs = map[string]string{
+					"dataset_edition": metadata.ContentItem.DatasetID + "/" + metadata.ContentItem.Edition,
+				}
 			}
 		}
 
