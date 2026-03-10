@@ -1,95 +1,109 @@
 package api_test
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ONSdigital/dp-authorisation/v2/authorisationtest"
 	"github.com/ONSdigital/dp-files-api/api"
-	"github.com/ONSdigital/dp-files-api/store"
+	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestHandleRemoveFileUnsuccessful(t *testing.T) {
+func TestHandleRemoveFile_Successful(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", http.NoBody)
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	errFunc := func(ctx context.Context, path string) error {
-		return errors.New("it's all gone very wrong")
-	}
-
-	h := api.HandleRemoveFile(errFunc)
-	h.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusInternalServerError {
-		t.Errorf("expected status code %d, got %d", http.StatusInternalServerError, rec.Code)
-	}
-	response, _ := io.ReadAll(rec.Body)
-	if !bytes.Contains(response, []byte("it's all gone very wrong")) {
-		t.Errorf("expected response to contain 'it's all gone very wrong', got %s", response)
-	}
-}
-
-func TestHandleRemoveFileFileNotRegistered(t *testing.T) {
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", http.NoBody)
-
-	errFunc := func(ctx context.Context, path string) error {
-		return store.ErrFileNotRegistered
-	}
-
-	h := api.HandleRemoveFile(errFunc)
-	h.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusNotFound {
-		t.Errorf("expected status code %d, got %d", http.StatusNotFound, rec.Code)
-	}
-	response, _ := io.ReadAll(rec.Body)
-
-	if !bytes.Contains(response, []byte(store.ErrFileNotRegistered.Error())) {
-		t.Errorf("expected response to contain '%s', got %s", store.ErrFileNotRegistered.Error(), response)
-	}
-}
-
-func TestHandleRemoveFileFileIsPublished(t *testing.T) {
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", http.NoBody)
-
-	errFunc := func(ctx context.Context, path string) error {
-		return store.ErrFileIsPublished
-	}
-
-	h := api.HandleRemoveFile(errFunc)
-	h.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusConflict {
-		t.Errorf("expected status code %d, got %d", http.StatusConflict, rec.Code)
-	}
-	response, _ := io.ReadAll(rec.Body)
-
-	if !bytes.Contains(response, []byte(store.ErrFileIsPublished.Error())) {
-		t.Errorf("expected response to contain '%s', got %s", store.ErrFileIsPublished.Error(), response)
-	}
-}
-
-func TestHandleRemoveFileSuccessful(t *testing.T) {
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", http.NoBody)
-
-	errFunc := func(ctx context.Context, path string) error {
+	removeFileFunc := func(ctx context.Context, path string) error {
 		return nil
 	}
+	createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
+		return nil
+	}
+	getFileMetadataFunc := func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
+		return files.StoredRegisteredMetaData{}, nil
+	}
 
-	h := api.HandleRemoveFile(errFunc)
+	authMock, identityClientMock, _ := setUpAuthServices()
+
+	h := api.HandleRemoveFile(removeFileFunc, createFileEventFunc, getFileMetadataFunc, authMock, identityClientMock)
 	h.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusNoContent {
-		t.Errorf("expected status code %d, got %d", http.StatusNoContent, rec.Code)
+	assert.Equal(t, http.StatusNoContent, rec.Code)
+}
+
+func TestHandleRemoveFile_Forbidden(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", http.NoBody)
+
+	authMock, identityClientMock, _ := setUpAuthServices()
+
+	h := api.HandleRemoveFile(nil, nil, nil, authMock, identityClientMock)
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+}
+
+func TestHandleRemoveFile_GetFileMetadataError(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", http.NoBody)
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
+
+	getFileMetadataFunc := func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
+		return files.StoredRegisteredMetaData{}, errors.New("failed to get metadata")
 	}
-	if rec.Body.Len() != 0 {
-		t.Errorf("expected empty response body, got %s", rec.Body.String())
+
+	authMock, identityClientMock, _ := setUpAuthServices()
+
+	h := api.HandleRemoveFile(nil, nil, getFileMetadataFunc, authMock, identityClientMock)
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestHandleRemoveFile_CreateFileEventError(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", http.NoBody)
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
+
+	getFileMetadataFunc := func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
+		return files.StoredRegisteredMetaData{}, nil
 	}
+	createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
+		return errors.New("failed to create file event")
+	}
+
+	authMock, identityClientMock, _ := setUpAuthServices()
+
+	h := api.HandleRemoveFile(nil, createFileEventFunc, getFileMetadataFunc, authMock, identityClientMock)
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestHandleRemoveFile_RemoveFileError(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", http.NoBody)
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
+
+	getFileMetadataFunc := func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
+		return files.StoredRegisteredMetaData{}, nil
+	}
+	createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
+		return nil
+	}
+	removeFileFunc := func(ctx context.Context, path string) error {
+		return errors.New("failed to remove file")
+	}
+
+	authMock, identityClientMock, _ := setUpAuthServices()
+
+	h := api.HandleRemoveFile(removeFileFunc, createFileEventFunc, getFileMetadataFunc, authMock, identityClientMock)
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 }

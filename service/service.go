@@ -82,7 +82,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		getMultipleFiles := api.HandlerGetFilesMetadata(store.GetFilesMetadata)
 		collectionPublished := api.HandleMarkCollectionPublished(store.MarkCollectionPublished)
 		bundlePublished := api.HandleMarkBundlePublished(store.MarkBundlePublished)
-		removeFile := api.HandleRemoveFile(store.RemoveFile)
+		removeFile := api.HandleRemoveFile(store.RemoveFile, store.CreateFileEvent, store.GetFileMetadata, authMiddleware, identityClient)
 		createFileEvent := api.HandlerCreateFileEvent(store.CreateFileEvent, authMiddleware, identityClient, permissionChecker)
 		getFileEvents := api.HandlerGetFileEvents(store.GetFileEvents)
 		updateContentItem := api.HandlerUpdateContentItem(store.UpdateContentItem)
