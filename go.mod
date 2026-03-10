@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-files-api
 
-go 1.24.0
+go 1.26
 
 require (
 	github.com/ONSdigital/dp-api-clients-go/v2 v2.270.0
