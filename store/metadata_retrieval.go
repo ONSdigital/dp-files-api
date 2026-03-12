@@ -176,7 +176,8 @@ func (store *Store) UpdateContentItem(ctx context.Context, path string, contentI
 
 	update := bson.M{
 		"$set": bson.M{
-			"content_item": contentItem,
+			"content_item":  contentItem,
+			"last_modified": store.clock.GetCurrentTime(),
 		},
 	}
 
