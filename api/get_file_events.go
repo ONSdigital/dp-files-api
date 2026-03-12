@@ -5,16 +5,35 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
+	clientsidentity "github.com/ONSdigital/dp-api-clients-go/v2/identity"
+	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/store"
+	dprequest "github.com/ONSdigital/dp-net/v3/request"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 type GetFileEvents func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error)
 
-func HandlerGetFileEvents(getFileEvents GetFileEvents) http.HandlerFunc {
+func HandlerGetFileEvents(getFileEvents GetFileEvents, createFileEvent CreateFileEvent, authMiddleware auth.Middleware, idClient *clientsidentity.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
+		ctx := req.Context()
+
+		logData := log.Data{
+			"method": req.Method,
+			"path":   req.URL.Path,
+		}
+
+		accessToken := strings.TrimPrefix(req.Header.Get(dprequest.AuthHeaderKey), dprequest.BearerPrefix)
+
+		authEntityData, err := getAuthEntityData(ctx, authMiddleware, idClient, accessToken, logData)
+		if err != nil {
+			log.Error(ctx, "failed to get auth entity data for file-events read", err, logData)
+		}
+
 		limit, offset, err := parsePaginationParams(req)
 		if err != nil {
 			writeError(w, buildErrors(err, "InvalidRequest"), http.StatusBadRequest)
@@ -29,7 +48,7 @@ func HandlerGetFileEvents(getFileEvents GetFileEvents) http.HandlerFunc {
 			return
 		}
 
-		eventsList, err := getFileEvents(req.Context(), limit, offset, path, after, before)
+		eventsList, err := getFileEvents(ctx, limit, offset, path, after, before)
 		if err != nil {
 			handleError(w, err)
 			return
@@ -42,6 +61,34 @@ func HandlerGetFileEvents(getFileEvents GetFileEvents) http.HandlerFunc {
 			handleError(w, err)
 			return
 		}
+
+		identityType := log.USER
+		if authEntityData != nil && authEntityData.IsServiceAuth {
+			identityType = log.SERVICE
+		}
+
+		var userID string
+		if authEntityData != nil && authEntityData.EntityData != nil {
+			userID = authEntityData.EntityData.UserID
+		}
+
+		logAuthOption := log.Auth(identityType, userID)
+
+		auditEvent := &files.FileEvent{
+			RequestedBy: &files.RequestedBy{
+				ID: userID,
+			},
+			Action:   files.ActionRead,
+			Resource: req.URL.Path,
+			File:     nil,
+		}
+
+		if err := createFileEvent(ctx, auditEvent); err != nil {
+			log.Error(ctx, "failed to create audit record for file-events read", err, log.Classification(log.ProtectiveMonitoring), logAuthOption, logData)
+			return
+		}
+
+		log.Info(ctx, "successfully created audit record for file-events read", log.Classification(log.ProtectiveMonitoring), logAuthOption, logData)
 	}
 }
 

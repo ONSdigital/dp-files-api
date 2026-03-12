@@ -343,3 +343,12 @@ Feature: Getting file events
       "items": []
     }
     """
+
+  Scenario: A READ audit event is created when file events are successfully retrieved
+  Given I am an admin user
+  And the following file events exist in the database:
+    | RequestedByID | Action | Resource             | FilePath  |
+    | user123       | READ   | /downloads/file1.csv | file1.csv |
+  When I GET "/file-events"
+  Then the HTTP status code should be "200"
+  And a READ audit event should be created for the file-events endpoint

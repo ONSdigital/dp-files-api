@@ -1,22 +1,22 @@
 module github.com/ONSdigital/dp-files-api
 
-go 1.24.0
+go 1.26
 
 require (
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.270.0
-	github.com/ONSdigital/dp-authorisation/v2 v2.33.1
-	github.com/ONSdigital/dp-component-test v1.2.4-alpha
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.277.0
+	github.com/ONSdigital/dp-authorisation/v2 v2.34.0
+	github.com/ONSdigital/dp-component-test v1.3.0-alpha
 	github.com/ONSdigital/dp-healthcheck v1.6.4
 	github.com/ONSdigital/dp-kafka/v3 v3.11.0
-	github.com/ONSdigital/dp-mongodb/v3 v3.11.0
+	github.com/ONSdigital/dp-mongodb/v3 v3.13.0
 	github.com/ONSdigital/dp-net/v3 v3.10.0
-	github.com/ONSdigital/dp-permissions-api v1.10.0
+	github.com/ONSdigital/dp-permissions-api v1.10.1
 	github.com/ONSdigital/dp-s3/v3 v3.3.0
 	github.com/ONSdigital/log.go/v2 v2.5.2
-	github.com/aws/aws-sdk-go-v2 v1.39.4
-	github.com/aws/aws-sdk-go-v2/config v1.31.15
-	github.com/aws/aws-sdk-go-v2/credentials v1.18.19
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.89.0
+	github.com/aws/aws-sdk-go-v2 v1.41.3
+	github.com/aws/aws-sdk-go-v2/config v1.32.11
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.11
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.4
 	github.com/cucumber/godog v0.15.1
 	github.com/cucumber/messages/go/v21 v21.0.1
 	github.com/go-playground/validator v9.31.0+incompatible
@@ -30,7 +30,7 @@ require (
 	github.com/square/mongo-lock v0.0.0-20230808145049-cfcf499f6bf0
 	github.com/stretchr/testify v1.11.1
 	github.com/swaggo/swag v1.16.6
-	go.mongodb.org/mongo-driver v1.17.6
+	go.mongodb.org/mongo-driver v1.17.9
 )
 
 require (
@@ -38,23 +38,25 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
+	github.com/ONSdigital/dp-kafka/v4 v4.3.0 // indirect
 	github.com/ONSdigital/dp-net/v2 v2.22.0 // indirect
 	github.com/Shopify/sarama v1.38.1 // indirect
-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.2 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.11 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.6 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.19 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.18.2 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.11 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.11 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.11 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.11 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.11 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.29.8 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.38.9 // indirect
-	github.com/aws/smithy-go v1.23.1 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.19 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.19 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.5 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.20 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.6 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.11 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.19 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.19 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.0.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.30.12 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.16 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.41.8 // indirect
+	github.com/aws/smithy-go v1.24.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chromedp/cdproto v0.0.0-20250803210736-d308e07a266d // indirect
@@ -140,6 +142,7 @@ require (
 	github.com/smarty/assertions v1.16.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/testcontainers/testcontainers-go v0.40.0 // indirect
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.40.0 // indirect
 	github.com/testcontainers/testcontainers-go/modules/mongodb v0.40.0 // indirect
 	github.com/testcontainers/testcontainers-go/modules/redis v0.40.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.16 // indirect
@@ -150,6 +153,7 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.43.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.64.0 // indirect
 	go.opentelemetry.io/otel v1.39.0 // indirect
 	go.opentelemetry.io/otel/metric v1.39.0 // indirect

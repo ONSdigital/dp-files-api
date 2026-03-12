@@ -84,7 +84,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		bundlePublished := api.HandleMarkBundlePublished(store.MarkBundlePublished)
 		removeFile := api.HandleRemoveFile(store.RemoveFile)
 		createFileEvent := api.HandlerCreateFileEvent(store.CreateFileEvent, authMiddleware, identityClient, permissionChecker)
-		getFileEvents := api.HandlerGetFileEvents(store.GetFileEvents)
+		getFileEvents := api.HandlerGetFileEvents(store.GetFileEvents, store.CreateFileEvent, authMiddleware, identityClient)
 		updateContentItem := api.HandlerUpdateContentItem(store.UpdateContentItem)
 		getSingleFile := api.HandleGetFileMetadataWithAuth(store.GetFileMetadata, authMiddleware, identityClient, permissionChecker)
 
