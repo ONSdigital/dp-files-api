@@ -358,8 +358,6 @@ func TestGetFileEventsWithAllQueryParams(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
-// New tests for audit logging behaviour
-
 func TestGetFileEvents_AuditRecordCreated(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/file-events", http.NoBody)
