@@ -18,14 +18,14 @@ func TestHandleRemoveFile_Successful(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	removeFileFunc := func(ctx context.Context, path string) error {
-		return nil
+	getFileMetadataFunc := func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
+		return files.StoredRegisteredMetaData{}, nil
 	}
 	createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
 		return nil
 	}
-	getFileMetadataFunc := func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
-		return files.StoredRegisteredMetaData{}, nil
+	removeFileFunc := func(ctx context.Context, path string, fileMetadata files.StoredRegisteredMetaData) error {
+		return nil
 	}
 
 	authMock, identityClientMock, _ := setUpAuthServices()
@@ -96,7 +96,7 @@ func TestHandleRemoveFile_RemoveFileError(t *testing.T) {
 	createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
 		return nil
 	}
-	removeFileFunc := func(ctx context.Context, path string) error {
+	removeFileFunc := func(ctx context.Context, path string, fileMetadata files.StoredRegisteredMetaData) error {
 		return errors.New("failed to remove file")
 	}
 

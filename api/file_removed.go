@@ -13,7 +13,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type RemoveFile func(ctx context.Context, path string) error
+type RemoveFile func(ctx context.Context, path string, fileMetadata files.StoredRegisteredMetaData) error
 
 func HandleRemoveFile(removeFile RemoveFile, createFileEvent CreateFileEvent, getFileMetadata GetFileMetadata, authMiddleware auth.Middleware, identityClient *clientsidentity.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -68,7 +68,7 @@ func HandleRemoveFile(removeFile RemoveFile, createFileEvent CreateFileEvent, ge
 		}
 		log.Info(ctx, "successfully created file event for file removal", log.Classification(log.ProtectiveMonitoring), logAuthOption, logData)
 
-		if err := removeFile(ctx, path); err != nil {
+		if err := removeFile(ctx, path, fileMetadata); err != nil {
 			log.Error(ctx, "failed to remove file", err, logData)
 			handleError(w, err)
 			return

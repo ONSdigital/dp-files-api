@@ -804,51 +804,6 @@ func (suite *StoreSuite) TestMarkFilePublishedUpdateKafkaDoesNotReturnError() {
 	suite.NoError(err)
 }
 
-func (suite *StoreSuite) TestRemoveFile_TestUnregisteredFile() {
-	suite.logInterceptor.Start()
-	defer suite.logInterceptor.Stop()
-
-	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
-	metadata.State = store.StateUploaded
-
-	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneReturnsError(store.ErrFileNotRegistered),
-	}
-
-	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
-	err := subject.RemoveFile(suite.defaultContext, suite.path)
-
-	logEvent := suite.logInterceptor.GetLogEvent()
-
-	suite.Equal("remove file: attempted to operate on unregistered file", logEvent)
-	suite.Error(err)
-	suite.ErrorIs(err, store.ErrFileNotRegistered)
-}
-
-func (suite *StoreSuite) TestRemoveFile_TestFailFindingFileMetadata() {
-	suite.logInterceptor.Start()
-	defer suite.logInterceptor.Stop()
-
-	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
-	metadata.State = store.StateUploaded
-
-	expectedError := errors.New("an error occurred")
-	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneReturnsError(expectedError),
-	}
-
-	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
-	err := subject.RemoveFile(suite.defaultContext, suite.path)
-
-	logEvent := suite.logInterceptor.GetLogEvent()
-
-	suite.Equal("remove file: failed finding file metadata", logEvent)
-	suite.Error(err)
-	suite.ErrorIs(err, expectedError)
-}
-
 func (suite *StoreSuite) TestRemoveFile_MetadataInMovedState() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
@@ -856,15 +811,9 @@ func (suite *StoreSuite) TestRemoveFile_MetadataInMovedState() {
 	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
 	metadata.State = store.StateMoved
 
-	metadataBytes, _ := bson.Marshal(metadata)
-
-	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
-	}
-
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
-	err := subject.RemoveFile(suite.defaultContext, suite.path)
+	subject := store.NewStore(nil, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	err := subject.RemoveFile(suite.defaultContext, suite.path, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
 
@@ -881,8 +830,6 @@ func (suite *StoreSuite) TestRemoveFile_S3Error() {
 	metadata.State = store.StateUploaded
 	metadata.Etag = "test-etag"
 
-	metadataBytes, _ := bson.Marshal(metadata)
-
 	expectedError := errors.New("an error occurred")
 
 	s3Client := &s3Mock.S3ClienterMock{
@@ -891,17 +838,13 @@ func (suite *StoreSuite) TestRemoveFile_S3Error() {
 		},
 	}
 
-	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
-	}
-
 	bundlesCollectionReturnsOK := mock.MongoCollectionMock{
 		FindOneFunc: BundleFindOneSucceeds(),
 	}
 
 	cfg, _ := config.Get()
-	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
-	err := subject.RemoveFile(suite.defaultContext, suite.path)
+	subject := store.NewStore(nil, nil, &bundlesCollectionReturnsOK, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
+	err := subject.RemoveFile(suite.defaultContext, suite.path, metadata)
 
 	logEvent := suite.logInterceptor.GetLogEvent()
 
@@ -917,8 +860,6 @@ func (suite *StoreSuite) TestRemoveFile_MetadataCollectionDeleteReturnAnError() 
 	metadata.State = store.StateUploaded
 	metadata.Etag = "test-etag"
 
-	metadataBytes, _ := bson.Marshal(metadata)
-
 	expectedError := errors.New("an error occurred")
 
 	s3Client := &s3Mock.S3ClienterMock{
@@ -928,7 +869,6 @@ func (suite *StoreSuite) TestRemoveFile_MetadataCollectionDeleteReturnAnError() 
 	}
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		DeleteFunc: func(ctx context.Context, selector interface{}) (*mongodriver.CollectionDeleteResult, error) {
 			return nil, expectedError
 		},
@@ -940,7 +880,7 @@ func (suite *StoreSuite) TestRemoveFile_MetadataCollectionDeleteReturnAnError() 
 
 	cfg, _ := config.Get()
 	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
-	err := subject.RemoveFile(suite.defaultContext, suite.path)
+	err := subject.RemoveFile(suite.defaultContext, suite.path, metadata)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("remove file: error while deleting metadata"))
 	suite.Error(err)
@@ -955,8 +895,6 @@ func (suite *StoreSuite) TestRemoveFile_TestErrorWhileFindingMetadata() {
 	metadata.State = store.StateUploaded
 	metadata.Etag = "test-etag"
 
-	metadataBytes, _ := bson.Marshal(metadata)
-
 	expectedError := errors.New("an error occurred")
 
 	s3Client := &s3Mock.S3ClienterMock{
@@ -966,7 +904,6 @@ func (suite *StoreSuite) TestRemoveFile_TestErrorWhileFindingMetadata() {
 	}
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		DeleteFunc: func(ctx context.Context, selector interface{}) (*mongodriver.CollectionDeleteResult, error) {
 			return &mongodriver.CollectionDeleteResult{}, nil
 		},
@@ -981,7 +918,7 @@ func (suite *StoreSuite) TestRemoveFile_TestErrorWhileFindingMetadata() {
 
 	cfg, _ := config.Get()
 	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
-	err := subject.RemoveFile(suite.defaultContext, suite.path)
+	err := subject.RemoveFile(suite.defaultContext, suite.path, metadata)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("remove file: error while finding metadata"))
 	suite.Error(err)
@@ -996,8 +933,6 @@ func (suite *StoreSuite) TestRemoveFile_TestErrorWhileDeletingBundleRecord() {
 	metadata.State = store.StateUploaded
 	metadata.Etag = "test-etag"
 
-	metadataBytes, _ := bson.Marshal(metadata)
-
 	expectedError := errors.New("an error occurred")
 
 	s3Client := &s3Mock.S3ClienterMock{
@@ -1007,7 +942,6 @@ func (suite *StoreSuite) TestRemoveFile_TestErrorWhileDeletingBundleRecord() {
 	}
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		DeleteFunc: func(ctx context.Context, selector interface{}) (*mongodriver.CollectionDeleteResult, error) {
 			return &mongodriver.CollectionDeleteResult{}, nil
 		},
@@ -1025,7 +959,7 @@ func (suite *StoreSuite) TestRemoveFile_TestErrorWhileDeletingBundleRecord() {
 
 	cfg, _ := config.Get()
 	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
-	err := subject.RemoveFile(suite.defaultContext, suite.path)
+	err := subject.RemoveFile(suite.defaultContext, suite.path, metadata)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("remove file: error while deleting bundle record"))
 	suite.Error(err)
@@ -1040,8 +974,6 @@ func (suite *StoreSuite) TestRemoveFile_TestBundleRecordDeletedSuccessfully() {
 	metadata.State = store.StateUploaded
 	metadata.Etag = "test-etag"
 
-	metadataBytes, _ := bson.Marshal(metadata)
-
 	s3Client := &s3Mock.S3ClienterMock{
 		DeleteFunc: func(ctx context.Context, key string) error {
 			return nil
@@ -1049,7 +981,6 @@ func (suite *StoreSuite) TestRemoveFile_TestBundleRecordDeletedSuccessfully() {
 	}
 
 	collectionWithUploadedFile := mock.MongoCollectionMock{
-		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
 		DeleteFunc: func(ctx context.Context, selector interface{}) (*mongodriver.CollectionDeleteResult, error) {
 			return &mongodriver.CollectionDeleteResult{}, nil
 		},
@@ -1069,7 +1000,7 @@ func (suite *StoreSuite) TestRemoveFile_TestBundleRecordDeletedSuccessfully() {
 
 	cfg, _ := config.Get()
 	subject := store.NewStore(&collectionWithUploadedFile, nil, &bundlesCollectionReturnsOK, nil, &suite.defaultKafkaProducer, suite.defaultClock, s3Client, cfg)
-	err := subject.RemoveFile(suite.defaultContext, suite.path)
+	err := subject.RemoveFile(suite.defaultContext, suite.path, metadata)
 
 	suite.Equal(true, suite.logInterceptor.IsEventPresent("remove file: bundle record deleted"))
 	suite.NoError(err)
