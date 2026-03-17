@@ -43,6 +43,7 @@ Feature: Updating the content item in a files metadata
           }
         }
       """
+    And the file event should be created in the database
 
   Scenario: Updating the content item in the metadata of a non registered file fails
     Given I am a publisher user
