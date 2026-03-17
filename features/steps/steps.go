@@ -68,6 +68,7 @@ func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the response should have pagination with limit "([^"]*)" and offset "([^"]*)"$`, c.theResponseShouldHavePaginationWithLimitAndOffset)
 	ctx.Step(`^all returned events should have file path "([^"]*)"$`, c.allReturnedEventsShouldHaveFilePath)
 	ctx.Step(`^I update the content item of the file "([^"]*)" with:`, c.iUpdateTheContentItemOfTheFileWith)
+	ctx.Step(`^a READ audit event should be created for the file-events endpoint$`, c.aReadAuditEventShouldBeCreatedForFileEvents)
 }
 
 func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {

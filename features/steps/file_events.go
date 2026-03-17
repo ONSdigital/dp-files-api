@@ -184,3 +184,16 @@ func (c *FilesAPIComponent) allReturnedEventsShouldHaveFilePath(expectedPath str
 
 	return c.APIFeature.StepError()
 }
+
+func (c *FilesAPIComponent) aReadAuditEventShouldBeCreatedForFileEvents() error {
+	ctx := context.Background()
+
+	count, err := c.mongoClient.Database("files").Collection("file_events").CountDocuments(ctx, bson.M{
+		"action":   "READ",
+		"resource": "/file-events",
+	})
+	assert.NoError(c.APIFeature, err)
+	assert.Equal(c.APIFeature, int64(1), count, "Expected exactly one READ audit event for /file-events")
+
+	return c.APIFeature.StepError()
+}
