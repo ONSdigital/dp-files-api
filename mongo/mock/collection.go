@@ -48,9 +48,6 @@ var _ mongo.MongoCollection = &MongoCollectionMock{}
 //			FindOneFunc: func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error {
 //				panic("mock out the FindOne method")
 //			},
-//			FindOneAndUpdateFunc: func(ctx context.Context, filter interface{}, update interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-//				panic("mock out the FindOneAndUpdate method")
-//			},
 //			InsertFunc: func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
 //				panic("mock out the Insert method")
 //			},
@@ -71,6 +68,9 @@ var _ mongo.MongoCollection = &MongoCollectionMock{}
 //			},
 //			UpdateManyFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
 //				panic("mock out the UpdateMany method")
+//			},
+//			UpdateOneFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+//				panic("mock out the UpdateOne method")
 //			},
 //			UpsertFunc: func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
 //				panic("mock out the Upsert method")
@@ -112,9 +112,6 @@ type MongoCollectionMock struct {
 	// FindOneFunc mocks the FindOne method.
 	FindOneFunc func(ctx context.Context, filter interface{}, result interface{}, opts ...mongodriver.FindOption) error
 
-	// FindOneAndUpdateFunc mocks the FindOneAndUpdate method.
-	FindOneAndUpdateFunc func(ctx context.Context, filter interface{}, update interface{}, result interface{}, opts ...mongodriver.FindOption) error
-
 	// InsertFunc mocks the Insert method.
 	InsertFunc func(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error)
 
@@ -135,6 +132,9 @@ type MongoCollectionMock struct {
 
 	// UpdateManyFunc mocks the UpdateMany method.
 	UpdateManyFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
+
+	// UpdateOneFunc mocks the UpdateOne method.
+	UpdateOneFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
 
 	// UpsertFunc mocks the Upsert method.
 	UpsertFunc func(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error)
@@ -223,19 +223,6 @@ type MongoCollectionMock struct {
 			// Opts is the opts argument value.
 			Opts []mongodriver.FindOption
 		}
-		// FindOneAndUpdate holds details about calls to the FindOneAndUpdate method.
-		FindOneAndUpdate []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// Filter is the filter argument value.
-			Filter interface{}
-			// Update is the update argument value.
-			Update interface{}
-			// Result is the result argument value.
-			Result interface{}
-			// Opts is the opts argument value.
-			Opts []mongodriver.FindOption
-		}
 		// Insert holds details about calls to the Insert method.
 		Insert []struct {
 			// Ctx is the ctx argument value.
@@ -283,6 +270,15 @@ type MongoCollectionMock struct {
 			// Update is the update argument value.
 			Update interface{}
 		}
+		// UpdateOne holds details about calls to the UpdateOne method.
+		UpdateOne []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Selector is the selector argument value.
+			Selector interface{}
+			// Update is the update argument value.
+			Update interface{}
+		}
 		// Upsert holds details about calls to the Upsert method.
 		Upsert []struct {
 			// Ctx is the ctx argument value.
@@ -302,25 +298,25 @@ type MongoCollectionMock struct {
 			Update interface{}
 		}
 	}
-	lockAggregate        sync.RWMutex
-	lockCount            sync.RWMutex
-	lockDelete           sync.RWMutex
-	lockDeleteById       sync.RWMutex
-	lockDeleteMany       sync.RWMutex
-	lockDistinct         sync.RWMutex
-	lockFind             sync.RWMutex
-	lockFindCursor       sync.RWMutex
-	lockFindOne          sync.RWMutex
-	lockFindOneAndUpdate sync.RWMutex
-	lockInsert           sync.RWMutex
-	lockInsertMany       sync.RWMutex
-	lockMust             sync.RWMutex
-	lockNewLockClient    sync.RWMutex
-	lockUpdate           sync.RWMutex
-	lockUpdateById       sync.RWMutex
-	lockUpdateMany       sync.RWMutex
-	lockUpsert           sync.RWMutex
-	lockUpsertById       sync.RWMutex
+	lockAggregate     sync.RWMutex
+	lockCount         sync.RWMutex
+	lockDelete        sync.RWMutex
+	lockDeleteById    sync.RWMutex
+	lockDeleteMany    sync.RWMutex
+	lockDistinct      sync.RWMutex
+	lockFind          sync.RWMutex
+	lockFindCursor    sync.RWMutex
+	lockFindOne       sync.RWMutex
+	lockInsert        sync.RWMutex
+	lockInsertMany    sync.RWMutex
+	lockMust          sync.RWMutex
+	lockNewLockClient sync.RWMutex
+	lockUpdate        sync.RWMutex
+	lockUpdateById    sync.RWMutex
+	lockUpdateMany    sync.RWMutex
+	lockUpdateOne     sync.RWMutex
+	lockUpsert        sync.RWMutex
+	lockUpsertById    sync.RWMutex
 }
 
 // Aggregate calls AggregateFunc.
@@ -679,54 +675,6 @@ func (mock *MongoCollectionMock) FindOneCalls() []struct {
 	return calls
 }
 
-// FindOneAndUpdate calls FindOneAndUpdateFunc.
-func (mock *MongoCollectionMock) FindOneAndUpdate(ctx context.Context, filter interface{}, update interface{}, result interface{}, opts ...mongodriver.FindOption) error {
-	if mock.FindOneAndUpdateFunc == nil {
-		panic("MongoCollectionMock.FindOneAndUpdateFunc: method is nil but MongoCollection.FindOneAndUpdate was just called")
-	}
-	callInfo := struct {
-		Ctx    context.Context
-		Filter interface{}
-		Update interface{}
-		Result interface{}
-		Opts   []mongodriver.FindOption
-	}{
-		Ctx:    ctx,
-		Filter: filter,
-		Update: update,
-		Result: result,
-		Opts:   opts,
-	}
-	mock.lockFindOneAndUpdate.Lock()
-	mock.calls.FindOneAndUpdate = append(mock.calls.FindOneAndUpdate, callInfo)
-	mock.lockFindOneAndUpdate.Unlock()
-	return mock.FindOneAndUpdateFunc(ctx, filter, update, result, opts...)
-}
-
-// FindOneAndUpdateCalls gets all the calls that were made to FindOneAndUpdate.
-// Check the length with:
-//
-//	len(mockedMongoCollection.FindOneAndUpdateCalls())
-func (mock *MongoCollectionMock) FindOneAndUpdateCalls() []struct {
-	Ctx    context.Context
-	Filter interface{}
-	Update interface{}
-	Result interface{}
-	Opts   []mongodriver.FindOption
-} {
-	var calls []struct {
-		Ctx    context.Context
-		Filter interface{}
-		Update interface{}
-		Result interface{}
-		Opts   []mongodriver.FindOption
-	}
-	mock.lockFindOneAndUpdate.RLock()
-	calls = mock.calls.FindOneAndUpdate
-	mock.lockFindOneAndUpdate.RUnlock()
-	return calls
-}
-
 // Insert calls InsertFunc.
 func (mock *MongoCollectionMock) Insert(ctx context.Context, document interface{}) (*mongodriver.CollectionInsertResult, error) {
 	if mock.InsertFunc == nil {
@@ -970,6 +918,46 @@ func (mock *MongoCollectionMock) UpdateManyCalls() []struct {
 	mock.lockUpdateMany.RLock()
 	calls = mock.calls.UpdateMany
 	mock.lockUpdateMany.RUnlock()
+	return calls
+}
+
+// UpdateOne calls UpdateOneFunc.
+func (mock *MongoCollectionMock) UpdateOne(ctx context.Context, selector interface{}, update interface{}) (*mongodriver.CollectionUpdateResult, error) {
+	if mock.UpdateOneFunc == nil {
+		panic("MongoCollectionMock.UpdateOneFunc: method is nil but MongoCollection.UpdateOne was just called")
+	}
+	callInfo := struct {
+		Ctx      context.Context
+		Selector interface{}
+		Update   interface{}
+	}{
+		Ctx:      ctx,
+		Selector: selector,
+		Update:   update,
+	}
+	mock.lockUpdateOne.Lock()
+	mock.calls.UpdateOne = append(mock.calls.UpdateOne, callInfo)
+	mock.lockUpdateOne.Unlock()
+	return mock.UpdateOneFunc(ctx, selector, update)
+}
+
+// UpdateOneCalls gets all the calls that were made to UpdateOne.
+// Check the length with:
+//
+//	len(mockedMongoCollection.UpdateOneCalls())
+func (mock *MongoCollectionMock) UpdateOneCalls() []struct {
+	Ctx      context.Context
+	Selector interface{}
+	Update   interface{}
+} {
+	var calls []struct {
+		Ctx      context.Context
+		Selector interface{}
+		Update   interface{}
+	}
+	mock.lockUpdateOne.RLock()
+	calls = mock.calls.UpdateOne
+	mock.lockUpdateOne.RUnlock()
 	return calls
 }
 

@@ -23,13 +23,13 @@ type MongoCollection interface {
 	UpsertById(ctx context.Context, id interface{}, update interface{}) (*mongodb.CollectionUpdateResult, error)
 	UpdateById(ctx context.Context, id interface{}, update interface{}) (*mongodb.CollectionUpdateResult, error)
 	Update(ctx context.Context, selector interface{}, update interface{}) (*mongodb.CollectionUpdateResult, error)
+	UpdateOne(ctx context.Context, selector interface{}, update interface{}) (*mongodb.CollectionUpdateResult, error)
 	UpdateMany(ctx context.Context, selector interface{}, update interface{}) (*mongodb.CollectionUpdateResult, error)
 	Delete(ctx context.Context, selector interface{}) (*mongodb.CollectionDeleteResult, error)
 	DeleteMany(ctx context.Context, selector interface{}) (*mongodb.CollectionDeleteResult, error)
 	DeleteById(ctx context.Context, id interface{}) (*mongodb.CollectionDeleteResult, error)
 	Aggregate(ctx context.Context, pipeline interface{}, results interface{}) error
 	NewLockClient() *lock.Client
-	FindOneAndUpdate(ctx context.Context, filter interface{}, update interface{}, result interface{}, opts ...mongodb.FindOption) error
 }
 
 //go:generate moq -out mock/cursor.go -pkg mock . MongoCursor
