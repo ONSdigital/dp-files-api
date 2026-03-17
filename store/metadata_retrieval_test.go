@@ -690,7 +690,7 @@ func (suite *StoreSuite) TestPatchBundleMetadataSuccess() {
 	suite.Exactly(metadataExpected, metadata)
 }
 
-func (suite *StoreSuite) TestPutContentItemUpdate() {
+func (suite *StoreSuite) TestUpdateContentItemSuccess() {
 	metadata := files.StoredRegisteredMetaData{
 		Path: "path1",
 		ContentItem: &files.StoredContentItem{
@@ -703,20 +703,18 @@ func (suite *StoreSuite) TestPutContentItemUpdate() {
 	metadataContentUpdated := metadata
 	metadataContentUpdated.ContentItem.Version = "2"
 
-	metadataBytes, _ := bson.Marshal(metadata)
-
 	metadataColl := mock.MongoCollectionMock{
-		FindOneAndUpdateFunc: CollectionFindOneAndUpdateReturnsNil(metadataBytes),
+		UpdateOneFunc: CollectionUpdateReturnsNilAndNil(),
 	}
 
 	subject := store.NewStore(&metadataColl, nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
-	_, err := subject.UpdateContentItem(suite.defaultContext, "path1", *metadataContentUpdated.ContentItem)
+	err := subject.UpdateContentItem(suite.defaultContext, metadata.Path, metadataContentUpdated.ContentItem)
 
 	suite.NoError(err)
 }
 
-func (suite *StoreSuite) TestUpdateContentItemFileNotRegistered() {
+func (suite *StoreSuite) TestUpdateContentItemMetadataFailure() {
 	contentItem := &files.StoredContentItem{
 		DatasetID: "dataset1",
 		Edition:   "edition1",
@@ -724,30 +722,12 @@ func (suite *StoreSuite) TestUpdateContentItemFileNotRegistered() {
 	}
 
 	collection := mock.MongoCollectionMock{
-		FindOneAndUpdateFunc: CollectionFindOneAndUpdateReturnsError(mongodriver.ErrNoDocumentFound),
+		UpdateOneFunc: CollectionUpdateReturnsNilAndError(errors.New("mongo write error")),
 	}
 
 	subject := store.NewStore(&collection, nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
-	_, err := subject.UpdateContentItem(suite.defaultContext, suite.path, *contentItem)
-
-	suite.ErrorIs(err, store.ErrFileNotRegistered)
-}
-
-func (suite *StoreSuite) TestUpdateContentItemMetadataNotFound() {
-	contentItem := &files.StoredContentItem{
-		DatasetID: "dataset1",
-		Edition:   "edition1",
-		Version:   "1",
-	}
-
-	collection := mock.MongoCollectionMock{
-		FindOneAndUpdateFunc: CollectionFindOneAndUpdateReturnsError(errors.New("mongo write error")),
-	}
-
-	subject := store.NewStore(&collection, nil, nil, nil, nil, suite.defaultClock, nil, nil)
-
-	_, err := subject.UpdateContentItem(suite.defaultContext, suite.path, *contentItem)
+	err := subject.UpdateContentItem(suite.defaultContext, suite.path, contentItem)
 
 	suite.ErrorContains(err, "mongo write error")
 }
