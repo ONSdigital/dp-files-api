@@ -85,7 +85,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		removeFile := api.HandleRemoveFile(store.RemoveFile, store.CreateFileEvent, store.GetFileMetadata, authMiddleware, identityClient)
 		createFileEvent := api.HandlerCreateFileEvent(store.CreateFileEvent, authMiddleware, identityClient, permissionChecker)
 		getFileEvents := api.HandlerGetFileEvents(store.GetFileEvents, store.CreateFileEvent, authMiddleware, identityClient)
-		updateContentItem := api.HandlerUpdateContentItem(store.UpdateContentItem)
+		updateContentItem := api.HandlerUpdateContentItem(store.UpdateContentItem, store.CreateFileEvent, store.GetFileMetadata, authMiddleware, identityClient)
 		getSingleFile := api.HandleGetFileMetadataWithAuth(store.GetFileMetadata, authMiddleware, identityClient, permissionChecker)
 
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:create", register)).Methods(http.MethodPost)
