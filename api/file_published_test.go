@@ -3,30 +3,29 @@ package api_test
 import (
 	"context"
 	"errors"
-	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/ONSdigital/dp-authorisation/v2/authorisationtest"
 	"github.com/ONSdigital/dp-files-api/api"
 	"github.com/ONSdigital/dp-files-api/files"
+	"github.com/ONSdigital/dp-files-api/store"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMovedHandlerHandlesInvalidJSONContent(t *testing.T) {
+func TestMarkFilePublished_Successful(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader("<json>invalid</json>"))
+	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
 	authMock, identityClientMock, _ := setUpAuthServices()
 
-	h := api.HandleMarkFileMoved(
-		func(ctx context.Context, change files.FileEtagChange) error { return nil },
+	h := api.HandleMarkFilePublished(
+		func(ctx context.Context, path string) error { return nil },
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
-			return files.StoredRegisteredMetaData{}, nil
+			return files.StoredRegisteredMetaData{Path: path}, nil
 		},
 		authMock,
 		identityClientMock,
@@ -34,20 +33,20 @@ func TestMovedHandlerHandlesInvalidJSONContent(t *testing.T) {
 
 	h.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	response, _ := io.ReadAll(rec.Body)
-	assert.Contains(t, string(response), "BadJsonEncoding")
+	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
-func TestMovedHandlerHandlesUnexpectedPublishingError(t *testing.T) {
+func TestMarkFilePublished_Unsuccessful(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader(`{"path": "dir/file.txt"}`))
+	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
 	authMock, identityClientMock, _ := setUpAuthServices()
 
-	h := api.HandleMarkFileMoved(
-		func(ctx context.Context, change files.FileEtagChange) error { return errors.New("broken") },
+	h := api.HandleMarkFilePublished(
+		func(ctx context.Context, path string) error {
+			return errors.New("it's all gone very wrong")
+		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 			return files.StoredRegisteredMetaData{}, nil
@@ -59,20 +58,42 @@ func TestMovedHandlerHandlesUnexpectedPublishingError(t *testing.T) {
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	response, _ := io.ReadAll(rec.Body)
-	assert.Contains(t, string(response), "InternalError")
 }
 
-func TestMovedHandler_AuditRecordCreated(t *testing.T) {
+func TestMarkFilePublished_FileNotRegistered(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader(`{"etag": "abc123"}`))
+	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", http.NoBody)
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
+
+	authMock, identityClientMock, _ := setUpAuthServices()
+
+	h := api.HandleMarkFilePublished(
+		func(ctx context.Context, path string) error {
+			return store.ErrFileNotRegistered
+		},
+		func(ctx context.Context, event *files.FileEvent) error { return nil },
+		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
+			return files.StoredRegisteredMetaData{}, nil
+		},
+		authMock,
+		identityClientMock,
+	)
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestMarkFilePublished_AuditRecordCreated(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
 	auditEventCreated := false
 	authMock, identityClientMock, _ := setUpAuthServices()
 
-	h := api.HandleMarkFileMoved(
-		func(ctx context.Context, change files.FileEtagChange) error { return nil },
+	h := api.HandleMarkFilePublished(
+		func(ctx context.Context, path string) error { return nil },
 		func(ctx context.Context, event *files.FileEvent) error {
 			auditEventCreated = true
 			assert.Equal(t, files.ActionUpdate, event.Action)
@@ -93,15 +114,15 @@ func TestMovedHandler_AuditRecordCreated(t *testing.T) {
 	assert.True(t, auditEventCreated)
 }
 
-func TestMovedHandler_AuditRecordFailure_StillReturns200(t *testing.T) {
+func TestMarkFilePublished_AuditRecordFailure_StillReturns200(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader(`{"etag": "abc123"}`))
+	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
 	authMock, identityClientMock, _ := setUpAuthServices()
 
-	h := api.HandleMarkFileMoved(
-		func(ctx context.Context, change files.FileEtagChange) error { return nil },
+	h := api.HandleMarkFilePublished(
+		func(ctx context.Context, path string) error { return nil },
 		func(ctx context.Context, event *files.FileEvent) error {
 			return errors.New("failed to create audit record")
 		},

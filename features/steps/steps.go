@@ -69,6 +69,7 @@ func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^all returned events should have file path "([^"]*)"$`, c.allReturnedEventsShouldHaveFilePath)
 	ctx.Step(`^I update the content item of the file "([^"]*)" with:`, c.iUpdateTheContentItemOfTheFileWith)
 	ctx.Step(`^a READ audit event should be created for the file-events endpoint$`, c.aReadAuditEventShouldBeCreatedForFileEvents)
+	ctx.Step(`^an UPDATE audit event should be created for file "([^"]*)"$`, c.anUpdateAuditEventShouldBeCreatedForFile)
 }
 
 func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {
@@ -637,4 +638,17 @@ func (c *FilesAPIComponent) iGetFilesWithBothCollectionAndBundleID(collectionID,
 
 func (c *FilesAPIComponent) iUpdateTheContentItemOfTheFileWith(path string, payload *godog.DocString) error {
 	return c.APIFeature.IPut(fmt.Sprintf("/files/%s", path), payload)
+}
+
+func (c *FilesAPIComponent) anUpdateAuditEventShouldBeCreatedForFile(path string) error {
+	ctx := context.Background()
+
+	count, err := c.mongoClient.Database("files").Collection("file_events").CountDocuments(ctx, bson.M{
+		"action":    "UPDATE",
+		"file.path": path,
+	})
+	assert.NoError(c.APIFeature, err)
+	assert.Equal(c.APIFeature, int64(1), count, "Expected exactly one UPDATE audit event for file %s", path)
+
+	return c.APIFeature.StepError()
 }

@@ -99,9 +99,9 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:update", updateContentItem)).Methods(http.MethodPut)
 
 		patchRequestHandlers := api.PatchRequestHandlers{
-			UploadComplete:   authMiddleware.Require("static-files:update", api.HandleMarkUploadComplete(store.MarkUploadComplete)),
-			Published:        authMiddleware.Require("static-files:update", api.HandleMarkFilePublished(store.MarkFilePublished)),
-			Moved:            authMiddleware.Require("static-files:update", api.HandleMarkFileMoved(store.MarkFileMoved)),
+			UploadComplete:   authMiddleware.Require("static-files:update", api.HandleMarkUploadComplete(store.MarkUploadComplete, store.CreateFileEvent, store.GetFileMetadata, authMiddleware, identityClient)),
+			Published:        authMiddleware.Require("static-files:update", api.HandleMarkFilePublished(store.MarkFilePublished, store.CreateFileEvent, store.GetFileMetadata, authMiddleware, identityClient)),
+			Moved:            authMiddleware.Require("static-files:update", api.HandleMarkFileMoved(store.MarkFileMoved, store.CreateFileEvent, store.GetFileMetadata, authMiddleware, identityClient)),
 			CollectionUpdate: authMiddleware.Require("static-files:update", api.HandlerUpdateCollectionID(store.UpdateCollectionID)),
 			BundleUpdate:     authMiddleware.Require("static-files:update", api.HandlerUpdateBundleID(store.UpdateBundleID)),
 		}
