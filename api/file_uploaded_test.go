@@ -30,7 +30,7 @@ func TestMarkFileUploadCompleteUnsuccessful(t *testing.T) {
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
-			return files.StoredRegisteredMetaData{}, nil
+			return files.StoredRegisteredMetaData{Path: "meme.jpg"}, nil
 		},
 		authMock,
 		identityClientMock,
@@ -144,7 +144,7 @@ func TestMarkUploadComplete_AuditRecordCreated(t *testing.T) {
 	assert.True(t, auditEventCreated)
 }
 
-func TestMarkUploadComplete_AuditRecordFailure_StillReturns200(t *testing.T) {
+func TestMarkUploadComplete_AuditRecordFailure_Returns500(t *testing.T) {
 	rec := httptest.NewRecorder()
 	body := bytes.NewBufferString(`{"etag": "1234-asdfg-54321-qwerty"}`)
 	req := httptest.NewRequest(http.MethodPatch, "/files/meme.jpg", body)
@@ -166,5 +166,50 @@ func TestMarkUploadComplete_AuditRecordFailure_StillReturns200(t *testing.T) {
 
 	h.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestMarkUploadComplete_GetFileMetadataError_Returns500(t *testing.T) {
+	rec := httptest.NewRecorder()
+	body := bytes.NewBufferString(`{"etag": "1234-asdfg-54321-qwerty"}`)
+	req := httptest.NewRequest(http.MethodPatch, "/files/meme.jpg", body)
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
+
+	authMock, identityClientMock, _ := setUpAuthServices()
+
+	h := api.HandleMarkUploadComplete(
+		func(ctx context.Context, metaData files.FileEtagChange) error { return nil },
+		func(ctx context.Context, event *files.FileEvent) error { return nil },
+		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
+			return files.StoredRegisteredMetaData{}, errors.New("failed to get file metadata")
+		},
+		authMock,
+		identityClientMock,
+	)
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestMarkUploadComplete_NoToken_Returns401(t *testing.T) {
+	rec := httptest.NewRecorder()
+	body := bytes.NewBufferString(`{"etag": "1234-asdfg-54321-qwerty"}`)
+	req := httptest.NewRequest(http.MethodPatch, "/files/meme.jpg", body)
+
+	authMock, identityClientMock, _ := setUpAuthServices()
+
+	h := api.HandleMarkUploadComplete(
+		func(ctx context.Context, metaData files.FileEtagChange) error { return nil },
+		func(ctx context.Context, event *files.FileEvent) error { return nil },
+		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
+			return files.StoredRegisteredMetaData{Path: path}, nil
+		},
+		authMock,
+		identityClientMock,
+	)
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }

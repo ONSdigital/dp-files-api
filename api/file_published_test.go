@@ -49,7 +49,7 @@ func TestMarkFilePublished_Unsuccessful(t *testing.T) {
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
-			return files.StoredRegisteredMetaData{}, nil
+			return files.StoredRegisteredMetaData{Path: path}, nil
 		},
 		authMock,
 		identityClientMock,
@@ -114,7 +114,7 @@ func TestMarkFilePublished_AuditRecordCreated(t *testing.T) {
 	assert.True(t, auditEventCreated)
 }
 
-func TestMarkFilePublished_AuditRecordFailure_StillReturns200(t *testing.T) {
+func TestMarkFilePublished_AuditRecordFailure_Returns500(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
@@ -135,5 +135,48 @@ func TestMarkFilePublished_AuditRecordFailure_StillReturns200(t *testing.T) {
 
 	h.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestMarkFilePublished_GetFileMetadataError_Returns500(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", http.NoBody)
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
+
+	authMock, identityClientMock, _ := setUpAuthServices()
+
+	h := api.HandleMarkFilePublished(
+		func(ctx context.Context, path string) error { return nil },
+		func(ctx context.Context, event *files.FileEvent) error { return nil },
+		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
+			return files.StoredRegisteredMetaData{}, errors.New("failed to get file metadata")
+		},
+		authMock,
+		identityClientMock,
+	)
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestMarkFilePublished_NoToken_Returns401(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", http.NoBody)
+
+	authMock, identityClientMock, _ := setUpAuthServices()
+
+	h := api.HandleMarkFilePublished(
+		func(ctx context.Context, path string) error { return nil },
+		func(ctx context.Context, event *files.FileEvent) error { return nil },
+		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
+			return files.StoredRegisteredMetaData{Path: path}, nil
+		},
+		authMock,
+		identityClientMock,
+	)
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }
