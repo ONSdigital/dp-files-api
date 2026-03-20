@@ -4,12 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator"
 
+	clientsidentity "github.com/ONSdigital/dp-api-clients-go/v2/identity"
+	auth "github.com/ONSdigital/dp-authorisation/v2/authorisation"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/dp-files-api/store"
+	dprequest "github.com/ONSdigital/dp-net/v3/request"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 type RegisterFileUpload func(ctx context.Context, metaData files.StoredRegisteredMetaData) error
@@ -33,8 +38,33 @@ type ContentItem struct {
 	Version   string `json:"version,omitempty"`
 }
 
-func HandlerRegisterUploadStarted(register RegisterFileUpload, deadlineDuration time.Duration) http.HandlerFunc {
+func HandlerRegisterUploadStarted(register RegisterFileUpload, createFileEvent CreateFileEvent, authMiddleware auth.Middleware, identityClient *clientsidentity.Client, deadlineDuration time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
+		ctx, cancel := context.WithTimeout(req.Context(), deadlineDuration)
+		defer cancel()
+
+		logData := log.Data{
+			"method": req.Method,
+		}
+
+		accessToken := strings.TrimPrefix(req.Header.Get(dprequest.AuthHeaderKey), dprequest.BearerPrefix)
+
+		authEntityData, err := getAuthEntityData(ctx, authMiddleware, identityClient, accessToken, logData)
+		if err != nil {
+			if strings.Contains(err.Error(), "key id unknown or invalid") || strings.Contains(err.Error(), "jwt token is malformed") {
+				writeError(w, buildGenericError("Unauthorised", "the request was not authorised"), http.StatusUnauthorized)
+				return
+			}
+			writeError(w, buildGenericError("Forbidden", "the request was not authorised - check token and user's permissions"), http.StatusForbidden)
+			return
+		}
+
+		identityType := log.USER
+		if authEntityData.IsServiceAuth {
+			identityType = log.SERVICE
+		}
+		logAuth := log.Auth(identityType, authEntityData.EntityData.UserID)
+
 		rm, err := getRegisterMetadataFromRequest(req)
 		if err != nil {
 			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
@@ -50,11 +80,25 @@ func HandlerRegisterUploadStarted(register RegisterFileUpload, deadlineDuration 
 			handleError(w, err)
 			return
 		}
+		storedRegisterMetadata := generateStoredRegisterMetaData(rm)
 
-		ctx, cancel := context.WithTimeout(context.Background(), deadlineDuration)
-		defer cancel()
+		fileEvent := &files.FileEvent{
+			RequestedBy: &files.RequestedBy{
+				ID: authEntityData.EntityData.UserID,
+			},
+			Action:   files.ActionCreate,
+			Resource: rm.Path,
+			File:     &storedRegisterMetadata,
+		}
 
-		if err := register(ctx, generateStoredRegisterMetaData(rm)); err != nil {
+		if err := createFileEvent(ctx, fileEvent); err != nil {
+			log.Error(ctx, "failed to create file event", err, log.Classification(log.ProtectiveMonitoring), logAuth, logData)
+			handleError(w, err)
+			return
+		}
+		log.Info(ctx, "successfully created file event for file creation", log.Classification(log.ProtectiveMonitoring), logAuth, logData)
+
+		if err := register(ctx, storedRegisterMetadata); err != nil {
 			handleError(w, err)
 			return
 		}

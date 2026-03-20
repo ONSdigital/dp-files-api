@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ONSdigital/dp-authorisation/v2/authorisationtest"
 	"github.com/ONSdigital/dp-files-api/api"
 	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/stretchr/testify/assert"
@@ -30,12 +31,18 @@ func TestFileMetaDataCreationUnsuccessful(t *testing.T) {
           "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
         }`)
 	req := httptest.NewRequest(http.MethodPost, "/files", body)
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	errFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+	registerFileFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 		return errors.New("it's all gone very wrong")
 	}
+	createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
+		return nil
+	}
 
-	h := api.HandlerRegisterUploadStarted(errFunc, 5*time.Second)
+	authMock, identityClientMock, _ := setUpAuthServices()
+
+	h := api.HandlerRegisterUploadStarted(registerFileFunc, createFileEventFunc, authMock, identityClientMock, 5*time.Second)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
@@ -57,8 +64,17 @@ func TestFileMetaDataCreationUnsuccessfulWithBothCollectionAndBundleID(t *testin
           "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
         }`)
 	req := httptest.NewRequest(http.MethodPost, "/files", body)
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error { return nil }, 5*time.Second)
+	registerFileFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+		return errors.New("it's all gone very wrong")
+	}
+	createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
+		return nil
+	}
+	authMock, identityClientMock, _ := setUpAuthServices()
+
+	h := api.HandlerRegisterUploadStarted(registerFileFunc, createFileEventFunc, authMock, identityClientMock, 5*time.Second)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -79,12 +95,17 @@ func TestJsonDecodingMetaDataCreation(t *testing.T) {
           "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
         }`)
 	req := httptest.NewRequest(http.MethodPost, "/files", body)
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	errFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+	registerFileFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 		return errors.New("it's all gone very wrong")
 	}
+	createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
+		return nil
+	}
+	authMock, identityClientMock, _ := setUpAuthServices()
 
-	h := api.HandlerRegisterUploadStarted(errFunc, 5*time.Second)
+	h := api.HandlerRegisterUploadStarted(registerFileFunc, createFileEventFunc, authMock, identityClientMock, 5*time.Second)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -131,14 +152,18 @@ func TestValidationMetaDataCreation(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
 			body := bytes.NewBufferString(test.incomingJSON)
 			req := httptest.NewRequest(http.MethodPost, "/files", body)
+			req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-			rec := httptest.NewRecorder()
+			registerFileFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error { return nil }
+			createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
+				return nil
+			}
+			authMock, identityClientMock, _ := setUpAuthServices()
 
-			errFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error { return nil }
-
-			h := api.HandlerRegisterUploadStarted(errFunc, 5*time.Second)
+			h := api.HandlerRegisterUploadStarted(registerFileFunc, createFileEventFunc, authMock, identityClientMock, 5*time.Second)
 			h.ServeHTTP(rec, req)
 
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -154,12 +179,18 @@ func TestCollectionIDOmittedFromBodyDoesNotRaiseError(t *testing.T) {
 	body := `{"path": "some/file.txt", "is_publishable":false,"title":"The latest Meme","size_in_bytes":14794,"type":"image/jpeg","licence":"OGL v3","licence_url":"http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader(body))
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+	registerFileFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 		assert.Nil(t, metaData.CollectionID)
 		return nil
-	}, 5*time.Second)
+	}
+	createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
+		return nil
+	}
+	authMock, identityClientMock, _ := setUpAuthServices()
 
+	h := api.HandlerRegisterUploadStarted(registerFileFunc, createFileEventFunc, authMock, identityClientMock, 5*time.Second)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusCreated, rec.Code)
@@ -170,12 +201,18 @@ func TestCollectionIDInBodyDoesNotRaiseError(t *testing.T) {
 	body := fmt.Sprintf(`{"path": "some/file.txt", "collection_id": %q, "is_publishable":false,"title":"The latest Meme","size_in_bytes":14794,"type":"image/jpeg","licence":"OGL v3","licence_url":"http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"}`, collectionID)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader(body))
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+	registerFileFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 		assert.Equal(t, collectionID, *metaData.CollectionID)
 		return nil
-	}, 5*time.Second)
+	}
+	createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
+		return nil
+	}
+	authMock, identityClientMock, _ := setUpAuthServices()
 
+	h := api.HandlerRegisterUploadStarted(registerFileFunc, createFileEventFunc, authMock, identityClientMock, 5*time.Second)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusCreated, rec.Code)
@@ -185,12 +222,18 @@ func TestContentItemOmittedFromBodyDoesNotRaiseError(t *testing.T) {
 	body := `{"path": "some/file.txt", "is_publishable":false,"title":"The latest Meme","size_in_bytes":14794,"type":"image/jpeg","licence":"OGL v3","licence_url":"http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/files", strings.NewReader(body))
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+	registerFileFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 		assert.Nil(t, metaData.ContentItem)
 		return nil
-	}, 5*time.Second)
+	}
+	createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
+		return nil
+	}
+	authMock, identityClientMock, _ := setUpAuthServices()
 
+	h := api.HandlerRegisterUploadStarted(registerFileFunc, createFileEventFunc, authMock, identityClientMock, 5*time.Second)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusCreated, rec.Code)
@@ -198,7 +241,7 @@ func TestContentItemOmittedFromBodyDoesNotRaiseError(t *testing.T) {
 
 func TestContentItemInBodyDoesNotRaiseError(t *testing.T) {
 	body := `{
-		"path": "some/file.txt", 
+		"path": "some/file.txt",
 		"is_publishable":false,
 		"title":"The latest Meme",
 		"size_in_bytes":14794,
@@ -213,15 +256,21 @@ func TestContentItemInBodyDoesNotRaiseError(t *testing.T) {
 	}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/files", strings.NewReader(body))
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+	registerFileFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 		assert.NotNil(t, metaData.ContentItem)
 		assert.Equal(t, "dataset-123", metaData.ContentItem.DatasetID)
 		assert.Equal(t, "2024", metaData.ContentItem.Edition)
 		assert.Equal(t, "1", metaData.ContentItem.Version)
 		return nil
-	}, 5*time.Second)
+	}
+	createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
+		return nil
+	}
+	authMock, identityClientMock, _ := setUpAuthServices()
 
+	h := api.HandlerRegisterUploadStarted(registerFileFunc, createFileEventFunc, authMock, identityClientMock, 5*time.Second)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusCreated, rec.Code)
@@ -229,7 +278,7 @@ func TestContentItemInBodyDoesNotRaiseError(t *testing.T) {
 
 func TestContentItemWithPartialFieldsDoesNotRaiseError(t *testing.T) {
 	body := `{
-		"path": "some/file.txt", 
+		"path": "some/file.txt",
 		"is_publishable":false,
 		"title":"The latest Meme",
 		"size_in_bytes":14794,
@@ -242,15 +291,21 @@ func TestContentItemWithPartialFieldsDoesNotRaiseError(t *testing.T) {
 	}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/files", strings.NewReader(body))
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+	registerFileFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 		assert.NotNil(t, metaData.ContentItem)
 		assert.Equal(t, "dataset-123", metaData.ContentItem.DatasetID)
 		assert.Equal(t, "", metaData.ContentItem.Edition)
 		assert.Equal(t, "", metaData.ContentItem.Version)
 		return nil
-	}, 5*time.Second)
+	}
+	createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
+		return nil
+	}
+	authMock, identityClientMock, _ := setUpAuthServices()
 
+	h := api.HandlerRegisterUploadStarted(registerFileFunc, createFileEventFunc, authMock, identityClientMock, 5*time.Second)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusCreated, rec.Code)
@@ -258,7 +313,7 @@ func TestContentItemWithPartialFieldsDoesNotRaiseError(t *testing.T) {
 
 func TestContentItemEmptyObjectDoesNotRaiseError(t *testing.T) {
 	body := `{
-		"path": "some/file.txt", 
+		"path": "some/file.txt",
 		"is_publishable":false,
 		"title":"The latest Meme",
 		"size_in_bytes":14794,
@@ -269,15 +324,21 @@ func TestContentItemEmptyObjectDoesNotRaiseError(t *testing.T) {
 	}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/files", strings.NewReader(body))
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	h := api.HandlerRegisterUploadStarted(func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
+	registerFileFunc := func(ctx context.Context, metaData files.StoredRegisteredMetaData) error {
 		assert.NotNil(t, metaData.ContentItem)
 		assert.Equal(t, "", metaData.ContentItem.DatasetID)
 		assert.Equal(t, "", metaData.ContentItem.Edition)
 		assert.Equal(t, "", metaData.ContentItem.Version)
 		return nil
-	}, 5*time.Second)
+	}
+	createFileEventFunc := func(ctx context.Context, event *files.FileEvent) error {
+		return nil
+	}
+	authMock, identityClientMock, _ := setUpAuthServices()
 
+	h := api.HandlerRegisterUploadStarted(registerFileFunc, createFileEventFunc, authMock, identityClientMock, 5*time.Second)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusCreated, rec.Code)

@@ -78,7 +78,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 			cfg.AuthConfig.PermissionsMaxCacheTime,
 		)
 
-		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload, cfg.MongoConfig.QueryTimeout)
+		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload, store.CreateFileEvent, authMiddleware, identityClient, cfg.MongoConfig.QueryTimeout)
 		getMultipleFiles := api.HandlerGetFilesMetadata(store.GetFilesMetadata)
 		collectionPublished := api.HandleMarkCollectionPublished(store.MarkCollectionPublished)
 		bundlePublished := api.HandleMarkBundlePublished(store.MarkBundlePublished)
