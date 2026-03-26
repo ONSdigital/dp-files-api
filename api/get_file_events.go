@@ -28,10 +28,21 @@ func HandlerGetFileEvents(getFileEvents GetFileEvents, createFileEvent CreateFil
 		}
 
 		accessToken := strings.TrimPrefix(req.Header.Get(dprequest.AuthHeaderKey), dprequest.BearerPrefix)
+		if accessToken == "" {
+			log.Info(ctx, "authorisation failed: no authorisation header in request", log.Classification(log.ProtectiveMonitoring), logData)
+			writeError(w, buildGenericError("Unauthorised", "The user is unauthorised"), http.StatusUnauthorized)
+			return
+		}
 
 		authEntityData, err := getAuthEntityData(ctx, authMiddleware, idClient, accessToken, logData)
 		if err != nil {
 			log.Error(ctx, "failed to get auth entity data for file-events read", err, logData)
+			if strings.Contains(err.Error(), "key id unknown or invalid") || strings.Contains(err.Error(), "jwt token is malformed") {
+				writeError(w, buildGenericError("Unauthorised", "the request was not authorised"), http.StatusUnauthorized)
+				return
+			}
+			writeError(w, buildGenericError("Forbidden", "the request was not authorised - check token and user's permissions"), http.StatusForbidden)
+			return
 		}
 
 		limit, offset, err := parsePaginationParams(req)
@@ -54,6 +65,11 @@ func HandlerGetFileEvents(getFileEvents GetFileEvents, createFileEvent CreateFil
 			return
 		}
 
+		if err := createAuditEvent(ctx, createFileEvent, authEntityData.EntityData, authEntityData.IsServiceAuth, files.ActionRead, req.URL.Path, nil, logData); err != nil {
+			handleError(w, err)
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
@@ -61,34 +77,6 @@ func HandlerGetFileEvents(getFileEvents GetFileEvents, createFileEvent CreateFil
 			handleError(w, err)
 			return
 		}
-
-		identityType := log.USER
-		if authEntityData != nil && authEntityData.IsServiceAuth {
-			identityType = log.SERVICE
-		}
-
-		var userID string
-		if authEntityData != nil && authEntityData.EntityData != nil {
-			userID = authEntityData.EntityData.UserID
-		}
-
-		logAuthOption := log.Auth(identityType, userID)
-
-		auditEvent := &files.FileEvent{
-			RequestedBy: &files.RequestedBy{
-				ID: userID,
-			},
-			Action:   files.ActionRead,
-			Resource: req.URL.Path,
-			File:     nil,
-		}
-
-		if err := createFileEvent(ctx, auditEvent); err != nil {
-			log.Error(ctx, "failed to create audit record for file-events read", err, log.Classification(log.ProtectiveMonitoring), logAuthOption, logData)
-			return
-		}
-
-		log.Info(ctx, "successfully created audit record for file-events read", log.Classification(log.ProtectiveMonitoring), logAuthOption, logData)
 	}
 }
 
