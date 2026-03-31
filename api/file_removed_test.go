@@ -28,9 +28,9 @@ func TestHandleRemoveFile_Successful(t *testing.T) {
 		return nil
 	}
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
-	h := api.HandleRemoveFile(removeFileFunc, createFileEventFunc, getFileMetadataFunc, authMock, identityClientMock)
+	h := api.HandleRemoveFile(removeFileFunc, createFileEventFunc, getFileMetadataFunc, authMiddlewareMock, identityClientMock)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusNoContent, rec.Code)
@@ -40,9 +40,9 @@ func TestHandleRemoveFile_Forbidden(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodDelete, "/files/path.txt", http.NoBody)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
-	h := api.HandleRemoveFile(nil, nil, nil, authMock, identityClientMock)
+	h := api.HandleRemoveFile(nil, nil, nil, authMiddlewareMock, identityClientMock)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusForbidden, rec.Code)
@@ -57,9 +57,9 @@ func TestHandleRemoveFile_GetFileMetadataError(t *testing.T) {
 		return files.StoredRegisteredMetaData{}, errors.New("failed to get metadata")
 	}
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
-	h := api.HandleRemoveFile(nil, nil, getFileMetadataFunc, authMock, identityClientMock)
+	h := api.HandleRemoveFile(nil, nil, getFileMetadataFunc, authMiddlewareMock, identityClientMock)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
@@ -77,9 +77,9 @@ func TestHandleRemoveFile_CreateFileEventError(t *testing.T) {
 		return errors.New("failed to create file event")
 	}
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
-	h := api.HandleRemoveFile(nil, createFileEventFunc, getFileMetadataFunc, authMock, identityClientMock)
+	h := api.HandleRemoveFile(nil, createFileEventFunc, getFileMetadataFunc, authMiddlewareMock, identityClientMock)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
@@ -100,9 +100,9 @@ func TestHandleRemoveFile_RemoveFileError(t *testing.T) {
 		return errors.New("failed to remove file")
 	}
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
-	h := api.HandleRemoveFile(removeFileFunc, createFileEventFunc, getFileMetadataFunc, authMock, identityClientMock)
+	h := api.HandleRemoveFile(removeFileFunc, createFileEventFunc, getFileMetadataFunc, authMiddlewareMock, identityClientMock)
 	h.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)

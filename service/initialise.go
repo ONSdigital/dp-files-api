@@ -80,9 +80,9 @@ func (e *ExternalServiceList) setup(ctx context.Context) error {
 	return nil
 }
 
-func (e *ExternalServiceList) createS3(ctx context.Context) (err error) {
+func (e *ExternalServiceList) createS3(ctx context.Context) error {
 	if e.cfg.LocalstackHost != "" {
-		awsConfig, err := awsConfig.LoadDefaultConfig(ctx,
+		awsCfg, err := awsConfig.LoadDefaultConfig(ctx,
 			awsConfig.WithRegion(e.cfg.AwsRegion),
 			awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("test", "test", "")),
 		)
@@ -91,7 +91,7 @@ func (e *ExternalServiceList) createS3(ctx context.Context) (err error) {
 			return err
 		}
 
-		e.s3Client = dps3.NewClientWithConfig(e.cfg.PrivateBucketName, awsConfig, func(o *s3.Options) {
+		e.s3Client = dps3.NewClientWithConfig(e.cfg.PrivateBucketName, awsCfg, func(o *s3.Options) {
 			o.BaseEndpoint = awssdk.String(e.cfg.LocalstackHost)
 			o.UsePathStyle = true
 		})
@@ -113,19 +113,19 @@ func (e *ExternalServiceList) createAuthMiddleware() (err error) {
 
 func (e *ExternalServiceList) createKafkaProducer() error {
 	pConfig := &kafka.ProducerConfig{
-		BrokerAddrs:       e.cfg.KafkaConfig.Addr,
-		Topic:             e.cfg.KafkaConfig.StaticFilePublishedTopic,
-		MinBrokersHealthy: &e.cfg.KafkaConfig.ProducerMinBrokersHealthy,
-		KafkaVersion:      &e.cfg.KafkaConfig.Version,
-		MaxMessageBytes:   &e.cfg.KafkaConfig.MaxBytes,
+		BrokerAddrs:       e.cfg.Addr,
+		Topic:             e.cfg.StaticFilePublishedTopic,
+		MinBrokersHealthy: &e.cfg.ProducerMinBrokersHealthy,
+		KafkaVersion:      &e.cfg.Version,
+		MaxMessageBytes:   &e.cfg.MaxBytes,
 	}
 
-	if e.cfg.KafkaConfig.SecProtocol != "" {
+	if e.cfg.SecProtocol != "" {
 		pConfig.SecurityConfig = kafka.GetSecurityConfig(
-			e.cfg.KafkaConfig.SecCACerts,
-			e.cfg.KafkaConfig.SecClientCert,
-			e.cfg.KafkaConfig.SecClientKey,
-			e.cfg.KafkaConfig.SecSkipVerify,
+			e.cfg.SecCACerts,
+			e.cfg.SecClientCert,
+			e.cfg.SecClientKey,
+			e.cfg.SecSkipVerify,
 		)
 	}
 

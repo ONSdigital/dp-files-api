@@ -19,7 +19,7 @@ func TestMarkFilePublished_Successful(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandleMarkFilePublished(
 		func(ctx context.Context, path string) error { return nil },
@@ -27,7 +27,7 @@ func TestMarkFilePublished_Successful(t *testing.T) {
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 			return files.StoredRegisteredMetaData{Path: path}, nil
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -41,7 +41,7 @@ func TestMarkFilePublished_Unsuccessful(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandleMarkFilePublished(
 		func(ctx context.Context, path string) error {
@@ -51,7 +51,7 @@ func TestMarkFilePublished_Unsuccessful(t *testing.T) {
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 			return files.StoredRegisteredMetaData{Path: path}, nil
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -65,7 +65,7 @@ func TestMarkFilePublished_FileNotRegistered(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandleMarkFilePublished(
 		func(ctx context.Context, path string) error {
@@ -75,7 +75,7 @@ func TestMarkFilePublished_FileNotRegistered(t *testing.T) {
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 			return files.StoredRegisteredMetaData{}, nil
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -90,7 +90,7 @@ func TestMarkFilePublished_AuditRecordCreated(t *testing.T) {
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
 	auditEventCreated := false
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandleMarkFilePublished(
 		func(ctx context.Context, path string) error { return nil },
@@ -104,7 +104,7 @@ func TestMarkFilePublished_AuditRecordCreated(t *testing.T) {
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 			return files.StoredRegisteredMetaData{Path: path}, nil
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -119,7 +119,7 @@ func TestMarkFilePublished_AuditRecordFailure_Returns500(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandleMarkFilePublished(
 		func(ctx context.Context, path string) error { return nil },
@@ -129,7 +129,7 @@ func TestMarkFilePublished_AuditRecordFailure_Returns500(t *testing.T) {
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 			return files.StoredRegisteredMetaData{Path: path}, nil
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -143,7 +143,7 @@ func TestMarkFilePublished_GetFileMetadataError_Returns500(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandleMarkFilePublished(
 		func(ctx context.Context, path string) error { return nil },
@@ -151,7 +151,7 @@ func TestMarkFilePublished_GetFileMetadataError_Returns500(t *testing.T) {
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 			return files.StoredRegisteredMetaData{}, errors.New("failed to get file metadata")
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -164,7 +164,7 @@ func TestMarkFilePublished_NoToken_Returns401(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", http.NoBody)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandleMarkFilePublished(
 		func(ctx context.Context, path string) error { return nil },
@@ -172,7 +172,7 @@ func TestMarkFilePublished_NoToken_Returns401(t *testing.T) {
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 			return files.StoredRegisteredMetaData{Path: path}, nil
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 

@@ -20,7 +20,7 @@ func TestMovedHandlerHandlesInvalidJSONContent(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader("<json>invalid</json>"))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandleMarkFileMoved(
 		func(ctx context.Context, change files.FileEtagChange) error { return nil },
@@ -28,7 +28,7 @@ func TestMovedHandlerHandlesInvalidJSONContent(t *testing.T) {
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 			return files.StoredRegisteredMetaData{}, nil
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -44,7 +44,7 @@ func TestMovedHandlerHandlesUnexpectedPublishingError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader(`{"etag": "abc123"}`))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandleMarkFileMoved(
 		func(ctx context.Context, change files.FileEtagChange) error { return errors.New("broken") },
@@ -52,7 +52,7 @@ func TestMovedHandlerHandlesUnexpectedPublishingError(t *testing.T) {
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 			return files.StoredRegisteredMetaData{}, nil
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -69,7 +69,7 @@ func TestMovedHandler_AuditRecordCreated(t *testing.T) {
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
 	auditEventCreated := false
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandleMarkFileMoved(
 		func(ctx context.Context, change files.FileEtagChange) error { return nil },
@@ -83,7 +83,7 @@ func TestMovedHandler_AuditRecordCreated(t *testing.T) {
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 			return files.StoredRegisteredMetaData{Path: path}, nil
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -98,7 +98,7 @@ func TestMovedHandler_AuditRecordFailure_Returns500(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader(`{"etag": "abc123"}`))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandleMarkFileMoved(
 		func(ctx context.Context, change files.FileEtagChange) error { return nil },
@@ -108,7 +108,7 @@ func TestMovedHandler_AuditRecordFailure_Returns500(t *testing.T) {
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 			return files.StoredRegisteredMetaData{Path: path}, nil
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -122,7 +122,7 @@ func TestMovedHandler_GetFileMetadataError_Returns500(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader(`{"etag": "abc123"}`))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandleMarkFileMoved(
 		func(ctx context.Context, change files.FileEtagChange) error { return nil },
@@ -130,7 +130,7 @@ func TestMovedHandler_GetFileMetadataError_Returns500(t *testing.T) {
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 			return files.StoredRegisteredMetaData{}, errors.New("failed to get file metadata")
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -143,7 +143,7 @@ func TestMovedHandler_NoToken_Returns401(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPatch, "/files/file.txt", strings.NewReader(`{"etag": "abc123"}`))
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandleMarkFileMoved(
 		func(ctx context.Context, change files.FileEtagChange) error { return nil },
@@ -151,7 +151,7 @@ func TestMovedHandler_NoToken_Returns401(t *testing.T) {
 		func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
 			return files.StoredRegisteredMetaData{Path: "file.txt"}, nil
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 

@@ -57,8 +57,7 @@ func TestUnmarshalJSONErrors(t *testing.T) {
 	t.Parallel()
 
 	Convey("Given a valid JSONErrors body", t, func() {
-		body := `{"errors":[{"errorCode":"FileNotRegistered","description":"file not registered"}]}`
-		rc := io.NopCloser(strings.NewReader(body))
+		rc := io.NopCloser(strings.NewReader(fileNotRegisteredResponse))
 
 		Convey("When unmarshalJSONErrors is called", func() {
 			jsonErrors, err := unmarshalJSONErrors(context.Background(), rc)
@@ -82,8 +81,7 @@ func TestUnmarshalJSONErrors(t *testing.T) {
 	})
 
 	Convey("Given an invalid JSONErrors body", t, func() {
-		body := `invalid json`
-		rc := io.NopCloser(strings.NewReader(body))
+		rc := io.NopCloser(strings.NewReader(`invalid json`))
 
 		Convey("When unmarshalJSONErrors is called", func() {
 			jsonErrors, err := unmarshalJSONErrors(context.Background(), rc)
@@ -161,8 +159,7 @@ func TestUnmarshalStoredRegisteredMetaData(t *testing.T) {
 	})
 
 	Convey("Given an invalid StoredRegisteredMetaData body", t, func() {
-		body := `invalid json`
-		rc := io.NopCloser(strings.NewReader(body))
+		rc := io.NopCloser(strings.NewReader(`invalid json`))
 
 		Convey("When unmarshalStoredRegisteredMetaData is called", func() {
 			metadata, err := unmarshalStoredRegisteredMetaData(rc)

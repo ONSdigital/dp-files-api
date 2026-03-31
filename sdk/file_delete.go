@@ -9,16 +9,16 @@ import (
 
 // DeleteFile deletes a file at the specified filePath
 func (c *Client) DeleteFile(ctx context.Context, filePath string, headers Headers) error {
-	url, err := url.Parse(c.hcCli.URL + "/files")
+	parsedURL, err := url.Parse(c.hcCli.URL + "/files")
 	if err != nil {
 		return err
 	}
 
 	// Remove leading slash so that JoinPath works if filePath starts with or without a "/"
 	cleanedFilePath := strings.TrimPrefix(filePath, "/")
-	url = url.JoinPath(cleanedFilePath)
+	parsedURL = parsedURL.JoinPath(cleanedFilePath)
 
-	req, err := http.NewRequest(http.MethodDelete, url.String(), http.NoBody)
+	req, err := http.NewRequest(http.MethodDelete, parsedURL.String(), http.NoBody)
 	if err != nil {
 		return err
 	}

@@ -45,7 +45,7 @@ func HandleMarkFileMoved(markMovementComplete MarkMovementComplete, createFileEv
 		}
 
 		m := EtagChange{}
-		if err := json.NewDecoder(req.Body).Decode(&m); err != nil {
+		if err = json.NewDecoder(req.Body).Decode(&m); err != nil {
 			writeError(w, buildErrors(err, "BadJsonEncoding"), http.StatusBadRequest)
 			return
 		}

@@ -28,7 +28,7 @@ func TestGetFileEventsSuccess(t *testing.T) {
 		Items:      []files.FileEvent{},
 	}
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
@@ -37,7 +37,7 @@ func TestGetFileEventsSuccess(t *testing.T) {
 		func(ctx context.Context, event *files.FileEvent) error {
 			return nil
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -52,7 +52,7 @@ func TestGetFileEventsWithLimitAndOffset(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=10&offset=5", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
@@ -61,7 +61,7 @@ func TestGetFileEventsWithLimitAndOffset(t *testing.T) {
 			return &files.EventsList{Count: 0, Limit: 10, Offset: 5, TotalCount: 0, Items: []files.FileEvent{}}, nil
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -75,7 +75,7 @@ func TestGetFileEventsWithPath(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events?path=test-file.csv", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
@@ -83,7 +83,7 @@ func TestGetFileEventsWithPath(t *testing.T) {
 			return &files.EventsList{Count: 0, Limit: 20, Offset: 0, TotalCount: 0, Items: []files.FileEvent{}}, nil
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -97,7 +97,7 @@ func TestGetFileEventsWithAfterAndBefore(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events?after=2025-01-01T00:00:00Z&before=2025-12-31T23:59:59Z", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
@@ -108,7 +108,7 @@ func TestGetFileEventsWithAfterAndBefore(t *testing.T) {
 			return &files.EventsList{Count: 0, Limit: 20, Offset: 0, TotalCount: 0, Items: []files.FileEvent{}}, nil
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -122,14 +122,14 @@ func TestGetFileEventsWithInvalidLimit(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=abc", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
 			return nil, nil
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -143,14 +143,14 @@ func TestGetFileEventsWithLimitTooLarge(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=2000", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
 			return nil, nil
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -164,14 +164,14 @@ func TestGetFileEventsWithNegativeLimit(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=-5", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
 			return nil, nil
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -185,14 +185,14 @@ func TestGetFileEventsWithInvalidOffset(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events?offset=xyz", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
 			return nil, nil
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -206,14 +206,14 @@ func TestGetFileEventsWithNegativeOffset(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events?offset=-10", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
 			return nil, nil
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -227,14 +227,14 @@ func TestGetFileEventsWithInvalidAfterDatetime(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events?after=not-a-date", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
 			return nil, nil
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -248,14 +248,14 @@ func TestGetFileEventsWithInvalidBeforeDatetime(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events?before=invalid-datetime", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
 			return nil, nil
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -269,14 +269,14 @@ func TestGetFileEventsWithPathNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events?path=nonexistent-file.csv", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
 			return nil, store.ErrPathNotFound
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -290,14 +290,14 @@ func TestGetFileEventsWithStoreError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
 			return nil, errors.New("database error")
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -311,7 +311,7 @@ func TestGetFileEventsDefaultPagination(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
@@ -323,7 +323,7 @@ func TestGetFileEventsDefaultPagination(t *testing.T) {
 			return &files.EventsList{Count: 0, Limit: 20, Offset: 0, TotalCount: 0, Items: []files.FileEvent{}}, nil
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -337,7 +337,7 @@ func TestGetFileEventsWithAllQueryParams(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events?limit=50&offset=10&path=data.csv&after=2025-01-01T00:00:00Z&before=2025-12-31T23:59:59Z", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
@@ -349,7 +349,7 @@ func TestGetFileEventsWithAllQueryParams(t *testing.T) {
 			return &files.EventsList{Count: 0, Limit: 50, Offset: 10, TotalCount: 0, Items: []files.FileEvent{}}, nil
 		},
 		func(ctx context.Context, event *files.FileEvent) error { return nil },
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -365,7 +365,7 @@ func TestGetFileEvents_AuditRecordCreated(t *testing.T) {
 
 	auditEventCreated := false
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
@@ -379,7 +379,7 @@ func TestGetFileEvents_AuditRecordCreated(t *testing.T) {
 			assert.Nil(t, event.File)
 			return nil
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 
@@ -394,7 +394,7 @@ func TestGetFileEvents_AuditRecordFailure_StillReturns200(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/file-events", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
@@ -403,7 +403,7 @@ func TestGetFileEvents_AuditRecordFailure_StillReturns200(t *testing.T) {
 		func(ctx context.Context, event *files.FileEvent) error {
 			return errors.New("failed to create audit record")
 		},
-		authMock,
+		authMiddlewareMock,
 		identityClientMock,
 	)
 

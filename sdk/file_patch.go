@@ -21,21 +21,21 @@ type FilePatchRequest struct {
 
 // patchFile sends a PATCH request to update the file metadata at the specified path
 func (c *Client) patchFile(ctx context.Context, filePath string, patchReq FilePatchRequest, headers Headers) error {
-	url, err := url.Parse(c.hcCli.URL + "/files")
+	parsedURL, err := url.Parse(c.hcCli.URL + "/files")
 	if err != nil {
 		return err
 	}
 
 	// Remove leading slash so that JoinPath works if filePath starts with or without a "/"
 	cleanedFilePath := strings.TrimPrefix(filePath, "/")
-	url = url.JoinPath(cleanedFilePath)
+	parsedURL = parsedURL.JoinPath(cleanedFilePath)
 
 	payload, err := json.Marshal(patchReq)
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPatch, url.String(), bytes.NewReader(payload))
+	req, err := http.NewRequest(http.MethodPatch, parsedURL.String(), bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}

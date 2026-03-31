@@ -155,7 +155,7 @@ func (c *FilesAPIComponent) ensureViewerKeys() error {
 	if err != nil {
 		return fmt.Errorf("generate viewer RSA key: %w", err)
 	}
-	if err := priv.Validate(); err != nil {
+	if err = priv.Validate(); err != nil {
 		return fmt.Errorf("validate viewer RSA key: %w", err)
 	}
 
@@ -168,10 +168,10 @@ func (c *FilesAPIComponent) ensureViewerKeys() error {
 		return fmt.Errorf("marshal viewer public key: %w", err)
 	}
 
-	if c.Config.AuthConfig.JWTVerificationPublicKeys == nil {
-		c.Config.AuthConfig.JWTVerificationPublicKeys = map[string]string{}
+	if c.Config.JWTVerificationPublicKeys == nil {
+		c.Config.JWTVerificationPublicKeys = map[string]string{}
 	}
-	c.Config.AuthConfig.JWTVerificationPublicKeys[kid] = base64.StdEncoding.EncodeToString(pubDER)
+	c.Config.JWTVerificationPublicKeys[kid] = base64.StdEncoding.EncodeToString(pubDER)
 
 	c.viewerPrivKey = priv
 	c.viewerKID = kid
@@ -418,26 +418,26 @@ func (c *FilesAPIComponent) theFileUploadHasNotBeenRegistered(path string) error
 }
 
 func (c *FilesAPIComponent) theFileIsMarkedAsMoved(path, etag string) error {
-	json := fmt.Sprintf(`{"etag": %q, "state": %q}`, etag, store.StateMoved)
-	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+	body := fmt.Sprintf(`{"etag": %q, "state": %q}`, etag, store.StateMoved)
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: body})
 }
 
 func (c *FilesAPIComponent) theFileIsMarkedAsPublished(path string) error {
-	json := fmt.Sprintf(`{"state": %q}`, store.StatePublished)
-	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+	body := fmt.Sprintf(`{"state": %q}`, store.StatePublished)
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: body})
 }
 
 func (c *FilesAPIComponent) theFileUploadIsMarkedAsCompleteWithTheEtag(path, etag string) error {
-	json := fmt.Sprintf(`{
-	"etag": "%s",
-	"state": "%s"
-}`, etag, store.StateUploaded)
-	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+	body := fmt.Sprintf(`{
+		"etag": "%s",
+		"state": "%s"
+	}`, etag, store.StateUploaded)
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: body})
 }
 
 func (c *FilesAPIComponent) iSetTheCollectionIDToForFile(collectionID, path string) error {
-	json := fmt.Sprintf(`{"collection_id": %q}`, collectionID)
-	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+	body := fmt.Sprintf(`{"collection_id": %q}`, collectionID)
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: body})
 }
 
 func (c *FilesAPIComponent) theFileMetadataIsRequested(filepath string) error {
@@ -568,11 +568,11 @@ func (c *FilesAPIComponent) kafkaConsumerGroupIsRunning() error {
 	minRetry := 1 * time.Millisecond
 	maxRetry := 5 * time.Millisecond
 	cgConfig := &kafka.ConsumerGroupConfig{
-		KafkaVersion:      &cfg.KafkaConfig.Version,
-		MinBrokersHealthy: &cfg.KafkaConfig.ProducerMinBrokersHealthy,
-		Topic:             cfg.KafkaConfig.StaticFilePublishedTopic,
+		KafkaVersion:      &cfg.Version,
+		MinBrokersHealthy: &cfg.ProducerMinBrokersHealthy,
+		Topic:             cfg.StaticFilePublishedTopic,
 		GroupName:         "testing-stuff",
-		BrokerAddrs:       cfg.KafkaConfig.Addr,
+		BrokerAddrs:       cfg.Addr,
 		MinRetryPeriod:    &minRetry,
 		MaxRetryPeriod:    &maxRetry,
 	}
@@ -594,8 +594,8 @@ func (c *FilesAPIComponent) kafkaConsumerGroupIsRunning() error {
 				  }`,
 		}
 		fp := files.FilePublished{}
-		err := schema.Unmarshal(msg.GetData(), &fp)
-		assert.NoError(c.APIFeature, err)
+		unmarshalErr := schema.Unmarshal(msg.GetData(), &fp)
+		assert.NoError(c.APIFeature, unmarshalErr)
 
 		c.msgs[fp.Path] = fp
 
@@ -603,10 +603,7 @@ func (c *FilesAPIComponent) kafkaConsumerGroupIsRunning() error {
 	})
 	assert.NoError(c.APIFeature, err)
 
-	for {
-		if c.cg.State().String() == "Consuming" {
-			break
-		}
+	for c.cg.State().String() != "Consuming" {
 		time.Sleep(250 * time.Millisecond)
 	}
 
@@ -624,8 +621,8 @@ func (c *FilesAPIComponent) iGetFilesInTheCollection(collectionID string) error 
 }
 
 func (c *FilesAPIComponent) iSetTheBundleIDToForFile(bundleID, path string) error {
-	json := fmt.Sprintf(`{"bundle_id": %q}`, bundleID)
-	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+	body := fmt.Sprintf(`{"bundle_id": %q}`, bundleID)
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: body})
 }
 
 func (c *FilesAPIComponent) iGetFilesInTheBundle(bundleID string) error {

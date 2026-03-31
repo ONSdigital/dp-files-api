@@ -18,16 +18,16 @@ func (c *Client) UpdateContentItem(ctx context.Context, filePath string, content
 		return nil, err
 	}
 
-	url, err := url.Parse(c.hcCli.URL + "/files")
+	parsedURL, err := url.Parse(c.hcCli.URL + "/files")
 	if err != nil {
 		return nil, err
 	}
 
 	// Remove leading slash so that JoinPath works if filePath starts with or without a "/"
 	cleanedFilePath := strings.TrimPrefix(filePath, "/")
-	url = url.JoinPath(cleanedFilePath)
+	parsedURL = parsedURL.JoinPath(cleanedFilePath)
 
-	req, err := http.NewRequest(http.MethodPut, url.String(), bytes.NewReader(payload))
+	req, err := http.NewRequest(http.MethodPut, parsedURL.String(), bytes.NewReader(payload))
 	if err != nil {
 		return nil, err
 	}
@@ -43,9 +43,9 @@ func (c *Client) UpdateContentItem(ctx context.Context, filePath string, content
 
 	statusCode := resp.StatusCode
 	if statusCode != http.StatusOK {
-		jsonErrors, err := unmarshalJSONErrors(ctx, resp.Body)
-		if err != nil {
-			return nil, err
+		jsonErrors, unmarshalErr := unmarshalJSONErrors(ctx, resp.Body)
+		if unmarshalErr != nil {
+			return nil, unmarshalErr
 		}
 		return nil, &APIError{
 			StatusCode: statusCode,

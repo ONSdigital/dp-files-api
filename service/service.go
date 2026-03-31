@@ -58,7 +58,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	identityClient := clientsidentity.New(cfg.ZebedeeURL)
 	authMiddleware := serviceList.GetAuthMiddleware()
 	s3Client := serviceList.GetS3Clienter()
-	store := store.NewStore(
+	dataStore := store.NewStore(
 		mongoClient.Collection(config.MetadataCollection),
 		mongoClient.Collection(config.CollectionsCollection),
 		mongoClient.Collection(config.BundlesCollection),
@@ -73,20 +73,20 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 	if cfg.IsPublishing {
 		permissionChecker := permissions.NewChecker(
 			ctx,
-			cfg.AuthConfig.PermissionsAPIURL,
-			cfg.AuthConfig.PermissionsCacheUpdateInterval,
-			cfg.AuthConfig.PermissionsMaxCacheTime,
+			cfg.PermissionsAPIURL,
+			cfg.PermissionsCacheUpdateInterval,
+			cfg.PermissionsMaxCacheTime,
 		)
 
-		register := api.HandlerRegisterUploadStarted(store.RegisterFileUpload, cfg.MongoConfig.QueryTimeout)
-		getMultipleFiles := api.HandlerGetFilesMetadata(store.GetFilesMetadata)
-		collectionPublished := api.HandleMarkCollectionPublished(store.MarkCollectionPublished)
-		bundlePublished := api.HandleMarkBundlePublished(store.MarkBundlePublished)
-		removeFile := api.HandleRemoveFile(store.RemoveFile, store.CreateFileEvent, store.GetFileMetadata, authMiddleware, identityClient)
-		createFileEvent := api.HandlerCreateFileEvent(store.CreateFileEvent, authMiddleware, identityClient, permissionChecker)
-		getFileEvents := api.HandlerGetFileEvents(store.GetFileEvents, store.CreateFileEvent, authMiddleware, identityClient)
-		updateContentItem := api.HandlerUpdateContentItem(store.UpdateContentItem, store.CreateFileEvent, store.GetFileMetadata, authMiddleware, identityClient)
-		getSingleFile := api.HandleGetFileMetadataWithAuth(store.GetFileMetadata, authMiddleware, identityClient, permissionChecker)
+		register := api.HandlerRegisterUploadStarted(dataStore.RegisterFileUpload, cfg.QueryTimeout)
+		getMultipleFiles := api.HandlerGetFilesMetadata(dataStore.GetFilesMetadata)
+		collectionPublished := api.HandleMarkCollectionPublished(dataStore.MarkCollectionPublished)
+		bundlePublished := api.HandleMarkBundlePublished(dataStore.MarkBundlePublished)
+		removeFile := api.HandleRemoveFile(dataStore.RemoveFile, dataStore.CreateFileEvent, dataStore.GetFileMetadata, authMiddleware, identityClient)
+		createFileEvent := api.HandlerCreateFileEvent(dataStore.CreateFileEvent, authMiddleware, identityClient, permissionChecker)
+		getFileEvents := api.HandlerGetFileEvents(dataStore.GetFileEvents, dataStore.CreateFileEvent, authMiddleware, identityClient)
+		updateContentItem := api.HandlerUpdateContentItem(dataStore.UpdateContentItem, dataStore.CreateFileEvent, dataStore.GetFileMetadata, authMiddleware, identityClient)
+		getSingleFile := api.HandleGetFileMetadataWithAuth(dataStore.GetFileMetadata, authMiddleware, identityClient, permissionChecker)
 
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:create", register)).Methods(http.MethodPost)
 		r.Path("/files").HandlerFunc(authMiddleware.Require("static-files:read", getMultipleFiles)).Methods(http.MethodGet)
@@ -99,11 +99,11 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path(filesURI).HandlerFunc(authMiddleware.Require("static-files:update", updateContentItem)).Methods(http.MethodPut)
 
 		patchRequestHandlers := api.PatchRequestHandlers{
-			UploadComplete:   authMiddleware.Require("static-files:update", api.HandleMarkUploadComplete(store.MarkUploadComplete, store.CreateFileEvent, store.GetFileMetadata, authMiddleware, identityClient)),
-			Published:        authMiddleware.Require("static-files:update", api.HandleMarkFilePublished(store.MarkFilePublished, store.CreateFileEvent, store.GetFileMetadata, authMiddleware, identityClient)),
-			Moved:            authMiddleware.Require("static-files:update", api.HandleMarkFileMoved(store.MarkFileMoved, store.CreateFileEvent, store.GetFileMetadata, authMiddleware, identityClient)),
-			CollectionUpdate: authMiddleware.Require("static-files:update", api.HandlerUpdateCollectionID(store.UpdateCollectionID)),
-			BundleUpdate:     authMiddleware.Require("static-files:update", api.HandlerUpdateBundleID(store.UpdateBundleID)),
+			UploadComplete:   authMiddleware.Require("static-files:update", api.HandleMarkUploadComplete(dataStore.MarkUploadComplete, dataStore.CreateFileEvent, dataStore.GetFileMetadata, authMiddleware, identityClient)),
+			Published:        authMiddleware.Require("static-files:update", api.HandleMarkFilePublished(dataStore.MarkFilePublished, dataStore.CreateFileEvent, dataStore.GetFileMetadata, authMiddleware, identityClient)),
+			Moved:            authMiddleware.Require("static-files:update", api.HandleMarkFileMoved(dataStore.MarkFileMoved, dataStore.CreateFileEvent, dataStore.GetFileMetadata, authMiddleware, identityClient)),
+			CollectionUpdate: authMiddleware.Require("static-files:update", api.HandlerUpdateCollectionID(dataStore.UpdateCollectionID)),
+			BundleUpdate:     authMiddleware.Require("static-files:update", api.HandlerUpdateBundleID(dataStore.UpdateBundleID)),
 		}
 
 		r.Path(filesURI).HandlerFunc(api.PatchRequestToHandler(patchRequestHandlers)).Methods(http.MethodPatch)
@@ -118,7 +118,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path("/bundle/{bundle-id}").HandlerFunc(forbiddenHandler).Methods(http.MethodPatch)
 
 		// simple scenario - web mode where users are not authenticated - allowed based on publishing status
-		r.Path(filesURI).HandlerFunc(api.HandleGetFileMetadata(store.GetFileMetadata)).Methods(http.MethodGet)
+		r.Path(filesURI).HandlerFunc(api.HandleGetFileMetadata(dataStore.GetFileMetadata)).Methods(http.MethodGet)
 	}
 	r.Path("/health").HandlerFunc(hc.Handler)
 
@@ -185,13 +185,13 @@ func (svc *Service) Close(ctx context.Context, timeout time.Duration) error {
 func (svc *Service) registerCheckers(ctx context.Context, hc health.Checker, isPublishing bool) (err error) {
 	hasErrors := false
 
-	if err = hc.AddCheck("Mongo DB", svc.MongoClient.Checker); err != nil {
+	if err := hc.AddCheck("Mongo DB", svc.MongoClient.Checker); err != nil {
 		hasErrors = true
 		log.Error(ctx, "error adding health for mongo db", err)
 	}
 
 	if isPublishing {
-		if err = hc.AddCheck("Authorization Middleware", svc.AuthMiddleware.HealthCheck); err != nil {
+		if err := hc.AddCheck("Authorization Middleware", svc.AuthMiddleware.HealthCheck); err != nil {
 			hasErrors = true
 			log.Error(ctx, "error adding health for authorization middleware", err)
 		}
@@ -201,12 +201,12 @@ func (svc *Service) registerCheckers(ctx context.Context, hc health.Checker, isP
 			log.Error(ctx, "error getting jwt keys from identity service", err)
 		}
 
-		if err = hc.AddCheck("Kafka Producer", svc.KafkaProducer.Checker); err != nil {
+		if err := hc.AddCheck("Kafka Producer", svc.KafkaProducer.Checker); err != nil {
 			hasErrors = true
 			log.Error(ctx, "error adding health for kafka producer", err)
 		}
 
-		if err = hc.AddCheck("S3 Client", svc.S3Client.Checker); err != nil {
+		if err := hc.AddCheck("S3 Client", svc.S3Client.Checker); err != nil {
 			hasErrors = true
 			log.Error(ctx, "error adding health for s3 client", err)
 		}

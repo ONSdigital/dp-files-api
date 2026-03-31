@@ -24,7 +24,7 @@ type PatchRequestToHandlerSuite struct {
 	PatchRequestHandlers api.PatchRequestHandlers
 }
 
-func (suite *PatchRequestToHandlerSuite) SetupTest() {
+func (s *PatchRequestToHandlerSuite) SetupTest() {
 	collectionID := "123456"
 	bundleID := "bundleID"
 	stateMoved := "MOVED"
@@ -40,7 +40,7 @@ func (suite *PatchRequestToHandlerSuite) SetupTest() {
 		return func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(body)) }
 	}
 
-	suite.TestStates = []patchRequestMetadataStates{
+	s.TestStates = []patchRequestMetadataStates{
 		{Metadata: api.StateMetadata{CollectionID: &collectionID}, ExpectedBody: collectionUpdateHandlerBody},
 		{Metadata: api.StateMetadata{BundleID: &bundleID}, ExpectedBody: bundleUpdateHandlerBody},
 		{Metadata: api.StateMetadata{State: &stateMoved}, ExpectedBody: movedHandlerBody},
@@ -48,7 +48,7 @@ func (suite *PatchRequestToHandlerSuite) SetupTest() {
 		{Metadata: api.StateMetadata{State: &stateUploaded}, ExpectedBody: uploadCompleteHandlerBody},
 	}
 
-	suite.PatchRequestHandlers = api.PatchRequestHandlers{
+	s.PatchRequestHandlers = api.PatchRequestHandlers{
 		UploadComplete:   generatePatchRequestHandler(uploadCompleteHandlerBody),
 		Published:        generatePatchRequestHandler(publishedHandlerBody),
 		Moved:            generatePatchRequestHandler(movedHandlerBody),
@@ -57,10 +57,10 @@ func (suite *PatchRequestToHandlerSuite) SetupTest() {
 	}
 }
 
-func (suite *PatchRequestToHandlerSuite) TestPatchRequestToHandlerReturnsCorrectHandler() {
-	patchRequestHandler := api.PatchRequestToHandler(suite.PatchRequestHandlers)
+func (s *PatchRequestToHandlerSuite) TestPatchRequestToHandlerReturnsCorrectHandler() {
+	patchRequestHandler := api.PatchRequestToHandler(s.PatchRequestHandlers)
 
-	for _, testState := range suite.TestStates {
+	for _, testState := range s.TestStates {
 		body, _ := json.Marshal(testState.Metadata)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest(http.MethodPatch, "/files/test.txt", bytes.NewBuffer(body))
@@ -69,11 +69,11 @@ func (suite *PatchRequestToHandlerSuite) TestPatchRequestToHandlerReturnsCorrect
 
 		actualBody, _ := io.ReadAll(w.Body)
 
-		suite.Equal(testState.ExpectedBody, string(actualBody))
+		s.Equal(testState.ExpectedBody, string(actualBody))
 	}
 }
 
-func (suite *PatchRequestToHandlerSuite) TestPatchRequestToHandlerPassesBodyToSubsequentHandler() {
+func (s *PatchRequestToHandlerSuite) TestPatchRequestToHandlerPassesBodyToSubsequentHandler() {
 	var actualRequestBody []byte
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +88,7 @@ func (suite *PatchRequestToHandlerSuite) TestPatchRequestToHandlerPassesBodyToSu
 		BundleUpdate:     testHandler,
 	}
 
-	for _, state := range suite.TestStates {
+	for _, state := range s.TestStates {
 		expectedRequestBody, _ := json.Marshal(state.Metadata)
 
 		w := httptest.NewRecorder()
@@ -99,7 +99,7 @@ func (suite *PatchRequestToHandlerSuite) TestPatchRequestToHandlerPassesBodyToSu
 
 		msg := fmt.Sprintf(`Expected %q to equal %q`, actualRequestBody, expectedRequestBody)
 
-		suite.Equal(expectedRequestBody, actualRequestBody, msg)
+		s.Equal(expectedRequestBody, actualRequestBody, msg)
 	}
 }
 
