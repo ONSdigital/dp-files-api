@@ -34,9 +34,7 @@ func TestGetFileEventsSuccess(t *testing.T) {
 		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
 			return mockEventsList, nil
 		},
-		func(ctx context.Context, event *files.FileEvent) error {
-			return nil
-		},
+		func(ctx context.Context, event *files.FileEvent) error { return nil },
 		authMiddlewareMock,
 		identityClientMock,
 	)
@@ -364,7 +362,6 @@ func TestGetFileEvents_AuditRecordCreated(t *testing.T) {
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
 	auditEventCreated := false
-
 	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	h := api.HandlerGetFileEvents(
@@ -389,7 +386,7 @@ func TestGetFileEvents_AuditRecordCreated(t *testing.T) {
 	assert.True(t, auditEventCreated)
 }
 
-func TestGetFileEvents_AuditRecordFailure_StillReturns200(t *testing.T) {
+func TestGetFileEvents_AuditRecordFailure_Returns500(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/file-events", http.NoBody)
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
@@ -409,5 +406,25 @@ func TestGetFileEvents_AuditRecordFailure_StillReturns200(t *testing.T) {
 
 	h.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestGetFileEvents_NoToken_Returns401(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/file-events", http.NoBody)
+
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
+
+	h := api.HandlerGetFileEvents(
+		func(ctx context.Context, limit, offset int, path string, after, before *time.Time) (*files.EventsList, error) {
+			return &files.EventsList{Count: 0, Limit: 20, Offset: 0, TotalCount: 0, Items: []files.FileEvent{}}, nil
+		},
+		func(ctx context.Context, event *files.FileEvent) error { return nil },
+		authMiddlewareMock,
+		identityClientMock,
+	)
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }

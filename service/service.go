@@ -78,7 +78,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 			cfg.PermissionsMaxCacheTime,
 		)
 
-		register := api.HandlerRegisterUploadStarted(dataStore.RegisterFileUpload, cfg.QueryTimeout)
+		register := api.HandlerRegisterUploadStarted(dataStore.RegisterFileUpload, dataStore.CreateFileEvent, authMiddleware, identityClient, cfg.QueryTimeout)
 		getMultipleFiles := api.HandlerGetFilesMetadata(dataStore.GetFilesMetadata)
 		collectionPublished := api.HandleMarkCollectionPublished(dataStore.MarkCollectionPublished)
 		bundlePublished := api.HandleMarkBundlePublished(dataStore.MarkBundlePublished)
