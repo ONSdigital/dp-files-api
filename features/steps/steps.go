@@ -2,21 +2,14 @@ package steps
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
 	"time"
 
-	"github.com/ONSdigital/dp-files-api/store"
-	"github.com/golang-jwt/jwt/v4"
-	"github.com/google/uuid"
-
 	"github.com/ONSdigital/dp-files-api/config"
+	"github.com/ONSdigital/dp-files-api/store"
 	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"github.com/ONSdigital/dp-kafka/v3/avro"
 
@@ -32,8 +25,6 @@ import (
 func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I am an authorised user$`, c.iAmAnAuthorisedUser)
 	ctx.Step(`^I am not an authorised user$`, c.iAmNotAnAuthorisedUser)
-	ctx.Step(`^I am a viewer user with permission$`, c.viewerAllowedJWTToken)
-	ctx.Step(`^I am a viewer user without permission$`, c.viewerNotAllowedJWTToken)
 	ctx.Step(`^I use a valid service token$`, c.iUseAValidServiceToken)
 	ctx.Step(`^I use an invalid JWT token$`, c.iUseAnInvalidJWTToken)
 	ctx.Step(`^the file upload is registered with payload:`, c.iRegisterFile)
@@ -91,90 +82,6 @@ func (c *FilesAPIComponent) iUseAValidServiceToken() error {
 
 func (c *FilesAPIComponent) iRegisterFile(payload *godog.DocString) error {
 	return c.APIFeature.IPostToWithBody("/files", payload)
-}
-
-func (c *FilesAPIComponent) viewerAllowedJWTToken() error {
-	c.isViewerAllowed = true
-	token, err := c.generateViewerAccessToken(
-		"viewer1@ons.gov.uk",
-		[]string{"role-viewer-allowed"},
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer "+token)
-}
-
-func (c *FilesAPIComponent) viewerNotAllowedJWTToken() error {
-	c.isViewerNotAllowed = true
-	token, err := c.generateViewerAccessToken(
-		"viewer2@ons.gov.uk",
-		[]string{"role-viewer-not-allowed"},
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.APIFeature.ISetTheHeaderTo("Authorization", "Bearer "+token)
-}
-
-func (c *FilesAPIComponent) generateViewerAccessToken(email string, groups []string) (string, error) {
-	if err := c.ensureViewerKeys(); err != nil {
-		return "", err
-	}
-
-	now := time.Now().Unix()
-
-	claims := jwt.MapClaims{
-		"sub":            "viewer-sub",
-		"token_use":      "access",
-		"auth_time":      now,
-		"iss":            "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_example",
-		"exp":            now + 3600,
-		"iat":            now,
-		"client_id":      "component-test-client",
-		"username":       email,
-		"cognito:groups": groups,
-	}
-
-	t := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	t.Header["kid"] = c.viewerKID
-
-	return t.SignedString(c.viewerPrivKey)
-}
-
-func (c *FilesAPIComponent) ensureViewerKeys() error {
-	if c.viewerPrivKey != nil && c.viewerKID != "" {
-		return nil
-	}
-
-	// Generate RSA keypair
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return fmt.Errorf("generate viewer RSA key: %w", err)
-	}
-	if err := priv.Validate(); err != nil {
-		return fmt.Errorf("validate viewer RSA key: %w", err)
-	}
-
-	// Create kid
-	kid := uuid.New().String()
-
-	// Convert public key to PKIX DER and base64 encode
-	pubDER, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
-	if err != nil {
-		return fmt.Errorf("marshal viewer public key: %w", err)
-	}
-
-	if c.Config.AuthConfig.JWTVerificationPublicKeys == nil {
-		c.Config.AuthConfig.JWTVerificationPublicKeys = map[string]string{}
-	}
-	c.Config.AuthConfig.JWTVerificationPublicKeys[kid] = base64.StdEncoding.EncodeToString(pubDER)
-
-	c.viewerPrivKey = priv
-	c.viewerKID = kid
-	return nil
 }
 
 type ExpectedMetaData struct {

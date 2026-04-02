@@ -160,7 +160,7 @@ Feature: Mark single file as published
     Then the HTTP status code should be "401"
 
   Scenario: The one where the user does not have permission to mark a file as published
-    Given I am a viewer user without permission
+    Given I am a JWT user with email "viewer2@ons.gov.uk" and group "role-viewer-denied"
     And the file upload "images/meme.jpg" has been completed with:
       | IsPublishable     | true                                                                      |
       | CollectionID      | 1234-asdfg-54321-qwerty                                                   |

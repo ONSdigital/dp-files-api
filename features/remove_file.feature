@@ -34,7 +34,7 @@ Feature: DELETE /files/{filepath}
     Then the HTTP status code should be "401"
 
   Scenario: Forbidden request returns 403 (user does not have required permissions)
-    Given I am a viewer user without permission
+    Given I am a JWT user with email "viewer2@ons.gov.uk" and group "role-viewer-denied"
     And the file upload "images/with-bundle.jpg" has been registered with:
       | IsPublishable | true                                                                      |
       | BundleID      | existing-bundle-789                                                       |

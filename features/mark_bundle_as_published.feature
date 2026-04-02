@@ -73,7 +73,7 @@ Feature: Publishing file to Kafka from a bundle ID
     Then the HTTP status code should be "201"
 
   Scenario: Publishing file for a bundle - user forbidden
-    Given I am a viewer user without permission
+    Given I am a JWT user with email "viewer2@ons.gov.uk" and group "role-viewer-denied"
     When I publish the bundle "1234-asdfg-54321-qwerty"
     Then the HTTP status code should be "403"
 

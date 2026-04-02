@@ -94,7 +94,7 @@ Feature: Register new file upload
     Then the HTTP status code should be "401"
 
   Scenario: Attempting to register a file - user does not have permissions
-    Given I am a viewer user without permission
+    Given I am a JWT user with email "viewer2@ons.gov.uk" and group "role-viewer-denied"
     When the file upload is registered with payload:
         """
         {

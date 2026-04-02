@@ -1,7 +1,7 @@
 Feature: Fetching metadata for a file
 
   Scenario: The file metadata is retrieved when file upload has been registered
-    Given I am a viewer user with permission
+    Given I am a JWT user with email "viewer1@ons.gov.uk" and group "role-viewer-allowed"
     And the file upload "images/meme.jpg" has been registered with:
       | IsPublishable | true                                                                      |
       | CollectionID  | 1234-asdfg-54321-qwerty                                                   |
@@ -54,7 +54,7 @@ Feature: Fetching metadata for a file
     Then the HTTP status code should be "401"
 
   Scenario: The one where the user is not authorised to (pre)view for a specific dataset edition
-    Given I am a viewer user without permission
+    Given I am a JWT user with email "viewer2@ons.gov.uk" and group "role-viewer-denied"
     And the file upload "images/meme.jpg" has been registered with:
       | IsPublishable | true                                                                      |
       | CollectionID  | 1234-asdfg-54321-qwerty                                                   |

@@ -1,7 +1,7 @@
 Feature: Creating file events
 
   Scenario: Successfully create a file event when authorised
-    Given I am a viewer user with permission
+    Given I am a JWT user with email "viewer1@ons.gov.uk" and group "role-viewer-allowed"
     When I create a file event with payload:
         """
         {
@@ -50,7 +50,7 @@ Feature: Creating file events
     Then the HTTP status code should be "401"
 
   Scenario: Error when creating a file event with invalid JSON
-    Given I am a viewer user with permission
+    Given I am a JWT user with email "viewer1@ons.gov.uk" and group "role-viewer-allowed"
     When I create a file event with payload:
         """
         { invalid json }
@@ -58,7 +58,7 @@ Feature: Creating file events
     Then the HTTP status code should be "400"
 
   Scenario: Create file event for bundle file download
-    Given I am a viewer user with permission
+    Given I am a JWT user with email "viewer1@ons.gov.uk" and group "role-viewer-allowed"
     When I create a file event with payload:
         """
         {
@@ -86,7 +86,7 @@ Feature: Creating file events
     And the file event should be created in the database
 
   Scenario: Cannot create a file event when user does not have access to the dataset edition
-    Given I am a viewer user without permission
+    Given I am a JWT user with email "viewer2@ons.gov.uk" and group "role-viewer-denied"
     When I create a file event with payload:
         """
         {

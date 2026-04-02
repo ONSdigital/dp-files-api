@@ -245,6 +245,12 @@ func (c *FilesAPIComponent) Reset() {
 		panic(err)
 	}
 
+	key, err := c.APIFeature.JWTFeature.EnsureKeys()
+	if err != nil {
+		panic(err)
+	}
+	c.Config.AuthConfig.JWTVerificationPublicKeys[key.KID] = key.PublicKeyB64
+
 	c.isPublishing = true
 }
 

@@ -86,7 +86,7 @@ Feature: Updating the content item in a files metadata
 
 
   Scenario: A user without the correct permission cannot update the content item of a registered file
-    Given I am a viewer user without permission
+    Given I am a JWT user with email "viewer2@ons.gov.uk" and group "role-viewer-denied"
     And the file upload "images/meme.jpg" has been registered with:
       | IsPublishable | true                                                                      |
       | CollectionID  | 1234-asdfg-54321-qwerty                                                   |
