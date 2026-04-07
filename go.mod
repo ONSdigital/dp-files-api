@@ -5,7 +5,7 @@ go 1.26
 require (
 	github.com/ONSdigital/dp-api-clients-go/v2 v2.277.0
 	github.com/ONSdigital/dp-authorisation/v2 v2.34.0
-	github.com/ONSdigital/dp-component-test v1.3.0-alpha
+	github.com/ONSdigital/dp-component-test v1.4.3-alpha
 	github.com/ONSdigital/dp-healthcheck v1.6.4
 	github.com/ONSdigital/dp-kafka/v3 v3.11.0
 	github.com/ONSdigital/dp-mongodb/v3 v3.13.0
@@ -20,8 +20,6 @@ require (
 	github.com/cucumber/godog v0.15.1
 	github.com/cucumber/messages/go/v21 v21.0.1
 	github.com/go-playground/validator v9.31.0+incompatible
-	github.com/golang-jwt/jwt/v4 v4.5.2
-	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/pkg/errors v0.9.1
@@ -95,7 +93,9 @@ require (
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
