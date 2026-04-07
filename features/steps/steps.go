@@ -60,6 +60,7 @@ func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^all returned events should have file path "([^"]*)"$`, c.allReturnedEventsShouldHaveFilePath)
 	ctx.Step(`^I update the content item of the file "([^"]*)" with:`, c.iUpdateTheContentItemOfTheFileWith)
 	ctx.Step(`^a READ audit event should be created for the file-events endpoint$`, c.aReadAuditEventShouldBeCreatedForFileEvents)
+	ctx.Step(`^an UPDATE audit event should be created for file "([^"]*)"$`, c.anUpdateAuditEventShouldBeCreatedForFile)
 }
 
 func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {
@@ -324,26 +325,26 @@ func (c *FilesAPIComponent) theFileUploadHasNotBeenRegistered(path string) error
 }
 
 func (c *FilesAPIComponent) theFileIsMarkedAsMoved(path, etag string) error {
-	json := fmt.Sprintf(`{"etag": %q, "state": %q}`, etag, store.StateMoved)
-	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+	body := fmt.Sprintf(`{"etag": %q, "state": %q}`, etag, store.StateMoved)
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: body})
 }
 
 func (c *FilesAPIComponent) theFileIsMarkedAsPublished(path string) error {
-	json := fmt.Sprintf(`{"state": %q}`, store.StatePublished)
-	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+	body := fmt.Sprintf(`{"state": %q}`, store.StatePublished)
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: body})
 }
 
 func (c *FilesAPIComponent) theFileUploadIsMarkedAsCompleteWithTheEtag(path, etag string) error {
-	json := fmt.Sprintf(`{
-	"etag": "%s",
-	"state": "%s"
-}`, etag, store.StateUploaded)
-	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+	body := fmt.Sprintf(`{
+		"etag": "%s",
+		"state": "%s"
+	}`, etag, store.StateUploaded)
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: body})
 }
 
 func (c *FilesAPIComponent) iSetTheCollectionIDToForFile(collectionID, path string) error {
-	json := fmt.Sprintf(`{"collection_id": %q}`, collectionID)
-	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+	body := fmt.Sprintf(`{"collection_id": %q}`, collectionID)
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: body})
 }
 
 func (c *FilesAPIComponent) theFileMetadataIsRequested(filepath string) error {
@@ -474,11 +475,11 @@ func (c *FilesAPIComponent) kafkaConsumerGroupIsRunning() error {
 	minRetry := 1 * time.Millisecond
 	maxRetry := 5 * time.Millisecond
 	cgConfig := &kafka.ConsumerGroupConfig{
-		KafkaVersion:      &cfg.KafkaConfig.Version,
-		MinBrokersHealthy: &cfg.KafkaConfig.ProducerMinBrokersHealthy,
-		Topic:             cfg.KafkaConfig.StaticFilePublishedTopic,
+		KafkaVersion:      &cfg.Version,
+		MinBrokersHealthy: &cfg.ProducerMinBrokersHealthy,
+		Topic:             cfg.StaticFilePublishedTopic,
 		GroupName:         "testing-stuff",
-		BrokerAddrs:       cfg.KafkaConfig.Addr,
+		BrokerAddrs:       cfg.Addr,
 		MinRetryPeriod:    &minRetry,
 		MaxRetryPeriod:    &maxRetry,
 	}
@@ -500,8 +501,8 @@ func (c *FilesAPIComponent) kafkaConsumerGroupIsRunning() error {
 				  }`,
 		}
 		fp := files.FilePublished{}
-		err := schema.Unmarshal(msg.GetData(), &fp)
-		assert.NoError(c.APIFeature, err)
+		unmarshalErr := schema.Unmarshal(msg.GetData(), &fp)
+		assert.NoError(c.APIFeature, unmarshalErr)
 
 		c.msgs[fp.Path] = fp
 
@@ -509,10 +510,7 @@ func (c *FilesAPIComponent) kafkaConsumerGroupIsRunning() error {
 	})
 	assert.NoError(c.APIFeature, err)
 
-	for {
-		if c.cg.State().String() == "Consuming" {
-			break
-		}
+	for c.cg.State().String() != "Consuming" {
 		time.Sleep(250 * time.Millisecond)
 	}
 
@@ -530,8 +528,8 @@ func (c *FilesAPIComponent) iGetFilesInTheCollection(collectionID string) error 
 }
 
 func (c *FilesAPIComponent) iSetTheBundleIDToForFile(bundleID, path string) error {
-	json := fmt.Sprintf(`{"bundle_id": %q}`, bundleID)
-	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: json})
+	body := fmt.Sprintf(`{"bundle_id": %q}`, bundleID)
+	return c.APIFeature.IPatch(fmt.Sprintf("/files/%s", path), &messages.PickleDocString{Content: body})
 }
 
 func (c *FilesAPIComponent) iGetFilesInTheBundle(bundleID string) error {
@@ -544,4 +542,17 @@ func (c *FilesAPIComponent) iGetFilesWithBothCollectionAndBundleID(collectionID,
 
 func (c *FilesAPIComponent) iUpdateTheContentItemOfTheFileWith(path string, payload *godog.DocString) error {
 	return c.APIFeature.IPut(fmt.Sprintf("/files/%s", path), payload)
+}
+
+func (c *FilesAPIComponent) anUpdateAuditEventShouldBeCreatedForFile(path string) error {
+	ctx := context.Background()
+
+	count, err := c.mongoClient.Database("files").Collection("file_events").CountDocuments(ctx, bson.M{
+		"action":    "UPDATE",
+		"file.path": path,
+	})
+	assert.NoError(c.APIFeature, err)
+	assert.Equal(c.APIFeature, int64(1), count, "Expected exactly one UPDATE audit event for file %s", path)
+
+	return c.APIFeature.StepError()
 }

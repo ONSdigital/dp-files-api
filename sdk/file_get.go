@@ -11,16 +11,16 @@ import (
 
 // GetFile retrieves the metadata for a file at the specified path
 func (c *Client) GetFile(ctx context.Context, filePath string, headers Headers) (*files.StoredRegisteredMetaData, error) {
-	url, err := url.Parse(c.hcCli.URL + "/files")
+	parsedURL, err := url.Parse(c.hcCli.URL + "/files")
 	if err != nil {
 		return nil, err
 	}
 
 	// Remove leading slash so that JoinPath works if filePath starts with or without a "/"
 	cleanedFilePath := strings.TrimPrefix(filePath, "/")
-	url = url.JoinPath(cleanedFilePath)
+	parsedURL = parsedURL.JoinPath(cleanedFilePath)
 
-	req, err := http.NewRequest(http.MethodGet, url.String(), http.NoBody)
+	req, err := http.NewRequest(http.MethodGet, parsedURL.String(), http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -35,9 +35,9 @@ func (c *Client) GetFile(ctx context.Context, filePath string, headers Headers) 
 
 	statusCode := resp.StatusCode
 	if statusCode != http.StatusOK {
-		jsonErrors, err := unmarshalJSONErrors(ctx, resp.Body)
-		if err != nil {
-			return nil, err
+		jsonErrors, unmarshalErr := unmarshalJSONErrors(ctx, resp.Body)
+		if unmarshalErr != nil {
+			return nil, unmarshalErr
 		}
 		return nil, &APIError{
 			StatusCode: statusCode,

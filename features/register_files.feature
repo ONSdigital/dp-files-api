@@ -28,7 +28,8 @@ Feature: Register new file upload
       | CreatedAt     | 2021-10-19T09:30:30Z                                                      |
       | LastModified  | 2021-10-19T09:30:30Z                                                      |
       | State         | CREATED                                                                   |
-  
+    And the file event should be created in the database
+
   Scenario: Register that a bundle upload has started
     Given I am a publisher user
     When the file upload is registered with payload:
@@ -57,6 +58,7 @@ Feature: Register new file upload
       | CreatedAt     | 2021-10-19T09:30:30Z                                                      |
       | LastModified  | 2021-10-19T09:30:30Z                                                      |
       | State         | CREATED                                                                   |
+    And the file event should be created in the database
 
   Scenario: Attempting to register a file with a path that is already registered
     Given I am a publisher user
@@ -162,3 +164,4 @@ Feature: Register new file upload
       | CreatedAt     | 2021-10-19T09:30:30Z                                                      |
       | LastModified  | 2021-10-19T09:30:30Z                                                      |
       | State         | CREATED                                                                   |
+    And the file event should be created in the database

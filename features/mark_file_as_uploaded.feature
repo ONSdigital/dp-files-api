@@ -20,7 +20,7 @@ Feature: Mark files as uploaded
         When the file upload "images/meme.jpg" is marked as complete with the etag "123456789"
         Then the HTTP status code should be "200"
         And the following document entry should look like:
-            | Path              | images/meme.jpg                                                          |
+            | Path              | images/meme.jpg                                                           |
             | IsPublishable     | true                                                                      |
             | CollectionID      | 1234-asdfg-54321-qwerty                                                   |
             | Title             | The latest Meme                                                           |
@@ -87,3 +87,20 @@ Feature: Mark files as uploaded
             | State         | CREATED                                                                   |
         When the file upload "images/meme.jpg" is marked as complete with the etag "123456789"
         Then the HTTP status code should be "403"
+
+    Scenario: An UPDATE audit event is created when a file upload is marked as complete
+        Given I am a publisher user
+        And the file upload "images/meme.jpg" has been registered with:
+            | IsPublishable | true                                                                      |
+            | CollectionID  | 1234-asdfg-54321-qwerty                                                   |
+            | Title         | The latest Meme                                                           |
+            | SizeInBytes   | 14794                                                                     |
+            | Type          | image/jpeg                                                                |
+            | Licence       | OGL v3                                                                    |
+            | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+            | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+            | LastModified  | 2021-10-21T15:13:14Z                                                      |
+            | State         | CREATED                                                                   |
+        When the file upload "images/meme.jpg" is marked as complete with the etag "123456789"
+        Then the HTTP status code should be "200"
+        And an UPDATE audit event should be created for file "images/meme.jpg"

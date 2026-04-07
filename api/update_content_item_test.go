@@ -22,7 +22,7 @@ func TestContentItemUpdateSuccess(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/files/file.txt", strings.NewReader(`{"content_item": {"dataset_id": "test_dataset_id", "edition": "jan2026", "version": "1"}}`))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	updateContentItemFunc := func(ctx context.Context, path string, contentItem *files.StoredContentItem) error {
 		return nil
@@ -34,7 +34,7 @@ func TestContentItemUpdateSuccess(t *testing.T) {
 		return files.StoredRegisteredMetaData{}, nil
 	}
 
-	h := api.HandlerUpdateContentItem(updateContentItemFunc, createFileEventFunc, getFileMetadataFunc, authMock, identityClientMock)
+	h := api.HandlerUpdateContentItem(updateContentItemFunc, createFileEventFunc, getFileMetadataFunc, authMiddlewareMock, identityClientMock)
 
 	h.ServeHTTP(rec, req)
 
@@ -54,7 +54,7 @@ func TestContentItemUpdateWithBadBodyContent(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPut, "/files/file.txt", strings.NewReader("<json></json>"))
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	updateContentItemFunc := func(ctx context.Context, path string, contentItem *files.StoredContentItem) error {
 		return nil
@@ -66,7 +66,7 @@ func TestContentItemUpdateWithBadBodyContent(t *testing.T) {
 		return files.StoredRegisteredMetaData{}, nil
 	}
 
-	h := api.HandlerUpdateContentItem(updateContentItemFunc, createFileEventFunc, getFileMetadataFunc, authMock, identityClientMock)
+	h := api.HandlerUpdateContentItem(updateContentItemFunc, createFileEventFunc, getFileMetadataFunc, authMiddlewareMock, identityClientMock)
 
 	h.ServeHTTP(rec, req)
 
@@ -77,7 +77,7 @@ func TestContentItemUpdateForbidden(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPut, "/files/file.txt", strings.NewReader(`{"content_item": {"dataset_id": "test_dataset_id", "edition": "jan2026", "version": "1"}}`))
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	updateContentItemFunc := func(ctx context.Context, path string, contentItem *files.StoredContentItem) error {
 		return nil
@@ -89,7 +89,7 @@ func TestContentItemUpdateForbidden(t *testing.T) {
 		return files.StoredRegisteredMetaData{}, nil
 	}
 
-	h := api.HandlerUpdateContentItem(updateContentItemFunc, createFileEventFunc, getFileMetadataFunc, authMock, identityClientMock)
+	h := api.HandlerUpdateContentItem(updateContentItemFunc, createFileEventFunc, getFileMetadataFunc, authMiddlewareMock, identityClientMock)
 
 	h.ServeHTTP(rec, req)
 
@@ -101,7 +101,7 @@ func TestContentItemUpdateForUnregisteredFile(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/files/file.txt", strings.NewReader(`{"content_item": {"dataset_id": "test_dataset_id", "edition": "jan2026", "version": "1"}}`))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	updateContentItemFunc := func(ctx context.Context, path string, contentItem *files.StoredContentItem) error {
 		return store.ErrFileNotRegistered
@@ -113,7 +113,7 @@ func TestContentItemUpdateForUnregisteredFile(t *testing.T) {
 		return files.StoredRegisteredMetaData{}, store.ErrFileNotRegistered
 	}
 
-	h := api.HandlerUpdateContentItem(updateContentItemFunc, createFileEventFunc, getFileMetadataFunc, authMock, identityClientMock)
+	h := api.HandlerUpdateContentItem(updateContentItemFunc, createFileEventFunc, getFileMetadataFunc, authMiddlewareMock, identityClientMock)
 
 	h.ServeHTTP(rec, req)
 
@@ -125,7 +125,7 @@ func TestContentItemUpdateCreateFileEventError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/files/file.txt", strings.NewReader(`{"content_item": {"dataset_id": "test_dataset_id", "edition": "jan2026", "version": "1"}}`))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	updateContentItemFunc := func(ctx context.Context, path string, contentItem *files.StoredContentItem) error {
 		return nil
@@ -137,7 +137,7 @@ func TestContentItemUpdateCreateFileEventError(t *testing.T) {
 		return files.StoredRegisteredMetaData{}, nil
 	}
 
-	h := api.HandlerUpdateContentItem(updateContentItemFunc, createFileEventFunc, getFileMetadataFunc, authMock, identityClientMock)
+	h := api.HandlerUpdateContentItem(updateContentItemFunc, createFileEventFunc, getFileMetadataFunc, authMiddlewareMock, identityClientMock)
 
 	h.ServeHTTP(rec, req)
 
@@ -149,7 +149,7 @@ func TestContentItemUpdateReceivingUnexpectedError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/files/file.txt", strings.NewReader(`{"content_item": {"dataset_id": "test_dataset_id", "edition": "jan2026", "version": "1"}}`))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, _ := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, _ := setUpAuthServices()
 
 	updateContentItemFunc := func(ctx context.Context, path string, contentItem *files.StoredContentItem) error {
 		return errors.New("unexpected error")
@@ -161,7 +161,7 @@ func TestContentItemUpdateReceivingUnexpectedError(t *testing.T) {
 		return files.StoredRegisteredMetaData{}, nil
 	}
 
-	h := api.HandlerUpdateContentItem(updateContentItemFunc, createFileEventFunc, getFileMetadataFunc, authMock, identityClientMock)
+	h := api.HandlerUpdateContentItem(updateContentItemFunc, createFileEventFunc, getFileMetadataFunc, authMiddlewareMock, identityClientMock)
 
 	h.ServeHTTP(rec, req)
 

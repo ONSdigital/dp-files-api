@@ -112,10 +112,9 @@ func TestPatchFile_Failure(t *testing.T) {
 	})
 
 	Convey("Given a files-api client that returns an unexpected status code", t, func() {
-		body := `{"errors":[{"errorCode":"FileNotRegistered","description":"file not registered"}]}`
 		mockClienter := newMockClienter(&http.Response{
 			StatusCode: http.StatusNotFound,
-			Body:       io.NopCloser(strings.NewReader(body)),
+			Body:       io.NopCloser(strings.NewReader(fileNotRegisteredResponse)),
 		}, nil)
 		client := newMockFilesAPIClient(mockClienter)
 

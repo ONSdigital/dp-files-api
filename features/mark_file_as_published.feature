@@ -195,3 +195,23 @@ Feature: Mark single file as published
       | Etag              | 123456789                                                                 |
     When the file "interactives/87a3dde3-wéî®∂-4290-9a3b-afbea82e0fa7/version-11/lib&/chosen-sprite@2x.png" is marked as published
     Then the HTTP status code should be "200"
+
+  Scenario: An UPDATE audit event is created when a file is marked as published
+    Given I am a publisher user
+    And the file upload "images/meme.jpg" has been completed with:
+      | IsPublishable     | true                                                                      |
+      | CollectionID      | 1234-asdfg-54321-qwerty                                                   |
+      | Title             | The latest Meme                                                           |
+      | SizeInBytes       | 14794                                                                     |
+      | Type              | image/jpeg                                                                |
+      | Licence           | OGL v3                                                                    |
+      | LicenceURL        | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | CreatedAt         | 2021-10-21T15:13:14Z                                                      |
+      | LastModified      | 2021-10-21T15:14:14Z                                                      |
+      | UploadCompletedAt | 2021-10-21T15:14:14Z                                                      |
+      | State             | UPLOADED                                                                  |
+      | Etag              | 123456789                                                                 |
+    And Kafka Consumer Group is running
+    When the file "images/meme.jpg" is marked as published
+    Then the HTTP status code should be "200"
+    And an UPDATE audit event should be created for file "images/meme.jpg"

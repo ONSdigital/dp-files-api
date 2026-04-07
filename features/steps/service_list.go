@@ -43,8 +43,8 @@ func (e *fakeServiceContainer) GetAuthMiddleware() authorisation.Middleware {
 }
 
 func (e *fakeServiceContainer) GetHTTPServer() files.HTTPServer {
-	e.server.Server.Addr = ":26900"
-	e.server.Server.Handler = e.r
+	e.server.Addr = ":26900"
+	e.server.Handler = e.r
 
 	return e.server
 }
@@ -67,7 +67,7 @@ func (e *fakeServiceContainer) GetClock() clock.Clock {
 func (e *fakeServiceContainer) GetS3Clienter() aws.S3Clienter {
 	cfg, _ := config.Get()
 
-	awsConfig, err := awsConfig.LoadDefaultConfig(context.Background(),
+	awsCfg, err := awsConfig.LoadDefaultConfig(context.Background(),
 		awsConfig.WithRegion(cfg.AwsRegion),
 		awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("test", "test", "")),
 	)
@@ -75,7 +75,7 @@ func (e *fakeServiceContainer) GetS3Clienter() aws.S3Clienter {
 		fmt.Println("S3 ERROR: " + err.Error())
 	}
 
-	return dps3.NewClientWithConfig(cfg.PrivateBucketName, awsConfig, func(o *s3.Options) {
+	return dps3.NewClientWithConfig(cfg.PrivateBucketName, awsCfg, func(o *s3.Options) {
 		o.BaseEndpoint = awssdk.String("http://localstack:4566")
 		o.UsePathStyle = true
 	})
@@ -84,11 +84,11 @@ func (e *fakeServiceContainer) GetS3Clienter() aws.S3Clienter {
 func (e *fakeServiceContainer) GetKafkaProducer() kafka.IProducer {
 	cfg, _ := config.Get()
 	pConfig := &kafka.ProducerConfig{
-		BrokerAddrs:       cfg.KafkaConfig.Addr,
-		Topic:             cfg.KafkaConfig.StaticFilePublishedTopic,
-		MinBrokersHealthy: &cfg.KafkaConfig.ProducerMinBrokersHealthy,
-		KafkaVersion:      &cfg.KafkaConfig.Version,
-		MaxMessageBytes:   &cfg.KafkaConfig.MaxBytes,
+		BrokerAddrs:       cfg.Addr,
+		Topic:             cfg.StaticFilePublishedTopic,
+		MinBrokersHealthy: &cfg.ProducerMinBrokersHealthy,
+		KafkaVersion:      &cfg.Version,
+		MaxMessageBytes:   &cfg.MaxBytes,
 	}
 
 	producer, _ := kafka.NewProducer(context.Background(), pConfig)

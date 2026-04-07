@@ -61,7 +61,7 @@ func NewFilesAPIComponent(zebedeeURL string) (*FilesAPIComponent, error) {
 
 	fakePermissionsAPI := setupFakePermissionsAPI()
 
-	c.Config.AuthConfig.PermissionsAPIURL = fakePermissionsAPI.URL()
+	c.Config.PermissionsAPIURL = fakePermissionsAPI.URL()
 	c.Config.ZebedeeURL = zebedeeURL
 
 	log.Namespace = "dp-files-api"

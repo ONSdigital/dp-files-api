@@ -11,7 +11,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-var testBundleID = "bundle1"
+var (
+	testBundleID     = "bundle1"
+	testCollectionID = "coll1"
+)
 
 func (suite *StoreSuite) TestGetFileMetadataNotFoundError() {
 	suite.logInterceptor.Start()
@@ -442,11 +445,10 @@ func (suite *StoreSuite) TestPatchMetadataNilMetadata() {
 func (suite *StoreSuite) TestPatchMetadataNilCollection() {
 	subject := store.NewStore(nil, nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
-	collectionID := "coll1"
 	metadata := files.StoredRegisteredMetaData{
 		Path:         "path1",
 		State:        store.StateUploaded,
-		CollectionID: &collectionID,
+		CollectionID: &testCollectionID,
 	}
 	metadataExpected := metadata
 
@@ -475,11 +477,10 @@ func (suite *StoreSuite) TestPatchMetadataNilCollectionID() {
 func (suite *StoreSuite) TestPatchMetadataCollectionIDMismatch() {
 	subject := store.NewStore(nil, nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
-	collectionID := "coll1"
 	metadata := files.StoredRegisteredMetaData{
 		Path:         "path1",
 		State:        store.StateUploaded,
-		CollectionID: &collectionID,
+		CollectionID: &testCollectionID,
 	}
 	collection := &files.StoredCollection{
 		ID:    "a-different-collection-id",
@@ -495,14 +496,13 @@ func (suite *StoreSuite) TestPatchMetadataCollectionIDMismatch() {
 func (suite *StoreSuite) TestPatchMetadataBadState() {
 	subject := store.NewStore(nil, nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
-	collectionID := "coll1"
 	metadata := files.StoredRegisteredMetaData{
 		Path:         "path1",
 		State:        store.StateMoved,
-		CollectionID: &collectionID,
+		CollectionID: &testCollectionID,
 	}
 	collection := &files.StoredCollection{
-		ID:    collectionID,
+		ID:    testCollectionID,
 		State: store.StatePublished,
 	}
 
@@ -515,14 +515,13 @@ func (suite *StoreSuite) TestPatchMetadataBadState() {
 func (suite *StoreSuite) TestPatchMetadataBadCollectionState() {
 	subject := store.NewStore(nil, nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
-	collectionID := "coll1"
 	metadata := files.StoredRegisteredMetaData{
 		Path:         "path1",
 		State:        store.StateUploaded,
-		CollectionID: &collectionID,
+		CollectionID: &testCollectionID,
 	}
 	collection := &files.StoredCollection{
-		ID: collectionID,
+		ID: testCollectionID,
 	}
 
 	metadataExpected := metadata
@@ -534,16 +533,15 @@ func (suite *StoreSuite) TestPatchMetadataBadCollectionState() {
 func (suite *StoreSuite) TestPatchMetadataSuccess() {
 	subject := store.NewStore(nil, nil, nil, nil, nil, suite.defaultClock, nil, nil)
 
-	collectionID := "coll1"
 	publishedAt := suite.generateTestTime(1)
 	lastModified := suite.generateTestTime(2)
 	metadata := files.StoredRegisteredMetaData{
 		Path:         "path1",
 		State:        store.StateUploaded,
-		CollectionID: &collectionID,
+		CollectionID: &testCollectionID,
 	}
 	collection := &files.StoredCollection{
-		ID:           collectionID,
+		ID:           testCollectionID,
 		State:        store.StatePublished,
 		PublishedAt:  &publishedAt,
 		LastModified: lastModified,
@@ -552,7 +550,7 @@ func (suite *StoreSuite) TestPatchMetadataSuccess() {
 	metadataExpected := files.StoredRegisteredMetaData{
 		Path:         "path1",
 		State:        store.StatePublished,
-		CollectionID: &collectionID,
+		CollectionID: &testCollectionID,
 		PublishedAt:  &publishedAt,
 		LastModified: lastModified,
 	}

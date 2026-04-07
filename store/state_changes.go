@@ -255,10 +255,10 @@ func (store *Store) updateFileState(ctx context.Context, path, etag, toState, ex
 	}
 	// while publishing check that you are publishing the correct/expected version of the file
 	if toState == StateMoved {
-		head, err := store.s3client.Head(ctx, metadata.Path)
-		if err != nil {
-			log.Error(ctx, fmt.Sprintf("Failed trying to get head data for %s from bucket %s", metadata.Path, store.cfg.PrivateBucketName), err)
-			return err
+		head, headErr := store.s3client.Head(ctx, metadata.Path)
+		if headErr != nil {
+			log.Error(ctx, fmt.Sprintf("Failed trying to get head data for %s from bucket %s", metadata.Path, store.cfg.PrivateBucketName), headErr)
+			return headErr
 		}
 		if head.ETag != nil && (strings.Trim(*head.ETag, "\"") != metadata.Etag) {
 			log.Error(ctx, fmt.Sprintf("Etags mismatch, expected [%s], from s3 [%s]", metadata.Etag, *head.ETag), ErrEtagMismatchWhilePublishing)

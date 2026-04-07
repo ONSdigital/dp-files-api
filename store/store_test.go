@@ -232,49 +232,49 @@ func KafkaSendReturnsNil() KafkaSendFunc {
 	}
 }
 
-func (suite *StoreSuite) SetupTest() {
-	suite.defaultCollectionID = "123456"
-	suite.defaultBundleID = "789"
+func (s *StoreSuite) SetupTest() {
+	s.defaultCollectionID = "123456"
+	s.defaultBundleID = "789"
 
-	suite.path = "test.txt"
-	suite.defaultContext = context.Background()
-	suite.defaultClock = steps.TestClock{}
-	suite.defaultKafkaProducer = kafkatest.IProducerMock{}
-	suite.logInterceptor = NewLogInterceptor()
+	s.path = "test.txt"
+	s.defaultContext = context.Background()
+	s.defaultClock = steps.TestClock{}
+	s.defaultKafkaProducer = kafkatest.IProducerMock{}
+	s.logInterceptor = NewLogInterceptor()
 }
 
-func (suite *StoreSuite) etagReference(metadata files.StoredRegisteredMetaData) files.FileEtagChange {
+func (s *StoreSuite) etagReference(metadata files.StoredRegisteredMetaData) files.FileEtagChange {
 	return files.FileEtagChange{
 		Path: metadata.Path,
 		Etag: metadata.Etag,
 	}
 }
 
-func (suite *StoreSuite) assertImmutableFieldsUnchanged(metadata, actualMetadata files.StoredRegisteredMetaData) {
-	suite.Equal(metadata.Path, actualMetadata.Path)
-	suite.Equal(metadata.IsPublishable, actualMetadata.IsPublishable)
-	suite.Equal(metadata.CollectionID, actualMetadata.CollectionID)
-	suite.Equal(metadata.Title, actualMetadata.Title)
-	suite.Equal(metadata.SizeInBytes, actualMetadata.SizeInBytes)
-	suite.Equal(metadata.Type, actualMetadata.Type)
-	suite.Equal(metadata.Licence, actualMetadata.Licence)
-	suite.Equal(metadata.LicenceURL, actualMetadata.LicenceURL)
-	suite.Equal(metadata.Etag, actualMetadata.Etag)
+func (s *StoreSuite) assertImmutableFieldsUnchanged(metadata, actualMetadata files.StoredRegisteredMetaData) {
+	s.Equal(metadata.Path, actualMetadata.Path)
+	s.Equal(metadata.IsPublishable, actualMetadata.IsPublishable)
+	s.Equal(metadata.CollectionID, actualMetadata.CollectionID)
+	s.Equal(metadata.Title, actualMetadata.Title)
+	s.Equal(metadata.SizeInBytes, actualMetadata.SizeInBytes)
+	s.Equal(metadata.Type, actualMetadata.Type)
+	s.Equal(metadata.Licence, actualMetadata.Licence)
+	s.Equal(metadata.LicenceURL, actualMetadata.LicenceURL)
+	s.Equal(metadata.Etag, actualMetadata.Etag)
 }
 
-func (suite *StoreSuite) generateTestTime(addedDuration time.Duration) time.Time {
+func (s *StoreSuite) generateTestTime(addedDuration time.Duration) time.Time {
 	return time.Now().Add(time.Second * addedDuration).Round(time.Second).UTC()
 }
 
-func (suite *StoreSuite) generateCollectionMetadata(collectionID string) files.StoredRegisteredMetaData {
-	createdAt := suite.generateTestTime(1)
-	lastModified := suite.generateTestTime(2)
-	uploadCompletedAt := suite.generateTestTime(3)
-	publishedAt := suite.generateTestTime(4)
-	movedAt := suite.generateTestTime(5)
+func (s *StoreSuite) generateCollectionMetadata(collectionID string) files.StoredRegisteredMetaData {
+	createdAt := s.generateTestTime(1)
+	lastModified := s.generateTestTime(2)
+	uploadCompletedAt := s.generateTestTime(3)
+	publishedAt := s.generateTestTime(4)
+	movedAt := s.generateTestTime(5)
 
 	return files.StoredRegisteredMetaData{
-		Path:              suite.path,
+		Path:              s.path,
 		IsPublishable:     true,
 		CollectionID:      &collectionID,
 		Title:             "Test file",
@@ -292,15 +292,15 @@ func (suite *StoreSuite) generateCollectionMetadata(collectionID string) files.S
 	}
 }
 
-func (suite *StoreSuite) generateBundleMetadata(bundleID string) files.StoredRegisteredMetaData {
-	createdAt := suite.generateTestTime(1)
-	lastModified := suite.generateTestTime(2)
-	uploadCompletedAt := suite.generateTestTime(3)
-	publishedAt := suite.generateTestTime(4)
-	movedAt := suite.generateTestTime(5)
+func (s *StoreSuite) generateBundleMetadata(bundleID string) files.StoredRegisteredMetaData {
+	createdAt := s.generateTestTime(1)
+	lastModified := s.generateTestTime(2)
+	uploadCompletedAt := s.generateTestTime(3)
+	publishedAt := s.generateTestTime(4)
+	movedAt := s.generateTestTime(5)
 
 	return files.StoredRegisteredMetaData{
-		Path:              suite.path,
+		Path:              s.path,
 		IsPublishable:     true,
 		BundleID:          &bundleID,
 		Title:             "Test file",
@@ -318,9 +318,9 @@ func (suite *StoreSuite) generateBundleMetadata(bundleID string) files.StoredReg
 	}
 }
 
-func (suite *StoreSuite) generatePublishedCollectionInfo(collectionID string) files.StoredCollection {
-	lastModified := suite.generateTestTime(10)
-	publishedAt := suite.generateTestTime(11)
+func (s *StoreSuite) generatePublishedCollectionInfo(collectionID string) files.StoredCollection {
+	lastModified := s.generateTestTime(10)
+	publishedAt := s.generateTestTime(11)
 
 	return files.StoredCollection{
 		ID:           collectionID,
@@ -330,11 +330,11 @@ func (suite *StoreSuite) generatePublishedCollectionInfo(collectionID string) fi
 	}
 }
 
-func (suite *StoreSuite) generatePublishedBundleInfo(bundleID string) files.StoredBundle {
+func (s *StoreSuite) generatePublishedBundleInfo(bundleID string) files.StoredBundle {
 	return files.StoredBundle{
 		ID:           bundleID,
 		State:        store.StatePublished,
-		LastModified: suite.generateTestTime(2),
+		LastModified: s.generateTestTime(2),
 	}
 }
 

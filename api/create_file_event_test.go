@@ -49,8 +49,8 @@ func TestCreateFileEventWithBadJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/file-events", strings.NewReader("<json></json>"))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, permissionsMock := setUpAuthServices()
-	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error { return nil }, authMock, identityClientMock, permissionsMock)
+	authMiddlewareMock, identityClientMock, permissionsMock := setUpAuthServices()
+	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error { return nil }, authMiddlewareMock, identityClientMock, permissionsMock)
 
 	h.ServeHTTP(rec, req)
 
@@ -68,11 +68,11 @@ func TestCreateFileEventWithStoreError(t *testing.T) {
 
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, permissionsMock := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, permissionsMock := setUpAuthServices()
 
 	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return errors.New("database error")
-	}, authMock, identityClientMock, permissionsMock)
+	}, authMiddlewareMock, identityClientMock, permissionsMock)
 
 	h.ServeHTTP(rec, req)
 
@@ -89,11 +89,11 @@ func TestCreateFileEventSuccess(t *testing.T) {
 	}`))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, permissionsMock := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, permissionsMock := setUpAuthServices()
 
 	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return nil
-	}, authMock, identityClientMock, permissionsMock)
+	}, authMiddlewareMock, identityClientMock, permissionsMock)
 
 	h.ServeHTTP(rec, req)
 
@@ -111,11 +111,11 @@ func TestCreateFileEventForbidden(t *testing.T) {
 	}`))
 	req.Header.Add("Authorization", "fake-token")
 
-	authMock, identityClientMock, permissionsMock := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, permissionsMock := setUpAuthServices()
 
 	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return nil
-	}, authMock, identityClientMock, permissionsMock)
+	}, authMiddlewareMock, identityClientMock, permissionsMock)
 
 	h.ServeHTTP(rec, req)
 
@@ -131,11 +131,11 @@ func TestCreateFileEventUnauthorised(t *testing.T) {
 		"file": {"path": "file.csv", "type": "csv"}
 	}`))
 
-	authMock, identityClientMock, permissionsMock := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, permissionsMock := setUpAuthServices()
 
 	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return nil
-	}, authMock, identityClientMock, permissionsMock)
+	}, authMiddlewareMock, identityClientMock, permissionsMock)
 
 	h.ServeHTTP(rec, req)
 
@@ -147,11 +147,11 @@ func TestCreateFileEventWithEmptyJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/file-events", strings.NewReader(`{}`))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, permissionsMock := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, permissionsMock := setUpAuthServices()
 
 	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return nil
-	}, authMock, identityClientMock, permissionsMock)
+	}, authMiddlewareMock, identityClientMock, permissionsMock)
 
 	h.ServeHTTP(rec, req)
 
@@ -167,11 +167,11 @@ func TestCreateFileEventWithMissingRequestedBy(t *testing.T) {
 	}`))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, permissionsMock := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, permissionsMock := setUpAuthServices()
 
 	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return nil
-	}, authMock, identityClientMock, permissionsMock)
+	}, authMiddlewareMock, identityClientMock, permissionsMock)
 
 	h.ServeHTTP(rec, req)
 
@@ -187,11 +187,11 @@ func TestCreateFileEventWithMissingAction(t *testing.T) {
 	}`))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, permissionsMock := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, permissionsMock := setUpAuthServices()
 
 	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return nil
-	}, authMock, identityClientMock, permissionsMock)
+	}, authMiddlewareMock, identityClientMock, permissionsMock)
 
 	h.ServeHTTP(rec, req)
 
@@ -207,11 +207,11 @@ func TestCreateFileEventWithMissingResource(t *testing.T) {
 	}`))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, permissionsMock := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, permissionsMock := setUpAuthServices()
 
 	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return nil
-	}, authMock, identityClientMock, permissionsMock)
+	}, authMiddlewareMock, identityClientMock, permissionsMock)
 
 	h.ServeHTTP(rec, req)
 
@@ -228,11 +228,11 @@ func TestCreateFileEventWithMissingFilePath(t *testing.T) {
 	}`))
 	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
 
-	authMock, identityClientMock, permissionsMock := setUpAuthServices()
+	authMiddlewareMock, identityClientMock, permissionsMock := setUpAuthServices()
 
 	h := api.HandlerCreateFileEvent(func(ctx context.Context, event *files.FileEvent) error {
 		return nil
-	}, authMock, identityClientMock, permissionsMock)
+	}, authMiddlewareMock, identityClientMock, permissionsMock)
 
 	h.ServeHTTP(rec, req)
 

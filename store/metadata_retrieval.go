@@ -56,10 +56,10 @@ func (store *Store) GetFileMetadata(ctx context.Context, path string) (files.Sto
 // @Failure      500
 // @Router       /files [get]
 func (store *Store) GetFilesMetadata(ctx context.Context, collectionID, bundleID string) ([]files.StoredRegisteredMetaData, error) {
-	files := make([]files.StoredRegisteredMetaData, 0)
+	storedFiles := make([]files.StoredRegisteredMetaData, 0)
 
 	if collectionID != "" {
-		_, err := store.metadataCollection.Find(ctx, bson.M{fieldCollectionID: collectionID}, &files)
+		_, err := store.metadataCollection.Find(ctx, bson.M{fieldCollectionID: collectionID}, &storedFiles)
 		if err != nil {
 			return nil, err
 		}
@@ -67,15 +67,15 @@ func (store *Store) GetFilesMetadata(ctx context.Context, collectionID, bundleID
 		// get the collection metadata, and if they're not present, return the files unchanged
 		collection, err := store.GetCollectionPublishedMetadata(ctx, collectionID)
 		if err != nil {
-			return files, nil
+			return storedFiles, nil
 		}
 
 		// we got the collection published metadata, so apply them to all the files in the collection
-		for i := 0; i < len(files); i++ {
-			store.PatchFilePublishMetadata(&files[i], &collection)
+		for i := 0; i < len(storedFiles); i++ {
+			store.PatchFilePublishMetadata(&storedFiles[i], &collection)
 		}
 	} else if bundleID != "" {
-		_, err := store.metadataCollection.Find(ctx, bson.M{fieldBundleID: bundleID}, &files)
+		_, err := store.metadataCollection.Find(ctx, bson.M{fieldBundleID: bundleID}, &storedFiles)
 		if err != nil {
 			return nil, err
 		}
@@ -83,16 +83,16 @@ func (store *Store) GetFilesMetadata(ctx context.Context, collectionID, bundleID
 		// get the bundle metadata, and if they're not present, return the files unchanged
 		bundle, err := store.GetBundlePublishedMetadata(ctx, bundleID)
 		if err != nil {
-			return files, nil
+			return storedFiles, nil
 		}
 
-		// we got the bundle published metadata, so apply them to all the files in the collection
-		for i := 0; i < len(files); i++ {
-			store.PatchFilePublishBundleMetadata(&files[i], &bundle)
+		// we got the bundle published metadata, so apply them to all the files in the bundle
+		for i := 0; i < len(storedFiles); i++ {
+			store.PatchFilePublishBundleMetadata(&storedFiles[i], &bundle)
 		}
 	}
 
-	return files, nil
+	return storedFiles, nil
 }
 
 func (store *Store) GetCollectionPublishedMetadata(ctx context.Context, id string) (files.StoredCollection, error) {

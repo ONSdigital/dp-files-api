@@ -16,6 +16,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+var (
+	testEtag = "test-etag"
+)
+
 func (suite *StoreSuite) TestRegisterFileUploadCollectionPublishedCheckError() {
 	suite.logInterceptor.Start()
 	defer suite.logInterceptor.Stop()
@@ -29,7 +33,7 @@ func (suite *StoreSuite) TestRegisterFileUploadCollectionPublishedCheckError() {
 	}
 
 	existingMetadata, _ := bson.Marshal(files.StoredRegisteredMetaData{
-		CollectionID: func() *string { id := "different-id"; return &id }(),
+		CollectionID: &testCollectionID,
 	})
 
 	metadataCollection := mock.MongoCollectionMock{
@@ -58,7 +62,7 @@ func (suite *StoreSuite) TestRegisterFileUploadBundlePublishedCheckError() {
 	}
 
 	existingMetadata, _ := bson.Marshal(files.StoredRegisteredMetaData{
-		BundleID: func() *string { id := "different-id"; return &id }(),
+		BundleID: &testBundleID,
 	})
 
 	metadataCollection := mock.MongoCollectionMock{
@@ -89,7 +93,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenCollectionAlreadyPublished() 
 	}
 
 	existingMetadata, _ := bson.Marshal(files.StoredRegisteredMetaData{
-		CollectionID: func() *string { id := "different-id"; return &id }(),
+		CollectionID: &testCollectionID,
 	})
 
 	metadataCollection := mock.MongoCollectionMock{
@@ -122,7 +126,7 @@ func (suite *StoreSuite) TestRegisterFileUploadWhenBundleAlreadyPublished() {
 	}
 
 	existingMetadata, _ := bson.Marshal(files.StoredRegisteredMetaData{
-		BundleID: func() *string { id := "different-id"; return &id }(),
+		BundleID: &testBundleID,
 	})
 
 	metadataCollection := mock.MongoCollectionMock{
@@ -540,7 +544,7 @@ func (suite *StoreSuite) TestMarkFileMovedFailsWhenFileNotExists() {
 func (suite *StoreSuite) TestMarkFileMovedFailsWhenUpdateReturnsError() {
 	metadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata.State = store.StatePublished
-	metadata.Etag = "test-etag"
+	metadata.Etag = testEtag
 	metadataBytes, _ := bson.Marshal(metadata)
 
 	expectedError := errors.New("an error occurred")
@@ -828,7 +832,7 @@ func (suite *StoreSuite) TestRemoveFile_S3Error() {
 
 	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
 	metadata.State = store.StateUploaded
-	metadata.Etag = "test-etag"
+	metadata.Etag = testEtag
 
 	expectedError := errors.New("an error occurred")
 
@@ -858,7 +862,7 @@ func (suite *StoreSuite) TestRemoveFile_MetadataCollectionDeleteReturnAnError() 
 	defer suite.logInterceptor.Stop()
 	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
 	metadata.State = store.StateUploaded
-	metadata.Etag = "test-etag"
+	metadata.Etag = testEtag
 
 	expectedError := errors.New("an error occurred")
 
@@ -893,7 +897,7 @@ func (suite *StoreSuite) TestRemoveFile_TestErrorWhileFindingMetadata() {
 
 	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
 	metadata.State = store.StateUploaded
-	metadata.Etag = "test-etag"
+	metadata.Etag = testEtag
 
 	expectedError := errors.New("an error occurred")
 
@@ -931,7 +935,7 @@ func (suite *StoreSuite) TestRemoveFile_TestErrorWhileDeletingBundleRecord() {
 
 	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
 	metadata.State = store.StateUploaded
-	metadata.Etag = "test-etag"
+	metadata.Etag = testEtag
 
 	expectedError := errors.New("an error occurred")
 
@@ -972,7 +976,7 @@ func (suite *StoreSuite) TestRemoveFile_TestBundleRecordDeletedSuccessfully() {
 
 	metadata := suite.generateBundleMetadata(suite.defaultBundleID)
 	metadata.State = store.StateUploaded
-	metadata.Etag = "test-etag"
+	metadata.Etag = testEtag
 
 	s3Client := &s3Mock.S3ClienterMock{
 		DeleteFunc: func(ctx context.Context, key string) error {
