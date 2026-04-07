@@ -2,7 +2,6 @@ package steps
 
 import (
 	"context"
-	"crypto/rsa"
 	"net/http"
 	"time"
 
@@ -40,8 +39,6 @@ type FilesAPIComponent struct {
 	isViewerNotAllowed      bool
 	Config                  *config.Config
 	AuthorisationMiddleware authorisation.Middleware
-	viewerPrivKey           *rsa.PrivateKey
-	viewerKID               string
 }
 
 func NewFilesAPIComponent(zebedeeURL string) (*FilesAPIComponent, error) {
@@ -249,7 +246,7 @@ func (c *FilesAPIComponent) Reset() {
 	if err != nil {
 		panic(err)
 	}
-	c.Config.AuthConfig.JWTVerificationPublicKeys[key.KID] = key.PublicKeyB64
+	c.Config.JWTVerificationPublicKeys[key.KID] = key.PublicKeyB64
 
 	c.isPublishing = true
 }
