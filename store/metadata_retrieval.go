@@ -45,6 +45,51 @@ func (store *Store) GetFileMetadata(ctx context.Context, path string) (files.Sto
 	return fileMetadata, nil
 }
 
+func (store *Store) GetFileMetadataWeb(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
+	fileMetadata := files.StoredRegisteredMetaData{}
+
+	err := store.metadataCollection.FindOne(ctx, bson.M{fieldPath: path}, &fileMetadata)
+	if err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			log.Error(ctx, "file metadata not found", err, log.Data{"path": path})
+			return files.StoredRegisteredMetaData{}, ErrFileNotRegistered
+		}
+		return files.StoredRegisteredMetaData{}, err
+	}
+
+	switch fileMetadata.State {
+	case StateUploaded:
+		if fileMetadata.CollectionID != nil {
+			collectionPublishedMetadata, err := store.GetCollectionPublishedMetadata(ctx, *fileMetadata.CollectionID)
+
+			if err != nil {
+				return files.StoredRegisteredMetaData{}, err
+			}
+
+			if collectionPublishedMetadata.State == StatePublished {
+				return fileMetadata, nil
+			}
+		} else if fileMetadata.BundleID != nil {
+			bundlePublishedMetadata, err := store.GetBundlePublishedMetadata(ctx, *fileMetadata.BundleID)
+
+			if err != nil {
+				return files.StoredRegisteredMetaData{}, err
+			}
+
+			if bundlePublishedMetadata.State == StatePublished {
+				return fileMetadata, nil
+			}
+		} else {
+			return files.StoredRegisteredMetaData{}, ErrFileIsNotPublished
+		}
+	case StateMoved, StatePublished:
+		return fileMetadata, nil
+	default:
+		return files.StoredRegisteredMetaData{}, ErrFileIsNotPublished
+	}
+	return files.StoredRegisteredMetaData{}, ErrFileIsNotPublished
+}
+
 // GetFilesMetadata godoc
 // @Description  GETs metadata for a file
 // @Tags         File upload started
