@@ -179,6 +179,157 @@ func (suite *StoreSuite) TestGetFileMetadataWithBundleError() {
 	suite.Equal(expectedMetadata, actualMetadata)
 }
 
+func (suite *StoreSuite) TestGetFileMetadataWebNotFoundError() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	collection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(mongodriver.ErrNoDocumentFound),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collection, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	_, err := subject.GetFileMetadataWeb(suite.defaultContext, suite.path)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("file metadata not found", logEvent)
+	suite.Equal(store.ErrFileNotRegistered, err)
+}
+
+func (suite *StoreSuite) TestGetFileMetadataWebOtherError() {
+	collection := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(errors.New("find error")),
+	}
+	cfg, _ := config.Get()
+	subject := store.NewStore(&collection, nil, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	_, err := subject.GetFileMetadataWeb(suite.defaultContext, suite.path)
+
+	suite.EqualError(err, "find error")
+}
+
+func (suite *StoreSuite) TestGetFileMetadataWebWithCollectionID() {
+	collectionID := testCollectionID
+	expectedMetadata := files.StoredRegisteredMetaData{
+		Path:     suite.path,
+		State:    store.StateUploaded,
+		BundleID: &collectionID,
+	}
+
+	metadataBytes, _ := bson.Marshal(expectedMetadata)
+
+	metadataColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+
+	lastModified := suite.generateTestTime(2)
+	collection := files.StoredCollection{
+		ID:           collectionID,
+		State:        store.StatePublished,
+		LastModified: lastModified,
+	}
+	collectionBytes, _ := bson.Marshal(collection)
+
+	collectionColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(collectionBytes),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataColl, nil, &collectionColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	actualMetadata, err := subject.GetFileMetadataWeb(suite.defaultContext, suite.path)
+
+	suite.NoError(err)
+	suite.Exactly(expectedMetadata, actualMetadata)
+}
+
+func (suite *StoreSuite) TestGetFileMetadataWebCollectionError() {
+	suite.logInterceptor.Start()
+	defer suite.logInterceptor.Stop()
+
+	expectedMetadata := suite.generateCollectionMetadata(suite.defaultCollectionID)
+	expectedMetadata.State = store.StateUploaded
+	metadataBytes, _ := bson.Marshal(expectedMetadata)
+
+	metadataColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+	collectionColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(errors.New("collection error")),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataColl, &collectionColl, nil, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+	_, err := subject.GetFileMetadataWeb(suite.defaultContext, suite.path)
+
+	logEvent := suite.logInterceptor.GetLogEvent()
+
+	suite.Equal("collection metadata fetch error", logEvent)
+	suite.EqualError(err, "collection error")
+}
+
+func (suite *StoreSuite) TestGetFileMetadataWebWithBundleID() {
+	bundleID := testBundleID
+	expectedMetadata := files.StoredRegisteredMetaData{
+		Path:     suite.path,
+		State:    store.StateUploaded,
+		BundleID: &bundleID,
+	}
+
+	metadataBytes, _ := bson.Marshal(expectedMetadata)
+
+	metadataColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+
+	lastModified := suite.generateTestTime(2)
+	bundle := files.StoredBundle{
+		ID:           bundleID,
+		State:        store.StatePublished,
+		LastModified: lastModified,
+	}
+	bundleBytes, _ := bson.Marshal(bundle)
+
+	bundleColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(bundleBytes),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataColl, nil, &bundleColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	actualMetadata, err := subject.GetFileMetadataWeb(suite.defaultContext, suite.path)
+
+	suite.NoError(err)
+	suite.Exactly(expectedMetadata, actualMetadata)
+}
+
+func (suite *StoreSuite) TestGetFileMetadataWebBundleError() {
+	bundleID := testBundleID
+	expectedMetadata := files.StoredRegisteredMetaData{
+		Path:     suite.path,
+		State:    store.StateUploaded,
+		BundleID: &bundleID,
+	}
+
+	metadataBytes, _ := bson.Marshal(expectedMetadata)
+
+	metadataColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneSetsResultAndReturnsNil(metadataBytes),
+	}
+
+	bundleColl := mock.MongoCollectionMock{
+		FindOneFunc: CollectionFindOneReturnsError(errors.New("bundle error")),
+	}
+
+	cfg, _ := config.Get()
+	subject := store.NewStore(&metadataColl, nil, &bundleColl, nil, &suite.defaultKafkaProducer, suite.defaultClock, nil, cfg)
+
+	actualMetadata, err := subject.GetFileMetadataWeb(suite.defaultContext, suite.path)
+
+	suite.Error(err)
+	suite.Equal(files.StoredRegisteredMetaData{}, actualMetadata)
+}
+
 func (suite *StoreSuite) TestGetFilesMetadataNoPatching() {
 	metadata1 := suite.generateCollectionMetadata(suite.defaultCollectionID)
 	metadata1.Path += "1"
