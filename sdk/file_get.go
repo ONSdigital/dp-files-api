@@ -6,11 +6,14 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/ONSdigital/log.go/v2/log"
+
 	"github.com/ONSdigital/dp-files-api/files"
 )
 
 // GetFile retrieves the metadata for a file at the specified path
 func (c *Client) GetFile(ctx context.Context, filePath string, headers Headers) (*files.StoredRegisteredMetaData, error) {
+	log.Info(ctx, "Hello from the Files API SDK")
 	parsedURL, err := url.Parse(c.hcCli.URL + "/files")
 	if err != nil {
 		return nil, err
