@@ -61,6 +61,8 @@ func (c *FilesAPIComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I update the content item of the file "([^"]*)" with:`, c.iUpdateTheContentItemOfTheFileWith)
 	ctx.Step(`^a READ audit event should be created for the file-events endpoint$`, c.aReadAuditEventShouldBeCreatedForFileEvents)
 	ctx.Step(`^an UPDATE audit event should be created for file "([^"]*)"$`, c.anUpdateAuditEventShouldBeCreatedForFile)
+	ctx.Step(`the collection with ID "([^"]*)" is published`, c.theCollectionIsPublished)
+	ctx.Step(`the bundle with ID "([^"]*)" is published`, c.theBundleIsPublished)
 }
 
 func (c *FilesAPIComponent) iAmAnAuthorisedUser() error {
@@ -182,6 +184,26 @@ func (c *FilesAPIComponent) theFileUploadHasBeenRegistered(path string) error {
 	_, err := c.mongoClient.Database("files").Collection("metadata").InsertOne(ctx, &m)
 	assert.NoError(c.APIFeature, err)
 
+	return c.APIFeature.StepError()
+}
+
+func (c *FilesAPIComponent) theCollectionIsPublished(collectionID string) error {
+	ctx := context.Background()
+
+	coll := files.StoredCollection{ID: collectionID, State: store.StatePublished}
+
+	_, err := c.mongoClient.Database("files").Collection("collections").InsertOne(ctx, &coll)
+	assert.NoError(c.APIFeature, err)
+	return c.APIFeature.StepError()
+}
+
+func (c *FilesAPIComponent) theBundleIsPublished(bundleID string) error {
+	ctx := context.Background()
+
+	bundle := files.StoredBundle{ID: bundleID, State: store.StatePublished}
+
+	_, err := c.mongoClient.Database("files").Collection("bundles").InsertOne(ctx, &bundle)
+	assert.NoError(c.APIFeature, err)
 	return c.APIFeature.StepError()
 }
 
@@ -452,7 +474,10 @@ func (c *FilesAPIComponent) iPublishTheBundle(bundleID string) error {
 func (c *FilesAPIComponent) theFollowingPublishedMessageIsSent(table *godog.Table) error {
 	expectedMessage, _ := assistdog.NewDefault().ParseMap(table)
 	for i := 0; i < 30; i++ {
-		if msg, ok := c.msgs[expectedMessage["path"]]; ok {
+		c.msgsMu.RLock()
+		msg, ok := c.msgs[expectedMessage["path"]]
+		c.msgsMu.RUnlock()
+		if ok {
 			assert.True(c.APIFeature, ok, "Could not find message")
 			assert.Equal(c.APIFeature, expectedMessage["path"], msg.Path)
 			assert.Equal(c.APIFeature, expectedMessage["etag"], msg.Etag)
@@ -469,7 +494,9 @@ func (c *FilesAPIComponent) theFollowingPublishedMessageIsSent(table *godog.Tabl
 }
 
 func (c *FilesAPIComponent) kafkaConsumerGroupIsRunning() error {
+	c.msgsMu.Lock()
 	c.msgs = make(map[string]files.FilePublished)
+	c.msgsMu.Unlock()
 	ctx := context.Background()
 	cfg, _ := config.Get()
 	minRetry := 1 * time.Millisecond
@@ -504,7 +531,9 @@ func (c *FilesAPIComponent) kafkaConsumerGroupIsRunning() error {
 		unmarshalErr := schema.Unmarshal(msg.GetData(), &fp)
 		assert.NoError(c.APIFeature, unmarshalErr)
 
+		c.msgsMu.Lock()
 		c.msgs[fp.Path] = fp
+		c.msgsMu.Unlock()
 
 		return nil
 	})

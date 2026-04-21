@@ -118,7 +118,7 @@ func Run(ctx context.Context, serviceList ServiceContainer, svcErrors chan error
 		r.Path("/bundle/{bundle-id}").HandlerFunc(forbiddenHandler).Methods(http.MethodPatch)
 
 		// simple scenario - web mode where users are not authenticated - allowed based on publishing status
-		r.Path(filesURI).HandlerFunc(api.HandleGetFileMetadata(dataStore.GetFileMetadata)).Methods(http.MethodGet)
+		r.Path(filesURI).HandlerFunc(api.HandleGetFileMetadata(dataStore.GetFileMetadataWeb)).Methods(http.MethodGet)
 	}
 	r.Path("/health").HandlerFunc(hc.Handler)
 

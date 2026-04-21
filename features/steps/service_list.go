@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ONSdigital/dp-files-api/mongo"
 	"github.com/gorilla/mux"
 
 	"github.com/ONSdigital/dp-authorisation/v2/authorisation"
@@ -15,7 +16,6 @@ import (
 	kafka "github.com/ONSdigital/dp-kafka/v3"
 
 	"github.com/ONSdigital/dp-files-api/clock"
-	"github.com/ONSdigital/dp-files-api/mongo"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 
 	dphttp "github.com/ONSdigital/dp-net/v3/http"
@@ -32,6 +32,7 @@ type fakeServiceContainer struct {
 	isAuthorised       bool
 	isViewerAllowed    bool
 	isViewerNotAllowed bool
+	mongoClient        mongo.Client
 }
 
 func (e *fakeServiceContainer) GetAuthMiddleware() authorisation.Middleware {
@@ -55,9 +56,7 @@ func (e *fakeServiceContainer) GetHealthCheck() health.Checker {
 }
 
 func (e *fakeServiceContainer) GetMongoDB() mongo.Client {
-	cfg, _ := config.Get()
-	m, _ := mongo.New(cfg.MongoConfig)
-	return m
+	return e.mongoClient
 }
 
 func (e *fakeServiceContainer) GetClock() clock.Clock {
@@ -96,5 +95,6 @@ func (e *fakeServiceContainer) GetKafkaProducer() kafka.IProducer {
 }
 
 func (e *fakeServiceContainer) Shutdown(ctx context.Context) error {
+	_ = ctx
 	return nil
 }

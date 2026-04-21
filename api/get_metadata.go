@@ -16,6 +16,8 @@ import (
 
 type GetFileMetadata func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error)
 
+type GetFileMetadataWeb func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error)
+
 func HandleGetFileMetadataWithAuth(getMetadata GetFileMetadata, authMiddleware auth.Middleware, idClient *clientsidentity.Client, permissionsChecker auth.PermissionsChecker) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
@@ -84,7 +86,7 @@ func HandleGetFileMetadataWithAuth(getMetadata GetFileMetadata, authMiddleware a
 	}
 }
 
-func HandleGetFileMetadata(getMetadata GetFileMetadata) http.HandlerFunc {
+func HandleGetFileMetadata(getMetadata GetFileMetadataWeb) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		w.Header().Add("Content-Type", "application/json")
