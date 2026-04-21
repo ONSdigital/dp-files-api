@@ -78,7 +78,7 @@ Feature: Web mode restrictions
     When the file "images/meme.jpg" is marked as moved with etag "987654321"
     Then the HTTP status code should be "403"
 
-  Scenario: The one where I try to get a file
+  Scenario: The one where I try to get a file (state CREATED)
     Given the file upload "images/meme.jpg" has been registered with:
       | IsPublishable | true                                                                      |
       | CollectionID  | 1234-asdfg-54321-qwerty                                                   |
@@ -90,5 +90,81 @@ Feature: Web mode restrictions
       | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
       | LastModified  | 2021-10-21T15:13:14Z                                                      |
       | State         | CREATED                                                                   |
+    When the file metadata is requested for the file "images/meme.jpg"
+    Then the HTTP status code should be "404"
+
+  Scenario: The one where I try to get a file (state UPLOADED)
+    Given the file upload "images/meme.jpg" has been completed with:
+      | IsPublishable | true                                                                      |
+      | Title         | The latest Meme                                                           |
+      | SizeInBytes   | 14794                                                                     |
+      | Type          | image/jpeg                                                                |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | UPLOADED                                                                  |
+    When the file metadata is requested for the file "images/meme.jpg"
+    Then the HTTP status code should be "404"
+
+  Scenario: The one where I try to get a file (state UPLOADED)
+    Given the file upload "images/meme.jpg" has been completed with:
+      | IsPublishable | true                                                                      |
+      | CollectionID  | 1234-asdfg-54321-qwerty                                                   |
+      | Title         | The latest Meme                                                           |
+      | SizeInBytes   | 14794                                                                     |
+      | Type          | image/jpeg                                                                |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | UPLOADED                                                                  |
+    And the collection with ID "1234-asdfg-54321-qwerty" is published
+    When the file metadata is requested for the file "images/meme.jpg"
+    Then the HTTP status code should be "200"
+
+    Scenario: The one where I try to get a file (state UPLOADED)
+    Given the file upload "images/meme.jpg" has been completed with:
+      | IsPublishable | true                                                                      |
+      | BundleID      | 1234-asdfg-54321-qwerty                                                   |
+      | Title         | The latest Meme                                                           |
+      | SizeInBytes   | 14794                                                                     |
+      | Type          | image/jpeg                                                                |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | UPLOADED                                                                  |
+    And the bundle with ID "1234-asdfg-54321-qwerty" is published
+    When the file metadata is requested for the file "images/meme.jpg"
+    Then the HTTP status code should be "200"
+
+  Scenario: The one where I try to get a file (state MOVED)
+    Given the file upload "images/meme.jpg" has been registered with:
+      | IsPublishable | true                                                                      |
+      | CollectionID  | 1234-asdfg-54321-qwerty                                                   |
+      | Title         | The latest Meme                                                           |
+      | SizeInBytes   | 14794                                                                     |
+      | Type          | image/jpeg                                                                |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | MOVED                                                                   |
+    When the file metadata is requested for the file "images/meme.jpg"
+    Then the HTTP status code should be "200"
+
+  Scenario: The one where I try to get a file (state PUBLISHED)
+    Given the file upload "images/meme.jpg" has been registered with:
+      | IsPublishable | true                                                                      |
+      | CollectionID  | 1234-asdfg-54321-qwerty                                                   |
+      | Title         | The latest Meme                                                           |
+      | SizeInBytes   | 14794                                                                     |
+      | Type          | image/jpeg                                                                |
+      | Licence       | OGL v3                                                                    |
+      | LicenceURL    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+      | CreatedAt     | 2021-10-21T15:13:14Z                                                      |
+      | LastModified  | 2021-10-21T15:13:14Z                                                      |
+      | State         | PUBLISHED                                                                   |
     When the file metadata is requested for the file "images/meme.jpg"
     Then the HTTP status code should be "200"

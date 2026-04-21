@@ -22,18 +22,23 @@ var (
 	loggingFlag   = flag.Bool("logging", false, "print logging")
 )
 
+const mongoVersion = "4.4.8"
+const databaseName = "files"
+const replicaSetName = "rs0"
+
 type ComponentTest struct {
 	MongoFeature *componenttest.MongoFeature
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	authorizationFeature := componenttest.NewAuthorizationFeature()
-	if !*loggingFlag {
-		buf := bytes.NewBufferString("")
-		log.SetDestination(buf, buf)
+
+	mongoURI, err := f.MongoFeature.GetConnectionString()
+	if err != nil {
+		panic(err)
 	}
 
-	component, err := steps.NewFilesAPIComponent(authorizationFeature.FakeAuthService.Server.URL)
+	component, err := steps.NewFilesAPIComponent(mongoURI, authorizationFeature.FakeAuthService.Server.URL)
 	if err != nil {
 		panic(err)
 	}
@@ -59,18 +64,34 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	authorizationFeature.RegisterSteps(ctx)
 }
 
+func (f *ComponentTest) InitializeTestSuite(ctx *godog.TestSuiteContext) {
+	ctx.BeforeSuite(func() {
+		if !*loggingFlag {
+			buf := bytes.NewBufferString("")
+			log.SetDestination(buf, buf)
+		}
+		f.MongoFeature = componenttest.NewMongoFeature(componenttest.MongoOptions{MongoVersion: mongoVersion, DatabaseName: databaseName, ReplicaSetName: replicaSetName})
+	})
+	ctx.AfterSuite(func() {
+		if err := f.MongoFeature.Close(); err != nil {
+			log.Error(context.Background(), "failed to close mongo feature", err)
+		}
+	})
+}
+
 func TestComponent(t *testing.T) {
 	if *componentFlag {
 		f := &ComponentTest{}
 
 		status := godog.TestSuite{
-			Name:                "feature_tests",
-			ScenarioInitializer: f.InitializeScenario,
-			//TestSuiteInitializer: f.InitializeTestSuite,
+			Name:                 "feature_tests",
+			ScenarioInitializer:  f.InitializeScenario,
+			TestSuiteInitializer: f.InitializeTestSuite,
 			Options: &godog.Options{
-				Output: colors.Colored(os.Stdout),
-				Format: "pretty",
-				Paths:  flag.Args(),
+				Output:      colors.Colored(os.Stdout),
+				Format:      "pretty",
+				Paths:       flag.Args(),
+				Concurrency: 1,
 			}}.Run()
 
 		fmt.Println("=================================")
