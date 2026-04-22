@@ -1,7 +1,7 @@
 #!/bin/bash -eux
 
 # Run component tests in docker compose defined in features/steps/compose folder
-pushd dis-files-api/features/compose
+pushd dp-files-api/features/compose
   COMPONENT_TEST_USE_LOG_FILE=true docker-compose up --attach dp-files-api --abort-on-container-exit
   e=$?
 popd
