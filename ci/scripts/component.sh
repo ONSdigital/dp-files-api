@@ -8,7 +8,7 @@ popd
 
 # Cat the component-test output file and remove it so log output can
 # be seen in Concourse
-pushd dis-files-api
+pushd dp-files-api
   cat component-output.txt && rm component-output.txt
 popd
 
