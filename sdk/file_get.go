@@ -54,7 +54,7 @@ func (c *Client) GetFile(ctx context.Context, filePath string, headers Headers) 
 	return metadata, nil
 }
 
-func (c *Client) GetFileWithBundleState(ctx context.Context, filePath string, headers Headers) (*files.StoredRegisteredMetaData, string, error) {
+func (c *Client) GetFileWithBundleStatePublished(ctx context.Context, filePath string, headers Headers) (*files.StoredRegisteredMetaData, string, error) {
 	parsedURL, err := url.Parse(c.hcCli.URL + "/files")
 	if err != nil {
 		return nil, "", err

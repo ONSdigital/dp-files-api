@@ -8,16 +8,17 @@ testing and error handling.
 
 ## Available client methods
 
-| Name                                      | Description                                                             |
-|-------------------------------------------|-------------------------------------------------------------------------|
-| [`Checker`](#checker)                     | Calls the `health.Client`'s `Checker` method                            |
-| [`Health`](#health)                       | Returns the underlying Healthcheck Client for this API client           |
-| [`URL`](#url)                             | Returns the URL used by this client                                     |
-| [`DeleteFile`](#deletefile)               | Deletes a file at the specified filePath                                |
-| [`CreateFileEvent`](#createfileevent)     | Creates a new file event in the audit log and returns the created event |
-| [`GetFile`](#getfile)                     | Retrieves the metadata for a file at the specified path                 |
-| [`MarkFilePublished`](#markfilepublished) | Sets the state of a file to `PUBLISHED`                                 |
-| [`UpdateContentItem`](#updatecontentitem) | Updates the content item information in a files metadata                |
+| Name                                                                  | Description                                                                                                                    |
+|-----------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+| [`Checker`](#checker)                                                 | Calls the `health.Client`'s `Checker` method                                                                                   |
+| [`Health`](#health)                                                   | Returns the underlying Healthcheck Client for this API client                                                                  |
+| [`URL`](#url)                                                         | Returns the URL used by this client                                                                                            |
+| [`DeleteFile`](#deletefile)                                           | Deletes a file at the specified filePath                                                                                       |
+| [`CreateFileEvent`](#createfileevent)                                 | Creates a new file event in the audit log and returns the created event                                                        |
+| [`GetFile`](#getfile)                                                 | Retrieves the metadata for a file at the specified path                                                                        |
+| [`GetFileWithBundleStatePublished`](#getfilewithbundlestatepublished) | Retrieves the metadata for a file at the specified path if the associated bundle or collection state is `PUBLISHED` or `MOVED` |
+| [`MarkFilePublished`](#markfilepublished)                             | Sets the state of a file to `PUBLISHED`                                                                                        |
+| [`UpdateContentItem`](#updatecontentitem)                             | Updates the content item information in a files metadata                                                                       |
 
 ## Instantiation
 
@@ -142,6 +143,12 @@ createdFileEvent, err := client.CreateFileEvent(ctx, fileEvent, sdk.Headers{})
 
 ```go
 fileMetadata, err := client.GetFile(ctx, "/path/to/file.csv", sdk.Headers{})
+```
+
+### GetFileWithBundleStatePublished
+
+```go
+fileMetadata, bundleStatePublished, err := client.GetFileWithBundleStatePublished(ctx, "/path/to/file.csv", sdk.Headers{})
 ```
 
 ### MarkFilePublished
