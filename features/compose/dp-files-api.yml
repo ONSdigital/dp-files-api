@@ -1,0 +1,30 @@
+version: "3.3"
+
+services:
+  dp-files-api:
+    build:
+      context: ../../../dp-files-api
+      dockerfile: Dockerfile.local
+    command:
+      - go
+      - test
+      - -cover
+      - -race
+      - -coverpkg=github.com/ONSdigital/dp-files-api/...
+      - -component
+    working_dir: /service
+    volumes:
+      - ../../../dp-files-api:/service
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "26900:26900"
+    environment:
+      BIND_ADDR: ':'
+      GRACEFUL_SHUTDOWN_TIMEOUT: '30s'
+      HEALTHCHECK_INTERVAL: '5s'
+      HEALTHCHECK_CRITICAL_TIMEOUT: '30s'
+      AUTHORISATION_ENABLED: 'false'
+      COMPONENT_TEST_USE_LOG_FILE: "${COMPONENT_TEST_USE_LOG_FILE-false}"
+    depends_on:
+      kafka:
+        condition: service_healthy
