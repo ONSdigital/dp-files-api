@@ -19,6 +19,7 @@ type Clienter interface {
 	CreateFileEvent(ctx context.Context, event files.FileEvent, headers Headers) (*files.FileEvent, error)
 	DeleteFile(ctx context.Context, filePath string, headers Headers) error
 	GetFile(ctx context.Context, filePath string, headers Headers) (*files.StoredRegisteredMetaData, error)
+	GetFileWithBundleStatePublished(ctx context.Context, filePath string, headers Headers) (*files.StoredRegisteredMetaData, string, error)
 	MarkFilePublished(ctx context.Context, filePath string, headers Headers) error
 	RegisterFile(ctx context.Context, metadata files.StoredRegisteredMetaData, headers Headers) error
 	MarkFileUploaded(ctx context.Context, filePath string, etag string, headers Headers) error

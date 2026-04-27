@@ -35,6 +35,9 @@ var _ sdk.Clienter = &ClienterMock{}
 //			GetFileFunc: func(ctx context.Context, filePath string, headers sdk.Headers) (*files.StoredRegisteredMetaData, error) {
 //				panic("mock out the GetFile method")
 //			},
+//			GetFileWithBundleStatePublishedFunc: func(ctx context.Context, filePath string, headers sdk.Headers) (*files.StoredRegisteredMetaData, string, error) {
+//				panic("mock out the GetFileWithBundleStatePublished method")
+//			},
 //			HealthFunc: func() *health.Client {
 //				panic("mock out the Health method")
 //			},
@@ -71,6 +74,9 @@ type ClienterMock struct {
 
 	// GetFileFunc mocks the GetFile method.
 	GetFileFunc func(ctx context.Context, filePath string, headers sdk.Headers) (*files.StoredRegisteredMetaData, error)
+
+	// GetFileWithBundleStatePublishedFunc mocks the GetFileWithBundleStatePublished method.
+	GetFileWithBundleStatePublishedFunc func(ctx context.Context, filePath string, headers sdk.Headers) (*files.StoredRegisteredMetaData, string, error)
 
 	// HealthFunc mocks the Health method.
 	HealthFunc func() *health.Client
@@ -126,6 +132,15 @@ type ClienterMock struct {
 			// Headers is the headers argument value.
 			Headers sdk.Headers
 		}
+		// GetFileWithBundleStatePublished holds details about calls to the GetFileWithBundleStatePublished method.
+		GetFileWithBundleStatePublished []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// FilePath is the filePath argument value.
+			FilePath string
+			// Headers is the headers argument value.
+			Headers sdk.Headers
+		}
 		// Health holds details about calls to the Health method.
 		Health []struct {
 		}
@@ -173,16 +188,17 @@ type ClienterMock struct {
 			Headers sdk.Headers
 		}
 	}
-	lockChecker           sync.RWMutex
-	lockCreateFileEvent   sync.RWMutex
-	lockDeleteFile        sync.RWMutex
-	lockGetFile           sync.RWMutex
-	lockHealth            sync.RWMutex
-	lockMarkFilePublished sync.RWMutex
-	lockMarkFileUploaded  sync.RWMutex
-	lockRegisterFile      sync.RWMutex
-	lockURL               sync.RWMutex
-	lockUpdateContentItem sync.RWMutex
+	lockChecker                         sync.RWMutex
+	lockCreateFileEvent                 sync.RWMutex
+	lockDeleteFile                      sync.RWMutex
+	lockGetFile                         sync.RWMutex
+	lockGetFileWithBundleStatePublished sync.RWMutex
+	lockHealth                          sync.RWMutex
+	lockMarkFilePublished               sync.RWMutex
+	lockMarkFileUploaded                sync.RWMutex
+	lockRegisterFile                    sync.RWMutex
+	lockURL                             sync.RWMutex
+	lockUpdateContentItem               sync.RWMutex
 }
 
 // Checker calls CheckerFunc.
@@ -338,6 +354,46 @@ func (mock *ClienterMock) GetFileCalls() []struct {
 	mock.lockGetFile.RLock()
 	calls = mock.calls.GetFile
 	mock.lockGetFile.RUnlock()
+	return calls
+}
+
+// GetFileWithBundleStatePublished calls GetFileWithBundleStatePublishedFunc.
+func (mock *ClienterMock) GetFileWithBundleStatePublished(ctx context.Context, filePath string, headers sdk.Headers) (*files.StoredRegisteredMetaData, string, error) {
+	if mock.GetFileWithBundleStatePublishedFunc == nil {
+		panic("ClienterMock.GetFileWithBundleStatePublishedFunc: method is nil but Clienter.GetFileWithBundleStatePublished was just called")
+	}
+	callInfo := struct {
+		Ctx      context.Context
+		FilePath string
+		Headers  sdk.Headers
+	}{
+		Ctx:      ctx,
+		FilePath: filePath,
+		Headers:  headers,
+	}
+	mock.lockGetFileWithBundleStatePublished.Lock()
+	mock.calls.GetFileWithBundleStatePublished = append(mock.calls.GetFileWithBundleStatePublished, callInfo)
+	mock.lockGetFileWithBundleStatePublished.Unlock()
+	return mock.GetFileWithBundleStatePublishedFunc(ctx, filePath, headers)
+}
+
+// GetFileWithBundleStatePublishedCalls gets all the calls that were made to GetFileWithBundleStatePublished.
+// Check the length with:
+//
+//	len(mockedClienter.GetFileWithBundleStatePublishedCalls())
+func (mock *ClienterMock) GetFileWithBundleStatePublishedCalls() []struct {
+	Ctx      context.Context
+	FilePath string
+	Headers  sdk.Headers
+} {
+	var calls []struct {
+		Ctx      context.Context
+		FilePath string
+		Headers  sdk.Headers
+	}
+	mock.lockGetFileWithBundleStatePublished.RLock()
+	calls = mock.calls.GetFileWithBundleStatePublished
+	mock.lockGetFileWithBundleStatePublished.RUnlock()
 	return calls
 }
 
