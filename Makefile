@@ -41,3 +41,7 @@ convey:
 .PHONY: test-component
 test-component:
 	cd features/compose; docker-compose up --attach dp-files-api --abort-on-container-exit
+
+.PHONY: lint-api-spec
+lint-api-spec:
+	redocly lint swagger.yaml
