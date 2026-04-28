@@ -63,3 +63,7 @@ docker-local:
 	docker-compose  -f docker-compose-services.yml -f docker-compose-local.yml down
 	docker-compose  -f docker-compose-services.yml -f docker-compose-local.yml up -d
 	docker-compose  -f docker-compose-services.yml -f docker-compose-local.yml exec dp-files-api bash
+
+.PHONY: lint-api-spec
+lint-api-spec:
+	redocly lint swagger.yaml

@@ -11,6 +11,8 @@ schemes:
   - http
 host: localhost:26900
 basePath: /
+security:
+  - Bearer: []
 
 securityDefinitions:
    Bearer:
@@ -21,6 +23,7 @@ securityDefinitions:
 
 tags:
   - name: "private"
+    description: "Internal endpoints"
 
 paths:
   /file-events:
@@ -129,7 +132,9 @@ paths:
         201:
           description: OK
         400:
-          $ref: '#/definitions/Error'
+          $ref: '#/responses/ErrorResponse'
+        401:
+          $ref: "#/responses/UnauthorisedError"
         403:
           description: Authoristion Failed - Check logs
         500:
@@ -155,15 +160,19 @@ paths:
           description: "ID of the bundle to retrieve files for"
       responses:
         200:
-          $ref: '#/definitions/MetaDataCollection'
+          $ref: '#/responses/MetaDataCollectionResponse'
         400:
-          $ref: '#/definitions/Error'
+          $ref: '#/responses/ErrorResponse'
+        401:
+          $ref: "#/responses/UnauthorisedError"
         403:
           description: Authorisation Failed - Check logs
+        404:
+          $ref: '#/responses/NotFound'
         500:
           $ref: '#/responses/InternalError'
 
-  /files/{filepath}:
+  /files/{path}:
     patch:
       tags:
         - Patch metadata state
@@ -176,14 +185,18 @@ paths:
         - $ref: '#/parameters/file_path'
         - $ref: '#/parameters/patch_file'
       responses:
-        201:
+        200:
           description: OK
         400:
-          $ref: '#/definitions/Error'
+          $ref: '#/responses/ErrorResponse'
+        401:
+          $ref: "#/responses/UnauthorisedError"
         403:
           description: Authorization Failed - Check logs
+        404:
+          $ref: '#/responses/NotFound'
         409:
-          $ref: '#/definitions/Error'
+          $ref: '#/responses/ErrorResponse'
         500:
           $ref: '#/responses/InternalError'
 
@@ -199,11 +212,13 @@ paths:
         - $ref: '#/parameters/file_path'
       responses:
         200:
-          $ref: '#/definitions/MetaData'
+          $ref: '#/responses/MetaDataResponse'
+        401:
+          $ref: "#/responses/UnauthorisedError"
         403:
           description: Authorization Failed - Check logs
         404:
-          $ref: '#/definitions/Error'
+          $ref: '#/responses/NotFound'
         500:
           $ref: '#/responses/InternalError'
 
@@ -220,10 +235,12 @@ paths:
         responses:
             204:
               description: File and metadata successfully deleted
+            401:
+              $ref: "#/responses/UnauthorisedError"
             403:
               description: Authorization Failed - Check logs
             404:
-              description: File not found
+              $ref: '#/responses/NotFound'
             409:
               description: File is already published
             500:
@@ -242,15 +259,15 @@ paths:
         - $ref: '#/parameters/put_content_item'
       responses:
         200:
-          $ref: '#/definitions/MetaData'
+          $ref: '#/responses/MetaDataResponse'
         400:
-          $ref: '#/definitions/Error'
+          $ref: '#/responses/ErrorResponse'
         401:
           $ref: '#/responses/UnauthorisedError'
         403:
           description: Authorization Failed - Check logs
         404:
-          description: File not found
+          $ref: '#/responses/NotFound'
         500:
           $ref: '#/responses/InternalError'
 
@@ -270,10 +287,14 @@ paths:
       responses:
         201:
           description: OK
+        401:
+          $ref: "#/responses/UnauthorisedError"
+        403:
+          $ref: "#/responses/ForbiddenError"
         404:
-          $ref: '#/definitions/Error'
+          $ref: '#/responses/NotFound'
         409:
-          $ref: '#/definitions/Error'
+          $ref: '#/responses/ErrorResponse'
         500:
           $ref: '#/responses/InternalError'
     
@@ -293,15 +314,20 @@ paths:
       responses:
         201:
           description: OK
+        401:
+          $ref: "#/responses/UnauthorisedError"
+        403:
+          $ref: "#/responses/ForbiddenError"
         404:
-          $ref: '#/definitions/Error'
+          $ref: '#/responses/NotFound'
         409:
-          $ref: '#/definitions/Error'
+          $ref: '#/responses/ErrorResponse'
         500:
           $ref: '#/responses/InternalError'
 
   /health:
     get:
+      security: []
       tags:
         - private
       summary: "Returns API's health status"
@@ -319,6 +345,18 @@ paths:
           $ref: "#/responses/InternalError"
 
 responses:
+  ErrorResponse:
+    description: "Request could not be processed"
+    schema:
+      $ref: "#/definitions/Error"
+  MetaDataResponse:
+    description: "File metadata"
+    schema:
+      $ref: "#/definitions/MetaData"
+  MetaDataCollectionResponse:
+    description: "Collection of file metadata"
+    schema:
+      $ref: "#/definitions/MetaDataCollection"
   InternalError:
     description: "Failed to process the request due to an internal error"
   ForbiddenError:
@@ -476,16 +514,20 @@ definitions:
             type: string
             description: "The version"
             example: "1"
-  ChangeFileState:
+  PatchFileRequest:
     type: object
-    description: "File upload complete metadata to be POSTed"
-    required:
-      - "state"
+    description: "PATCH payload for file metadata updates. Use state for lifecycle changes, or collection_id/bundle_id for ID updates."
     properties:
       state:
         type: string
         description: "New state for the file: UPLOADED, PUBLISHED or MOVED"
         example: "UPLOADED"
+      collection_id:
+        type: string
+        description: "Set the collection ID when linking a file to a collection"
+      bundle_id:
+        type: string
+        description: "Set the bundle ID when linking a file to a bundle"
       etag:
         type: string
         description: "The etag for the file"
@@ -506,6 +548,12 @@ definitions:
         type: string
         description: "The version"
         example: "1"
+  ContentItemChange:
+    type: object
+    description: "Wrapper payload used by PUT /files/{path} to update content item"
+    properties:
+      content_item:
+        $ref: '#/definitions/ContentItemUpdate'
 
   Event:
     description: Details of a specific file access event forming part of the audit log for users downloading a file.
@@ -659,9 +707,9 @@ definitions:
         type: string
         description: "File etag"
         example: "1234567890asdfghjk"
-      status:
+      state:
         type: string
-        description: "File status"
+        description: "File state"
         example: "UPLOADED"
       content_item:
         type: object
@@ -705,10 +753,10 @@ parameters:
 
   file_path:
     type: string
-    name: filepath
+    name: path
     in: path
     required: true
-    description: filepath of required file
+    description: path of required file
 
   patch_file:
     name: state
@@ -716,7 +764,7 @@ parameters:
     in: body
     required: true
     schema:
-      $ref: '#/definitions/ChangeFileState'
+      $ref: '#/definitions/PatchFileRequest'
 
   put_content_item:
     name: content_item
@@ -724,4 +772,4 @@ parameters:
     in: body
     required: true
     schema:
-      $ref: '#/definitions/ContentItemUpdate'
+      $ref: '#/definitions/ContentItemChange'
