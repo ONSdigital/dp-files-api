@@ -85,7 +85,7 @@ paths:
         404:
           $ref: "#/responses/NotFound"
         500:
-          $ref: "#/responses/InternalErrorEvent"
+          $ref: "#/responses/InternalError"
     post:
       tags:
         - Create file access event
@@ -115,7 +115,7 @@ paths:
         403:
           $ref: "#/responses/ForbiddenError"
         500:
-          $ref: "#/responses/InternalErrorEvent"
+          $ref: "#/responses/InternalError"
 
   /files:
     post:
@@ -361,24 +361,14 @@ responses:
     description: "Failed to process the request due to an internal error"
   ForbiddenError:
     description: "Access denied."
-    schema:
-      $ref: "#/definitions/Error"
-  InternalErrorEvent:
-    description: "Failed to process the request due to an internal error."
-    schema:
-      $ref: "#/definitions/Error"
   InvalidRequest:
     description: "Unable to process request due to a malformed or invalid request body or query parameter."
     schema:
       $ref: "#/definitions/Error"
   NotFound:
     description: "The requested resource does not exist."
-    schema:
-      $ref: "#/definitions/Error"
   UnauthorisedError:
     description: "Authentication information is missing or invalid."
-    schema:
-      $ref: "#/definitions/Error"
 
 
 definitions:
