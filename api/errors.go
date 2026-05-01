@@ -50,8 +50,7 @@ func handleError(w http.ResponseWriter, err error) {
 		writeError(w, buildErrors(err, "FileMoved"), http.StatusConflict)
 	case store.ErrFileIsPublished:
 		writeError(w, buildErrors(err, "FileIsPublished"), http.StatusConflict)
-	case store.ErrPathNotFound,
-		store.ErrFileIsNotPublished:
+	case store.ErrPathNotFound:
 		writeError(w, buildErrors(err, "NotFound"), http.StatusNotFound)
 	default:
 		writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)

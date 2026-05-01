@@ -80,14 +80,14 @@ func (store *Store) GetFileMetadataWeb(ctx context.Context, path string) (files.
 				return fileMetadata, nil
 			}
 		} else {
-			return files.StoredRegisteredMetaData{}, ErrFileIsNotPublished
+			return files.StoredRegisteredMetaData{}, ErrFileNotRegistered
 		}
 	case StateMoved, StatePublished:
 		return fileMetadata, nil
 	default:
-		return files.StoredRegisteredMetaData{}, ErrFileIsNotPublished
+		return files.StoredRegisteredMetaData{}, ErrFileNotRegistered
 	}
-	return files.StoredRegisteredMetaData{}, ErrFileIsNotPublished
+	return files.StoredRegisteredMetaData{}, ErrFileNotRegistered
 }
 
 // GetFilesMetadata godoc
