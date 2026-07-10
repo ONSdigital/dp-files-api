@@ -50,7 +50,7 @@ var _ sdk.Clienter = &ClienterMock{}
 //			URLFunc: func() string {
 //				panic("mock out the URL method")
 //			},
-//			UpdateContentItemFunc: func(ctx context.Context, filePath string, item api.ContentItem, headers sdk.Headers) (files.StoredRegisteredMetaData, error) {
+//			UpdateContentItemFunc: func(ctx context.Context, filePath string, item api.ContentItem, headers sdk.Headers) (*files.StoredRegisteredMetaData, error) {
 //				panic("mock out the UpdateContentItem method")
 //			},
 //		}
@@ -88,7 +88,7 @@ type ClienterMock struct {
 	URLFunc func() string
 
 	// UpdateContentItemFunc mocks the UpdateContentItem method.
-	UpdateContentItemFunc func(ctx context.Context, filePath string, item api.ContentItem, headers sdk.Headers) (files.StoredRegisteredMetaData, error)
+	UpdateContentItemFunc func(ctx context.Context, filePath string, item api.ContentItem, headers sdk.Headers) (*files.StoredRegisteredMetaData, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -520,7 +520,7 @@ func (mock *ClienterMock) URLCalls() []struct {
 }
 
 // UpdateContentItem calls UpdateContentItemFunc.
-func (mock *ClienterMock) UpdateContentItem(ctx context.Context, filePath string, item api.ContentItem, headers sdk.Headers) (files.StoredRegisteredMetaData, error) {
+func (mock *ClienterMock) UpdateContentItem(ctx context.Context, filePath string, item api.ContentItem, headers sdk.Headers) (*files.StoredRegisteredMetaData, error) {
 	if mock.UpdateContentItemFunc == nil {
 		panic("ClienterMock.UpdateContentItemFunc: method is nil but Clienter.UpdateContentItem was just called")
 	}

@@ -18,6 +18,11 @@ type Client struct {
 	hcCli *health.Client
 }
 
+// check that Client implements Clienter
+// if Client's method drifts from the Clienter interface, this line will
+// fail to compile
+var _ Clienter = (*Client)(nil)
+
 // New creates a new instance of Client for the service
 func New(filesAPIURL string) *Client {
 	return &Client{

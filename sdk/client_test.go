@@ -97,3 +97,7 @@ func TestNewWithHealthClient(t *testing.T) {
 		})
 	})
 }
+
+func TestClientImplementsClienter(t *testing.T) {
+	var _ Clienter = (*Client)(nil)
+}
