@@ -305,4 +305,3 @@ func TestContentItemUpdateStoresBothPreviousIdsWhenDatasetIDAndEditionChange(t *
 	assert.Equal(t, []string{"old_dataset_id"}, capturedContentItem.PreviousSeriesId)
 	assert.Equal(t, []string{"jan2026"}, capturedContentItem.PreviousEditionId)
 }
-
