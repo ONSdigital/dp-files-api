@@ -52,20 +52,12 @@ func HandleGetFileMetadataWithAuth(getMetadata GetFileMetadata, authMiddleware a
 			handleError(w, err)
 			return
 		}
-		var permissionAttrs map[string]string
-		if metadata.ContentItem != nil {
-			if metadata.ContentItem.DatasetID != "" && metadata.ContentItem.Edition != "" {
-				permissionAttrs = map[string]string{
-					"dataset_edition": metadata.ContentItem.DatasetID + "/" + metadata.ContentItem.Edition,
-				}
-			}
-		}
 
 		logData = log.Data{
 			"entity_data": authEntityData,
 		}
 
-		if checkUserPermission(req, logData, "static-files:read", permissionAttrs, permissionsChecker, authEntityData.EntityData) {
+		if hasPermissionForContent(req, logData, metadata.ContentItem, permissionsChecker, authEntityData) {
 			if err := json.NewEncoder(w).Encode(metadata); err != nil {
 				handleError(w, err)
 				return

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	clientsidentity "github.com/ONSdigital/dp-api-clients-go/v2/identity"
+	"github.com/ONSdigital/dp-files-api/files"
 	"github.com/ONSdigital/log.go/v2/log"
 
 	permissionsAPISDK "github.com/ONSdigital/dp-permissions-api/sdk"
@@ -71,4 +72,25 @@ func checkUserPermission(r *http.Request, logData log.Data, permission string, a
 	logData["authenticated"] = authorised
 
 	return authorised
+}
+
+func hasPermissionForContent(req *http.Request, logData log.Data, contentItem *files.StoredContentItem, permissionsChecker auth.PermissionsChecker, authEntityData *AuthEntityData) bool {
+	if contentItem == nil {
+		return checkUserPermission(req, logData, "static-files:read", nil, permissionsChecker, authEntityData.EntityData)
+	}
+
+	allSeriesIDs := append([]string{contentItem.DatasetID}, contentItem.PreviousSeriesId...)
+	allEditionIDs := append([]string{contentItem.Edition}, contentItem.PreviousEditionId...)
+
+	for _, datasetID := range allSeriesIDs {
+		for _, edition := range allEditionIDs {
+			if datasetID != "" && edition != "" {
+				if checkUserPermission(req, logData, "static-files:read", map[string]string{"dataset_edition": datasetID + "/" + edition}, permissionsChecker, authEntityData.EntityData) {
+					return true
+				}
+			}
+		}
+	}
+
+	return checkUserPermission(req, logData, "static-files:read", nil, permissionsChecker, authEntityData.EntityData)
 }

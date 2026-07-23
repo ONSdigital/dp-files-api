@@ -82,10 +82,17 @@ func HandlerUpdateContentItem(updateContentItem UpdateContentItem, createFileEve
 		}
 		log.Info(ctx, "successfully created file event for content item update", log.Classification(log.ProtectiveMonitoring), logAuthOption, logData)
 
+		existingContentItem := fileMetadata.ContentItem
+		if existingContentItem == nil {
+			existingContentItem = &files.StoredContentItem{}
+		}
+
 		updatedContentItem := &files.StoredContentItem{
-			DatasetID: contentItemChange.ContentItem.DatasetID,
-			Edition:   contentItemChange.ContentItem.Edition,
-			Version:   contentItemChange.ContentItem.Version,
+			DatasetID:         contentItemChange.ContentItem.DatasetID,
+			Edition:           contentItemChange.ContentItem.Edition,
+			Version:           contentItemChange.ContentItem.Version,
+			PreviousSeriesId:  appendOldIDs(contentItemChange.ContentItem.DatasetID, existingContentItem.DatasetID, existingContentItem.PreviousSeriesId),
+			PreviousEditionId: appendOldIDs(contentItemChange.ContentItem.Edition, existingContentItem.Edition, existingContentItem.PreviousEditionId),
 		}
 
 		if err := updateContentItem(ctx, path, updatedContentItem); err != nil {
@@ -102,4 +109,11 @@ func HandlerUpdateContentItem(updateContentItem UpdateContentItem, createFileEve
 		}
 		w.WriteHeader(http.StatusOK)
 	}
+}
+
+func appendOldIDs(newId, oldId string, previousIds []string) []string {
+	if newId != oldId && oldId != "" {
+		previousIds = append(previousIds, oldId)
+	}
+	return previousIds
 }

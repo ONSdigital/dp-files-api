@@ -58,18 +58,9 @@ func HandlerCreateFileEvent(createFileEvent CreateFileEvent, authMiddleware auth
 			return
 		}
 
-		var permissionAttrs map[string]string
-		if event.File.ContentItem != nil {
-			if event.File.ContentItem.DatasetID != "" && event.File.ContentItem.Edition != "" {
-				permissionAttrs = map[string]string{
-					"dataset_edition": event.File.ContentItem.DatasetID + "/" + event.File.ContentItem.Edition,
-				}
-			}
-		}
-
 		logData["entity_data"] = authEntityData
 
-		if checkUserPermission(req, logData, "static-files:read", permissionAttrs, permissionsChecker, authEntityData.EntityData) {
+		if hasPermissionForContent(req, logData, event.File.ContentItem, permissionsChecker, authEntityData) {
 			if err := createFileEvent(req.Context(), &event); err != nil {
 				handleError(w, err)
 				return
