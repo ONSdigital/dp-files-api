@@ -717,6 +717,18 @@ definitions:
             type: string
             description: "The version"
             example: "1"
+          previous_series_id:
+            type: array
+            description: "The previous series ID"
+            items:
+              type: string
+            example: ["cpih1", "cpih2"]
+          previous_edition_id:
+            type: array
+            description: "The previous edition ID"
+            items:
+              type: string
+            example: ["feb-2026", "mar-2026"]
   Error:
     type: object
     properties:
