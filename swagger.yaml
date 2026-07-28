@@ -719,13 +719,13 @@ definitions:
             example: "1"
           previous_series_id:
             type: array
-            description: "The previous series ID"
+            description: "Previous series IDs in order from oldest to most recent"
             items:
               type: string
             example: ["cpih1", "cpih2"]
           previous_edition_id:
             type: array
-            description: "The previous edition ID"
+            description: "Previous edition IDs in order from oldest to most recent"
             items:
               type: string
             example: ["feb-2026", "mar-2026"]
