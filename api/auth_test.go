@@ -7,15 +7,18 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	healthcheck "github.com/ONSdigital/dp-api-clients-go/v2/health"
 	clientsidentity "github.com/ONSdigital/dp-api-clients-go/v2/identity"
 	authMock "github.com/ONSdigital/dp-authorisation/v2/authorisation/mock"
 	"github.com/ONSdigital/dp-files-api/config"
+	"github.com/ONSdigital/dp-files-api/files"
 	dphttp "github.com/ONSdigital/dp-net/v3/http"
 	dprequest "github.com/ONSdigital/dp-net/v3/request"
 	permissionsAPISDK "github.com/ONSdigital/dp-permissions-api/sdk"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -67,4 +70,65 @@ func TestAuthServiceToken(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, authEntityData)
 	assert.Equal(t, &AuthEntityData{EntityData: &permissionsAPISDK.EntityData{UserID: "service-1"}, IsServiceAuth: true}, authEntityData)
+}
+
+func TestHasPermissionForContentWithCurrentIDs(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", http.NoBody)
+	logData := log.Data{}
+	authEntityData := &AuthEntityData{EntityData: &permissionsAPISDK.EntityData{UserID: "admin"}}
+
+	permissionsChecker := &authMock.PermissionsCheckerMock{
+		HasPermissionFunc: func(ctx context.Context, entityData permissionsAPISDK.EntityData, permission string, attributes map[string]string) (bool, error) {
+			return attributes != nil && attributes["dataset_edition"] == "current-series/current-edition", nil
+		},
+	}
+
+	contentItem := &files.StoredContentItem{DatasetID: "current-series", Edition: "current-edition"}
+
+	authorised := hasPermissionForContent(req, logData, contentItem, permissionsChecker, authEntityData)
+	assert.True(t, authorised)
+}
+
+func TestHasPermissionForContentWithPreviousIDs(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", http.NoBody)
+	logData := log.Data{}
+	authEntityData := &AuthEntityData{EntityData: &permissionsAPISDK.EntityData{UserID: "admin"}}
+
+	permissionsChecker := &authMock.PermissionsCheckerMock{
+		HasPermissionFunc: func(ctx context.Context, entityData permissionsAPISDK.EntityData, permission string, attributes map[string]string) (bool, error) {
+			return attributes != nil && attributes["dataset_edition"] == "old-series/old-edition", nil
+		},
+	}
+
+	contentItem := &files.StoredContentItem{
+		DatasetID:         "current-series",
+		Edition:           "current-edition",
+		PreviousSeriesId:  []string{"old-series"},
+		PreviousEditionId: []string{"old-edition"},
+	}
+
+	authorised := hasPermissionForContent(req, logData, contentItem, permissionsChecker, authEntityData)
+	assert.True(t, authorised)
+}
+
+func TestHasPermissionForContentWhenNoAuthorisationAllowed(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", http.NoBody)
+	logData := log.Data{}
+	authEntityData := &AuthEntityData{EntityData: &permissionsAPISDK.EntityData{UserID: "admin"}}
+
+	permissionsChecker := &authMock.PermissionsCheckerMock{
+		HasPermissionFunc: func(ctx context.Context, entityData permissionsAPISDK.EntityData, permission string, attributes map[string]string) (bool, error) {
+			return false, nil
+		},
+	}
+
+	contentItem := &files.StoredContentItem{
+		DatasetID:         "current-series",
+		Edition:           "current-edition",
+		PreviousSeriesId:  []string{"old-series"},
+		PreviousEditionId: []string{"old-edition"},
+	}
+
+	authorised := hasPermissionForContent(req, logData, contentItem, permissionsChecker, authEntityData)
+	assert.False(t, authorised)
 }

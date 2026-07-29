@@ -43,7 +43,9 @@ type FileEtagChange struct {
 }
 
 type StoredContentItem struct {
-	DatasetID string `bson:"dataset_id" json:"dataset_id"`
-	Edition   string `bson:"edition" json:"edition"`
-	Version   string `bson:"version" json:"version"`
+	DatasetID         string   `bson:"dataset_id" json:"dataset_id"`
+	Edition           string   `bson:"edition" json:"edition"`
+	Version           string   `bson:"version" json:"version"`
+	PreviousSeriesId  []string `bson:"previous_series_id,omitempty" json:"previous_series_id,omitempty"`
+	PreviousEditionId []string `bson:"previous_edition_id,omitempty" json:"previous_edition_id,omitempty"`
 }

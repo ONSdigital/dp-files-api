@@ -76,3 +76,30 @@ func TestGetFileMetadataWithAuthForbidden(t *testing.T) {
 	response, _ := io.ReadAll(rec.Body)
 	assert.Contains(t, string(response), "the request was not authorised - check token and user's permissions")
 }
+
+func TestGetFileMetadataWithAuthReturnsPreviousSeriesAndEditionIds(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/files/path.jpg", http.NoBody)
+	req.Header.Add("Authorization", authorisationtest.AdminJWTToken)
+
+	authMiddlewareMock, identityClientMock, permissionsMock := setUpAuthServices()
+
+	h := api.HandleGetFileMetadataWithAuth(func(ctx context.Context, path string) (files.StoredRegisteredMetaData, error) {
+		return files.StoredRegisteredMetaData{
+			Path: "/files/path.jpg",
+			ContentItem: &files.StoredContentItem{
+				DatasetID:         "current_dataset_id",
+				Edition:           "feb2026",
+				Version:           "1",
+				PreviousSeriesId:  []string{"old_dataset_id"},
+				PreviousEditionId: []string{"jan2026"},
+			},
+		}, nil
+	}, authMiddlewareMock, identityClientMock, permissionsMock)
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	response, _ := io.ReadAll(rec.Body)
+	assert.Contains(t, string(response), "old_dataset_id")
+	assert.Contains(t, string(response), "jan2026")
+}
