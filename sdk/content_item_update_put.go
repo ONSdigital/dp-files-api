@@ -13,7 +13,10 @@ import (
 )
 
 func (c *Client) UpdateContentItem(ctx context.Context, filePath string, contentItem api.ContentItem, headers Headers) (*files.StoredRegisteredMetaData, error) {
-	payload, err := json.Marshal(contentItem)
+	contentItemChange := api.ContentItemChange{
+		ContentItem: &contentItem,
+	}
+	payload, err := json.Marshal(contentItemChange)
 	if err != nil {
 		return nil, err
 	}
